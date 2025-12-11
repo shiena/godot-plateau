@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUDatasetSource" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Access to PLATEAU dataset (local or server).
+	</brief_description>
+	<description>
+		PLATEAUDatasetSource provides access to local PLATEAU datasets.
+		For server access, use HTTPRequest in GDScript (see demo/samples/dataset_sample.gd).
+		[codeblock]
+		# Local dataset
+		var source = PLATEAUDatasetSource.create_local("C:/path/to/plateau/data")
+		var gml_files = source.get_gml_files(PLATEAUCityModelPackage.PACKAGE_BUILDING)
+		for file_info in gml_files:
+		    print(file_info.get_path())
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="create_local" qualifiers="static">
+			<return type="PLATEAUDatasetSource" />
+			<param index="0" name="local_path" type="String" />
+			<description>
+				Create a dataset source from a local directory path.
+			</description>
+		</method>
+		<method name="get_default_server_url" qualifiers="static">
+			<return type="String" />
+			<description>
+				Returns the default PLATEAU API server URL.
+			</description>
+		</method>
+		<method name="get_mock_server_url" qualifiers="static">
+			<return type="String" />
+			<description>
+				Returns the mock server URL for testing (no authentication required).
+			</description>
+		</method>
+		<method name="build_auth_headers" qualifiers="static">
+			<return type="PackedStringArray" />
+			<param index="0" name="custom_token" type="String" />
+			<param index="1" name="use_default_token" type="bool" />
+			<description>
+				Build authentication headers for PLATEAU API requests.
+				[param custom_token]: User-provided token (used if not empty).
+				[param use_default_token]: If [code]true[/code] and custom_token is empty, uses built-in default token.
+				Returns array with Content-Type and Authorization headers.
+				[codeblock]
+				# For production server (uses default token if custom is empty)
+				var headers = PLATEAUDatasetSource.build_auth_headers("", true)
+				# For mock server (no auth)
+				var headers = PLATEAUDatasetSource.build_auth_headers("", false)
+				# With custom token
+				var headers = PLATEAUDatasetSource.build_auth_headers("my-token", false)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="is_valid" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the source is valid and accessible.
+			</description>
+		</method>
+		<method name="get_available_packages" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns a bitmask of available packages (see [enum PLATEAUCityModelPackage]).
+			</description>
+		</method>
+		<method name="get_gml_files">
+			<return type="PLATEAUGmlFileInfo[]" />
+			<param index="0" name="package_flags" type="int" />
+			<description>
+				Get GML files for the specified package type(s). Use [enum PLATEAUCityModelPackage] flags.
+			</description>
+		</method>
+		<method name="get_mesh_codes">
+			<return type="PackedStringArray" />
+			<description>
+				Get mesh codes (region IDs) available in this dataset.
+			</description>
+		</method>
+		<method name="filter_by_mesh_codes">
+			<return type="PLATEAUDatasetSource" />
+			<param index="0" name="codes" type="PackedStringArray" />
+			<description>
+				Create a filtered source containing only the specified mesh codes.
+			</description>
+		</method>
+	</methods>
+</class>

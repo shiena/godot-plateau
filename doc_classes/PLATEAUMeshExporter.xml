@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUMeshExporter" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Exports mesh data to various file formats.
+	</brief_description>
+	<description>
+		PLATEAUMeshExporter exports [PLATEAUMeshData] to standard 3D file formats including glTF, GLB, and OBJ.
+		[codeblock]
+		var exporter = PLATEAUMeshExporter.new()
+		exporter.export_to_file(mesh_data_array, "output.glb", PLATEAUMeshExporter.EXPORT_FORMAT_GLB)
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="export_to_file">
+			<return type="bool" />
+			<param index="0" name="mesh_data_array" type="PLATEAUMeshData[]" />
+			<param index="1" name="file_path" type="String" />
+			<param index="2" name="format" type="int" />
+			<description>
+				Export mesh data to the specified file path in the given format. Returns [code]true[/code] on success.
+			</description>
+		</method>
+		<method name="get_supported_formats" qualifiers="static">
+			<return type="PackedStringArray" />
+			<description>
+				Returns an array of supported export format names.
+			</description>
+		</method>
+		<method name="get_format_extension" qualifiers="static">
+			<return type="String" />
+			<param index="0" name="format" type="int" />
+			<description>
+				Returns the file extension for the specified format.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="texture_directory" type="String" setter="set_texture_directory" getter="get_texture_directory" default="&quot;&quot;">
+			Directory path for textures (relative to output file, for glTF only).
+		</member>
+	</members>
+	<constants>
+		<constant name="EXPORT_FORMAT_GLTF" value="0">
+			glTF format with separate binary and texture files.
+		</constant>
+		<constant name="EXPORT_FORMAT_GLB" value="1">
+			Binary glTF with embedded data.
+		</constant>
+		<constant name="EXPORT_FORMAT_OBJ" value="2">
+			Wavefront OBJ with MTL material file.
+			[b]Note:[/b] OBJ export creates one group per CityObject (building). When re-importing into Godot, this may exceed the 256 surface limit ([code]MAX_MESH_SURFACES[/code]). Use AREA granularity before export to merge meshes.
+		</constant>
+	</constants>
+</class>

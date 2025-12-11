@@ -1,56 +1,240 @@
-# godot-cpp template
-This repository serves as a quickstart template for GDExtension development with Godot 4.0+.
+# PLATEAU SDK for Godot
 
-## Contents
-* Preconfigured source files for C++ development of the GDExtension ([src/](./src/))
-* An empty Godot project in [demo/](./demo), to test the GDExtension
-* godot-cpp as a submodule (`godot-cpp/`)
-* GitHub Issues template ([.github/ISSUE_TEMPLATE.yml](./.github/ISSUE_TEMPLATE.yml))
-* GitHub CI/CD workflows to publish your library packages when creating a release ([.github/workflows/builds.yml](./.github/workflows/builds.yml))
-* An SConstruct file with various functions, such as boilerplate for [Adding documentation](https://docs.godotengine.org/en/stable/tutorials/scripting/cpp/gdextension_docs_system.html)
+A GDExtension for Godot Engine 4.x that enables loading 3D city models (CityGML) provided by Japan's Ministry of Land, Infrastructure, Transport and Tourism (MLIT).
 
-## Usage - Template
+[日本語版 README](./README.ja.md)
 
-To use this template, log in to GitHub and click the green "Use this template" button at the top of the repository page. This will let you create a copy of this repository with a clean git history.
+## Features
 
-To get started with your new GDExtension, do the following:
+- Load CityGML files
+- Generate and display 3D meshes
+- LOD (Level of Detail) selection
+- Coordinate conversion (Geographic ↔ Local coordinates)
+- Texture loading with caching
+- PBR material support (Metallic/Roughness/Emission)
+- Smooth shading with auto-generated normals
+- Attribute information access (GML ID, CityObjectType, attributes)
+- Raycast-based CityObject identification via UV coordinates
 
-* clone your repository to your local computer
-* initialize the godot-cpp git submodule via `git submodule update --init`
-* change the name of the compiled library file inside the [SConstruct](./SConstruct) file by modifying the `libname` string.
-  * change the paths of the to be loaded library name inside the [demo/bin/example.gdextension](./demo/bin/example.gdextension) file, by replacing `EXTENSION-NAME` with the name you chose for `libname`.
-* change the `entry_symbol` string inside [demo/bin/example.gdextension](./demo/bin/example.gdextension) file.
-  * rename the `example_library_init` function in [src/register_types.cpp](./src/register_types.cpp) to the same name you chose for `entry_symbol`.
-* change the name of the `demo/bin/example.gdextension` file
+## Classes
 
-Now, you can build the project with the following command:
+### PLATEAUImporter (Node3D)
+Import CityGML files and place them in the scene.
 
-```shell
-scons
+```gdscript
+var importer = PLATEAUImporter.new()
+importer.gml_path = "path/to/your.gml"
+importer.import_gml()
+add_child(importer)
 ```
 
-If the build command worked, you can test it with the [demo](./demo) project. Import it into Godot, open it, and launch the main scene. You should see it print the following line in the console:
+### PLATEAUCityModel (RefCounted)
+Load CityGML files and extract meshes.
 
-```
-Type: 24
-```
+```gdscript
+var city_model = PLATEAUCityModel.new()
+city_model.load("path/to/your.gml")
 
-### Configuring an IDE
-You can develop your own extension with any text editor and by invoking scons on the command line, but if you want to work with an IDE (Integrated Development Environment), you can use a compilation database file called `compile_commands.json`. Most IDEs should automatically identify this file, and self-configure appropriately.
-To generate the database file, you can run one of the following commands in the project root directory:
-```shell
-# Generate compile_commands.json while compiling
-scons compiledb=yes
+var options = PLATEAUMeshExtractOptions.new()
+options.min_lod = 1
+options.max_lod = 2
 
-# Generate compile_commands.json without compiling
-scons compiledb=yes compile_commands.json
+var mesh_data_array = city_model.extract_meshes(options)
 ```
 
-## Usage - Actions
+### PLATEAUMeshData (RefCounted)
+Represents extracted mesh data with attribute information.
 
-This repository comes with continuous integration (CI) through a GitHub action that tests building the GDExtension.
-It triggers automatically for each pushed change. You can find and edit it in [builds.yml](.github/workflows/ci.yml).
+```gdscript
+# Access mesh and transform
+var mesh: ArrayMesh = mesh_data.get_mesh()
+var transform: Transform3D = mesh_data.get_transform()
 
-There is also a workflow ([make_build.yml](.github/workflows/make_build.yml)) that builds the GDExtension for all supported platforms that you can use to create releases.
-You can trigger this workflow manually from the `Actions` tab on GitHub.
-After it is complete, you can find the file `godot-cpp-template.zip` in the `Artifacts` section of the workflow run.
+# Access CityObject attributes
+var gml_id: String = mesh_data.get_gml_id()
+var type: int = mesh_data.get_city_object_type()
+var type_name: String = mesh_data.get_city_object_type_name()
+var attributes: Dictionary = mesh_data.get_attributes()
+
+# Get specific attribute (supports nested keys with "/" separator)
+var building_id = mesh_data.get_attribute("bldg:buildingID")
+var height = mesh_data.get_attribute("bldg:measuredHeight")
+
+# Get GML ID from raycast hit UV (for CityObject identification)
+var gml_id_from_hit = mesh_data.get_gml_id_from_uv(hit_uv)
+```
+
+### PLATEAUGeoReference (RefCounted)
+Coordinate conversion between geographic and local coordinates.
+
+```gdscript
+var geo_ref = PLATEAUGeoReference.new()
+geo_ref.zone_id = 9  # Tokyo
+var local_pos = geo_ref.project(Vector3(35.6762, 139.6503, 0))  # lat, lon, height
+```
+
+### PLATEAUMeshExtractOptions (RefCounted)
+Options for mesh extraction (LOD, granularity, textures, etc.).
+
+```gdscript
+var options = PLATEAUMeshExtractOptions.new()
+options.min_lod = 0
+options.max_lod = 3
+options.mesh_granularity = 1  # 0=atomic, 1=primary, 2=area
+options.export_appearance = true
+```
+
+## Samples
+
+The `demo/samples/` directory contains example scenes demonstrating SDK features.
+
+### Attributes Display Sample (`attributes_display_sample.tscn`)
+Demonstrates how to display CityObject attributes when clicking on buildings.
+- Load CityGML file and extract meshes
+- Left-click on a building to show its attributes
+- Displays GML ID, CityObjectType, and all attributes
+
+### Attributes Color Sample (`attributes_color_sample.tscn`)
+Demonstrates how to color-code buildings based on their attributes.
+- Color by building usage (`bldg:usage`)
+- Color by CityObjectType
+- Color by flood risk (if available in data)
+
+### API Sample (`api_sample.tscn`)
+Demonstrates the main PLATEAU SDK APIs.
+- **Import**: Load CityGML files with various options (LOD, granularity, textures)
+- **Export**: Save meshes to glTF/GLB/OBJ formats
+- **Granularity Conversion**: Convert between Atomic/Primary/Area mesh levels
+
+### Terrain Sample (`terrain_sample.tscn`)
+Demonstrates terrain-related features.
+- Load terrain GML (DEM/TIN data)
+- Generate heightmap from terrain mesh
+- Align buildings to terrain height
+- Save heightmap as PNG image
+
+### Basemap Sample (`basemap_sample.tscn`)
+Demonstrates map tile download features.
+- Download map tiles from GSI (Geospatial Information Authority of Japan)
+- Download tiles from OpenStreetMap
+- Create combined texture from multiple tiles
+- Apply texture to ground mesh
+
+### Using the Samples
+
+1. Open the demo project in Godot
+2. Run one of the sample scenes
+3. Use "Import GML..." or "Load..." buttons to select your CityGML file
+4. Interact with the UI to test various features
+
+**Note**: You need to prepare your own PLATEAU CityGML data. Download from [G空間情報センター](https://www.geospatial.jp/ckan/dataset/plateau).
+
+## Building
+
+### Requirements
+
+- Python 3.8+
+- SCons 4.0+
+- CMake 3.17+
+- Visual Studio 2022 (Windows) / Ninja (macOS)
+- Git
+
+### Build with SCons (Recommended)
+
+SCons automatically builds libplateau and godot-plateau together.
+
+#### 1. Clone repository
+
+```bash
+git clone --recursive https://github.com/shiena/godot-plateau.git
+cd godot-plateau
+```
+
+#### 2. Build
+
+```bash
+# Windows (template_debug)
+scons platform=windows target=template_debug
+
+# Windows (template_release)
+scons platform=windows target=template_release
+
+# macOS
+scons platform=macos target=template_release
+```
+
+The built library will be copied to `bin/<platform>/` and `demo/bin/<platform>/`.
+
+#### Build Options
+
+```bash
+# Skip libplateau build (if already built)
+scons platform=windows target=template_release skip_libplateau_build=yes
+```
+
+### Build with CMake (Alternative)
+
+#### 1. Clone repository
+
+```bash
+git clone --recursive https://github.com/shiena/godot-plateau.git
+cd godot-plateau
+```
+
+#### 2. Build libplateau (first time only)
+
+```bash
+cmake -S libplateau -B build/windows/libplateau -G "Visual Studio 17 2022" -DPLATEAU_USE_FBX=OFF -DCMAKE_BUILD_TYPE:STRING="Release" -DBUILD_LIB_TYPE=static -DRUNTIME_LIB_TYPE=MT
+cmake --build build/windows/libplateau --config Release
+```
+
+#### 3. Build godot-plateau
+
+```bash
+cmake -S . -B build -G "Visual Studio 17 2022"
+cmake --build build --config Release
+```
+
+The built DLL will be copied to `bin/windows/` and `demo/bin/windows/`.
+
+## Project Structure
+
+```
+godot-plateau/
+├── src/
+│   ├── register_types.cpp/h
+│   └── plateau/
+│       ├── plateau_city_model.cpp/h      # CityModel, MeshData classes
+│       ├── plateau_geo_reference.cpp/h   # Coordinate conversion
+│       ├── plateau_importer.cpp/h        # Scene builder
+│       └── plateau_mesh_extract_options.cpp/h
+├── demo/
+│   └── bin/
+│       └── godot-plateau.gdextension
+├── libplateau/         # Submodule
+├── godot-cpp/          # Submodule
+├── SConstruct          # SCons build script (recommended)
+├── CMakeLists.txt      # CMake build script (alternative)
+└── methods.py          # SCons helper functions
+```
+
+## Known Limitations
+
+### OBJ Export
+
+When exporting to OBJ format, libplateau creates one group per CityObject (building). If you have many buildings (e.g., 1990), the exported OBJ will have that many groups. When re-importing such OBJ files into Godot, you may encounter `MAX_MESH_SURFACES` errors because Godot limits meshes to 256 surfaces.
+
+**Workaround**: Use AREA granularity (`mesh_granularity = 2`) before exporting to merge buildings into fewer meshes.
+
+## License
+
+- godot-plateau: MIT License
+- libplateau: See libplateau/LICENSE
+
+## References
+
+- [PLATEAU SDK for Unity](https://github.com/Project-PLATEAU/PLATEAU-SDK-for-Unity)
+- [PLATEAU SDK for Unreal](https://github.com/Project-PLATEAU/PLATEAU-SDK-for-Unreal)
+- [3D-Tiles-For-Godot](https://github.com/pslehisl/3D-Tiles-For-Godot)
+- [Godot GDExtension](https://docs.godotengine.org/en/stable/tutorials/scripting/gdextension/index.html)
+- [Project PLATEAU](https://www.mlit.go.jp/plateau/)

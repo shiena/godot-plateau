@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUGeoReference" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Geographic reference for coordinate conversion.
+	</brief_description>
+	<description>
+		PLATEAUGeoReference manages coordinate transformation between geographic coordinates (latitude/longitude) and local 3D coordinates. It supports Japanese coordinate zones and various coordinate systems.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="project">
+			<return type="Vector3" />
+			<param index="0" name="lat_lon_height" type="Vector3" />
+			<description>
+				Convert geographic coordinates (latitude, longitude, height) to local 3D coordinates.
+			</description>
+		</method>
+		<method name="unproject">
+			<return type="Vector3" />
+			<param index="0" name="xyz" type="Vector3" />
+			<description>
+				Convert local 3D coordinates to geographic coordinates (latitude, longitude, height).
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="zone_id" type="int" setter="set_zone_id" getter="get_zone_id" default="9">
+			Japanese coordinate zone ID (1-19). Default is 9 (Tokyo region).
+		</member>
+		<member name="reference_point" type="Vector3" setter="set_reference_point" getter="get_reference_point" default="Vector3(0, 0, 0)">
+			Origin point for local coordinates.
+		</member>
+		<member name="unit_scale" type="float" setter="set_unit_scale" getter="get_unit_scale" default="1.0">
+			Scale factor for coordinate conversion.
+		</member>
+		<member name="coordinate_system" type="int" setter="set_coordinate_system" getter="get_coordinate_system" default="3">
+			Coordinate system (0=ENU, 1=WUN, 2=ESU, 3=EUN). Default is EUN for Godot.
+		</member>
+	</members>
+</class>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUVectorTile" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Downloaded map tile information.
+	</brief_description>
+	<description>
+		PLATEAUVectorTile contains information about a downloaded map tile including its coordinate, local image path, and download status.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="is_success" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the tile was downloaded successfully.
+			</description>
+		</method>
+		<method name="load_image" qualifiers="const">
+			<return type="Image" />
+			<description>
+				Load the tile image as a Godot [Image].
+			</description>
+		</method>
+		<method name="load_texture" qualifiers="const">
+			<return type="ImageTexture" />
+			<description>
+				Load the tile image as an [ImageTexture].
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="coordinate" type="PLATEAUTileCoordinate" setter="set_coordinate" getter="get_coordinate">
+			The tile coordinate.
+		</member>
+		<member name="image_path" type="String" setter="set_image_path" getter="get_image_path" default="&quot;&quot;">
+			Local path to the downloaded image file.
+		</member>
+	</members>
+</class>

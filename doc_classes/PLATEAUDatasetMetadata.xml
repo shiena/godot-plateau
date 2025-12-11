@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUDatasetMetadata" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Metadata for a PLATEAU dataset.
+	</brief_description>
+	<description>
+		PLATEAUDatasetMetadata contains information about a PLATEAU dataset including its ID, title, description, and available feature types.
+	</description>
+	<tutorials>
+	</tutorials>
+	<members>
+		<member name="id" type="String" setter="set_id" getter="get_id" default="&quot;&quot;">
+			Unique identifier for the dataset.
+		</member>
+		<member name="title" type="String" setter="set_title" getter="get_title" default="&quot;&quot;">
+			Display title (typically city/town name).
+		</member>
+		<member name="description" type="String" setter="set_description" getter="get_description" default="&quot;&quot;">
+			Description of the dataset.
+		</member>
+		<member name="feature_types" type="PackedStringArray" setter="set_feature_types" getter="get_feature_types" default="PackedStringArray()">
+			Available feature types in the dataset.
+		</member>
+	</members>
+</class>

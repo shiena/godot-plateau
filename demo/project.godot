@@ -10,6 +10,12 @@ config_version=5
 
 [application]
 
-config/name="godot cpp template"
-config/features=PackedStringArray("4.1", "Forward Plus")
+config/name="PLATEAU SDK for Godot - Demo"
+config/description="Demo project for PLATEAU SDK GDExtension"
+run/main_scene="res://samples/dataset_sample.tscn"
+config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/plateau/plugin.cfg")

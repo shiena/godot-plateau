@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUGmlFileInfo" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Information about a GML file in a PLATEAU dataset.
+	</brief_description>
+	<description>
+		PLATEAUGmlFileInfo contains metadata about a specific GML file including its path, mesh code, LOD level, and package type.
+	</description>
+	<tutorials>
+	</tutorials>
+	<members>
+		<member name="path" type="String" setter="set_path" getter="get_path" default="&quot;&quot;">
+			Full path to the GML file.
+		</member>
+		<member name="mesh_code" type="String" setter="set_mesh_code" getter="get_mesh_code" default="&quot;&quot;">
+			Mesh code (region ID) for this file.
+		</member>
+		<member name="max_lod" type="int" setter="set_max_lod" getter="get_max_lod" default="0">
+			Maximum LOD level available in this file.
+		</member>
+		<member name="package_type" type="int" setter="set_package_type" getter="get_package_type" default="0">
+			Package type (see [enum PLATEAUCityModelPackage]).
+		</member>
+	</members>
+</class>

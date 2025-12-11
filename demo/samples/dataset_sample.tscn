@@ -1,0 +1,240 @@
+[gd_scene load_steps=3 format=3 uid="uid://plateau_sample_dataset"]
+
+[ext_resource type="Script" path="res://samples/dataset_sample.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://japanese_font" path="res://fonts/japanese_font.tres" id="2_font"]
+
+[node name="DatasetSample" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 500, 500)
+fov = 60.0
+far = 10000.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 100, 100)
+shadow_enabled = true
+
+[node name="MeshContainer" type="Node3D" parent="."]
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="ServerPanel" type="Panel" parent="UI"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 400.0
+offset_bottom = 180.0
+
+[node name="Title" type="Label" parent="UI/ServerPanel"]
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 380.0
+offset_bottom = 25.0
+text = "Data Source"
+horizontal_alignment = 1
+
+[node name="ServerUrlLabel" type="Label" parent="UI/ServerPanel"]
+offset_left = 10.0
+offset_top = 30.0
+offset_right = 100.0
+offset_bottom = 50.0
+text = "Server URL:"
+
+[node name="ServerUrlEdit" type="LineEdit" parent="UI/ServerPanel"]
+offset_left = 105.0
+offset_top = 28.0
+offset_right = 380.0
+offset_bottom = 52.0
+placeholder_text = "Server URL"
+
+[node name="TokenLabel" type="Label" parent="UI/ServerPanel"]
+offset_left = 10.0
+offset_top = 58.0
+offset_right = 100.0
+offset_bottom = 78.0
+text = "API Token:"
+
+[node name="TokenEdit" type="LineEdit" parent="UI/ServerPanel"]
+offset_left = 105.0
+offset_top = 56.0
+offset_right = 380.0
+offset_bottom = 80.0
+placeholder_text = "Bearer token (required for production server)"
+secret = true
+
+[node name="MockCheck" type="CheckBox" parent="UI/ServerPanel"]
+offset_left = 10.0
+offset_top = 85.0
+offset_right = 380.0
+offset_bottom = 105.0
+text = "Use Mock Server (no auth required)"
+
+[node name="FetchButton" type="Button" parent="UI/ServerPanel"]
+offset_left = 10.0
+offset_top = 115.0
+offset_right = 190.0
+offset_bottom = 140.0
+text = "Fetch Server Datasets"
+
+[node name="OpenLocalButton" type="Button" parent="UI/ServerPanel"]
+offset_left = 200.0
+offset_top = 115.0
+offset_right = 380.0
+offset_bottom = 140.0
+text = "Open Local Dataset..."
+
+[node name="StatusLabel" type="Label" parent="UI/ServerPanel"]
+offset_left = 10.0
+offset_top = 148.0
+offset_right = 380.0
+offset_bottom = 168.0
+text = ""
+theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="DatasetPanel" type="Panel" parent="UI"]
+offset_left = 10.0
+offset_top = 190.0
+offset_right = 400.0
+offset_bottom = 480.0
+
+[node name="Title" type="Label" parent="UI/DatasetPanel"]
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 380.0
+offset_bottom = 25.0
+text = "Datasets (Prefecture / City)"
+horizontal_alignment = 1
+
+[node name="GroupLabel" type="Label" parent="UI/DatasetPanel"]
+offset_left = 10.0
+offset_top = 30.0
+offset_right = 100.0
+offset_bottom = 50.0
+text = "Prefecture:"
+
+[node name="GroupList" type="ItemList" parent="UI/DatasetPanel"]
+offset_left = 10.0
+offset_top = 50.0
+offset_right = 190.0
+offset_bottom = 280.0
+
+[node name="DatasetLabel" type="Label" parent="UI/DatasetPanel"]
+offset_left = 200.0
+offset_top = 30.0
+offset_right = 380.0
+offset_bottom = 50.0
+text = "City/Dataset:"
+
+[node name="DatasetList" type="ItemList" parent="UI/DatasetPanel"]
+offset_left = 200.0
+offset_top = 50.0
+offset_right = 380.0
+offset_bottom = 280.0
+
+[node name="FilePanel" type="Panel" parent="UI"]
+offset_left = 410.0
+offset_top = 10.0
+offset_right = 750.0
+offset_bottom = 480.0
+
+[node name="Title" type="Label" parent="UI/FilePanel"]
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 330.0
+offset_bottom = 25.0
+text = "GML Files"
+horizontal_alignment = 1
+
+[node name="PackageLabel" type="Label" parent="UI/FilePanel"]
+offset_left = 10.0
+offset_top = 30.0
+offset_right = 80.0
+offset_bottom = 50.0
+text = "Package:"
+
+[node name="PackageOption" type="OptionButton" parent="UI/FilePanel"]
+offset_left = 85.0
+offset_top = 28.0
+offset_right = 250.0
+offset_bottom = 52.0
+
+[node name="FileList" type="ItemList" parent="UI/FilePanel"]
+offset_left = 10.0
+offset_top = 60.0
+offset_right = 330.0
+offset_bottom = 320.0
+
+[node name="MeshCodeLabel" type="Label" parent="UI/FilePanel"]
+offset_left = 10.0
+offset_top = 325.0
+offset_right = 100.0
+offset_bottom = 345.0
+text = "Mesh Codes:"
+
+[node name="MeshCodeList" type="ItemList" parent="UI/FilePanel"]
+offset_left = 10.0
+offset_top = 345.0
+offset_right = 200.0
+offset_bottom = 415.0
+max_columns = 3
+
+[node name="DownloadButton" type="Button" parent="UI/FilePanel"]
+offset_left = 10.0
+offset_top = 425.0
+offset_right = 160.0
+offset_bottom = 450.0
+text = "Download"
+
+[node name="LoadGMLButton" type="Button" parent="UI/FilePanel"]
+offset_left = 170.0
+offset_top = 425.0
+offset_right = 330.0
+offset_bottom = 450.0
+text = "Load Selected GML"
+
+[node name="LogPanel" type="Panel" parent="UI"]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -420.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 0
+
+[node name="Title" type="Label" parent="UI/LogPanel"]
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 390.0
+offset_bottom = 25.0
+text = "Log"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="UI/LogPanel"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 30.0
+offset_right = 400.0
+offset_bottom = -10.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="LogLabel" type="RichTextLabel" parent="UI/LogPanel/ScrollContainer"]
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_fonts/normal_font = ExtResource("2_font")
+bbcode_enabled = true
+fit_content = true
+scroll_following = true
+
+[node name="HTTPRequest" type="HTTPRequest" parent="."]
+timeout = 30
+
+[node name="DownloadRequest" type="HTTPRequest" parent="."]
+timeout = 120
+download_chunk_size = 65536

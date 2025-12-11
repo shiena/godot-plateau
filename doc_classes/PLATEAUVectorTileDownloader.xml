@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUVectorTileDownloader" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Downloads map tiles from GSI or custom tile servers.
+	</brief_description>
+	<description>
+		PLATEAUVectorTileDownloader downloads map tiles (aerial photos, standard maps, etc.) for a given geographic extent. Tiles are saved as image files to the specified destination directory.
+		[codeblock]
+		var downloader = PLATEAUVectorTileDownloader.new()
+		downloader.destination = "user://map_tiles"
+		downloader.zoom_level = 15
+		downloader.tile_source = PLATEAUVectorTileDownloader.TILE_SOURCE_GSI_PHOTO
+		downloader.set_extent_from_center(35.65, 139.75, 0.01)
+		var tiles = downloader.download_all()
+		var combined = downloader.create_combined_texture(tiles)
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="set_extent">
+			<return type="void" />
+			<param index="0" name="min_lat" type="float" />
+			<param index="1" name="min_lon" type="float" />
+			<param index="2" name="max_lat" type="float" />
+			<param index="3" name="max_lon" type="float" />
+			<description>
+				Set the download extent using latitude/longitude bounds.
+			</description>
+		</method>
+		<method name="set_extent_from_center">
+			<return type="void" />
+			<param index="0" name="center_lat" type="float" />
+			<param index="1" name="center_lon" type="float" />
+			<param index="2" name="radius_deg" type="float" />
+			<description>
+				Set the download extent from a center point and radius (in degrees).
+			</description>
+		</method>
+		<method name="get_extent" qualifiers="const">
+			<return type="Dictionary" />
+			<description>
+				Returns the current extent as a Dictionary with min_lat, min_lon, max_lat, max_lon keys.
+			</description>
+		</method>
+		<method name="get_tile_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the number of tiles to download for the current extent.
+			</description>
+		</method>
+		<method name="get_tile_coordinate" qualifiers="const">
+			<return type="PLATEAUTileCoordinate" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the tile coordinate at the specified index.
+			</description>
+		</method>
+		<method name="download">
+			<return type="PLATEAUVectorTile" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Download a single tile at the specified index.
+			</description>
+		</method>
+		<method name="download_tile">
+			<return type="PLATEAUVectorTile" />
+			<param index="0" name="coord" type="PLATEAUTileCoordinate" />
+			<description>
+				Download a single tile by coordinate.
+			</description>
+		</method>
+		<method name="download_all">
+			<return type="PLATEAUVectorTile[]" />
+			<description>
+				Download all tiles in the current extent.
+			</description>
+		</method>
+		<method name="create_combined_texture">
+			<return type="ImageTexture" />
+			<param index="0" name="tiles" type="PLATEAUVectorTile[]" />
+			<description>
+				Create a combined texture from downloaded tiles, arranged in a grid matching their geographic positions.
+			</description>
+		</method>
+		<method name="get_tile_path" qualifiers="const">
+			<return type="String" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the expected file path for a tile at the specified index.
+			</description>
+		</method>
+		<method name="get_default_url" qualifiers="static">
+			<return type="String" />
+			<description>
+				Returns the default GSI aerial photo URL template.
+			</description>
+		</method>
+		<method name="project" qualifiers="static">
+			<return type="PLATEAUTileCoordinate" />
+			<param index="0" name="latitude" type="float" />
+			<param index="1" name="longitude" type="float" />
+			<param index="2" name="zoom_level" type="int" />
+			<description>
+				Convert latitude/longitude to tile coordinate.
+			</description>
+		</method>
+		<method name="unproject" qualifiers="static">
+			<return type="Dictionary" />
+			<param index="0" name="coord" type="PLATEAUTileCoordinate" />
+			<description>
+				Convert tile coordinate to extent (lat/lon bounds).
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="destination" type="String" setter="set_destination" getter="get_destination" default="&quot;&quot;">
+			Destination directory for downloaded tiles.
+		</member>
+		<member name="zoom_level" type="int" setter="set_zoom_level" getter="get_zoom_level" default="15">
+			Zoom level (1-18).
+		</member>
+		<member name="tile_source" type="int" setter="set_tile_source" getter="get_tile_source" default="0">
+			Tile source preset.
+		</member>
+		<member name="url_template" type="String" setter="set_url_template" getter="get_url_template" default="&quot;&quot;">
+			URL template with {x}, {y}, {z} placeholders.
+		</member>
+	</members>
+	<constants>
+		<constant name="TILE_SOURCE_GSI_PHOTO" value="0">
+			GSI seamless aerial photo.
+		</constant>
+		<constant name="TILE_SOURCE_GSI_STD" value="1">
+			GSI standard map.
+		</constant>
+		<constant name="TILE_SOURCE_GSI_PALE" value="2">
+			GSI pale map.
+		</constant>
+		<constant name="TILE_SOURCE_OSM" value="3">
+			OpenStreetMap.
+		</constant>
+		<constant name="TILE_SOURCE_CUSTOM" value="4">
+			Custom URL template.
+		</constant>
+	</constants>
+</class>
