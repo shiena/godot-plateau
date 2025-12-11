@@ -48,13 +48,7 @@ func _ready() -> void:
 
 func _on_load_terrain_pressed() -> void:
 	if terrain_gml_path.is_empty():
-		var dialog = FileDialog.new()
-		dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-		dialog.access = FileDialog.ACCESS_FILESYSTEM
-		dialog.filters = ["*.gml ; CityGML Files"]
-		dialog.file_selected.connect(_on_terrain_file_selected)
-		add_child(dialog)
-		dialog.popup_centered(Vector2i(800, 600))
+		PLATEAUUtils.show_gml_file_dialog(self, _on_terrain_file_selected)
 	else:
 		_load_terrain(terrain_gml_path)
 
@@ -69,9 +63,7 @@ func _load_terrain(path: String) -> void:
 	_log("File: " + path.get_file())
 
 	# Clear previous terrain
-	for mi in terrain_instances:
-		mi.queue_free()
-	terrain_instances.clear()
+	PLATEAUUtils.clear_mesh_instances(terrain_instances)
 	terrain_mesh_data.clear()
 	heightmap_data = null
 
@@ -90,7 +82,7 @@ func _load_terrain(path: String) -> void:
 	options.export_appearance = false
 
 	var root_meshes = terrain_city_model.extract_meshes(options)
-	terrain_mesh_data = _flatten_mesh_data(root_meshes)
+	terrain_mesh_data = PLATEAUUtils.flatten_mesh_data(root_meshes)
 	_log("Terrain meshes: " + str(terrain_mesh_data.size()) + " (from " + str(root_meshes.size()) + " root nodes)")
 
 	if terrain_mesh_data.is_empty():
@@ -212,13 +204,7 @@ func _do_save_heightmap(path: String) -> void:
 
 func _on_load_building_pressed() -> void:
 	if building_gml_path.is_empty():
-		var dialog = FileDialog.new()
-		dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-		dialog.access = FileDialog.ACCESS_FILESYSTEM
-		dialog.filters = ["*.gml ; CityGML Files"]
-		dialog.file_selected.connect(_on_building_file_selected)
-		add_child(dialog)
-		dialog.popup_centered(Vector2i(800, 600))
+		PLATEAUUtils.show_gml_file_dialog(self, _on_building_file_selected)
 	else:
 		_load_buildings(building_gml_path)
 
@@ -233,9 +219,7 @@ func _load_buildings(path: String) -> void:
 	_log("File: " + path.get_file())
 
 	# Clear previous buildings
-	for mi in building_instances:
-		mi.queue_free()
-	building_instances.clear()
+	PLATEAUUtils.clear_mesh_instances(building_instances)
 	building_mesh_data.clear()
 
 	# Load building CityGML
@@ -264,23 +248,15 @@ func _load_buildings(path: String) -> void:
 
 
 func _create_building_instances() -> void:
-	for mi in building_instances:
-		mi.queue_free()
-	building_instances.clear()
+	PLATEAUUtils.clear_mesh_instances(building_instances)
 
 	# Flatten the mesh data to include children (buildings are in child nodes)
-	var flattened = _flatten_mesh_data(building_mesh_data)
-	for mesh_data in flattened:
-		var mesh = mesh_data.get_mesh()
-		if mesh == null:
-			continue
-		var mi = MeshInstance3D.new()
-		mi.mesh = mesh
-		mi.transform = mesh_data.get_transform()
-		mi.name = "Building_" + mesh_data.get_name()
-
-		add_child(mi)
-		building_instances.append(mi)
+	var flattened = PLATEAUUtils.flatten_mesh_data(building_mesh_data)
+	var result = PLATEAUUtils.create_mesh_instances(flattened, self)
+	building_instances = result["instances"]
+	# Rename with Building_ prefix
+	for mi in building_instances:
+		mi.name = "Building_" + mi.name
 
 
 func _on_align_buildings() -> void:
@@ -330,26 +306,7 @@ func _on_align_buildings() -> void:
 
 
 func _position_camera(bounds_min: Vector3, bounds_max: Vector3) -> void:
-	var center = (bounds_min + bounds_max) / 2
-	var size = (bounds_max - bounds_min).length()
-	if size < 0.001:
-		size = 100.0  # Default size if bounds are too small
-	camera.position = center + Vector3(0, size * 0.5, size * 0.8)
-	if not camera.position.is_equal_approx(center):
-		camera.look_at(center)
-
-
-func _flatten_mesh_data(mesh_data_array: Array) -> Array:
-	## Recursively collect all mesh data including children
-	var result: Array = []
-	for mesh_data in mesh_data_array:
-		if mesh_data.get_mesh() != null:
-			result.append(mesh_data)
-		# Recursively add children
-		var children = mesh_data.get_children()
-		if not children.is_empty():
-			result.append_array(_flatten_mesh_data(Array(children)))
-	return result
+	PLATEAUUtils.fit_camera_to_bounds(camera, bounds_min, bounds_max)
 
 
 func _log(message: String) -> void:

@@ -249,14 +249,12 @@ func _on_save_texture() -> void:
 		_log("[color=red]ERROR: Download tiles first[/color]")
 		return
 
-	var dialog = FileDialog.new()
-	dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
-	dialog.access = FileDialog.ACCESS_FILESYSTEM
-	dialog.filters = ["*.png ; PNG Image"]
-	dialog.current_file = "basemap.png"
-	dialog.file_selected.connect(_do_save_texture)
-	add_child(dialog)
-	dialog.popup_centered(Vector2i(800, 600))
+	PLATEAUUtils.show_save_file_dialog(
+		self,
+		PackedStringArray(["*.png ; PNG Image"]),
+		"basemap.png",
+		_do_save_texture
+	)
 
 
 func _do_save_texture(path: String) -> void:

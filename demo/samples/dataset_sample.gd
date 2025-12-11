@@ -331,12 +331,7 @@ func _on_open_local_pressed() -> void:
 		_open_local_dataset(local_dataset_path)
 		return
 
-	var dialog = FileDialog.new()
-	dialog.file_mode = FileDialog.FILE_MODE_OPEN_DIR
-	dialog.access = FileDialog.ACCESS_FILESYSTEM
-	dialog.dir_selected.connect(_on_local_dir_selected)
-	add_child(dialog)
-	dialog.popup_centered(Vector2i(800, 600))
+	PLATEAUUtils.show_directory_dialog(self, _on_local_dir_selected)
 
 
 func _on_local_dir_selected(path: String) -> void:
@@ -433,32 +428,16 @@ func _on_load_gml_pressed() -> void:
 	options.export_appearance = true
 
 	var root_mesh_data = city_model.extract_meshes(options)
-	var mesh_data_array = _flatten_mesh_data(Array(root_mesh_data))
+	var mesh_data_array = PLATEAUUtils.flatten_mesh_data(Array(root_mesh_data))
 
 	_log("Extracted " + str(mesh_data_array.size()) + " meshes")
 
-	# Create mesh instances and calculate bounds
-	var bounds_min = Vector3.INF
-	var bounds_max = -Vector3.INF
-
-	for mesh_data in mesh_data_array:
-		var mi = MeshInstance3D.new()
-		mi.mesh = mesh_data.get_mesh()
-		mi.transform = mesh_data.get_transform()
-		mi.name = mesh_data.get_name()
-
-		mesh_container.add_child(mi)
-		mesh_instances.append(mi)
-
-		# Calculate bounds
-		var aabb = mi.get_aabb()
-		if aabb.size.length() > 0.001:
-			var global_aabb = mi.transform * aabb
-			bounds_min = bounds_min.min(global_aabb.position)
-			bounds_max = bounds_max.max(global_aabb.position + global_aabb.size)
+	# Create mesh instances
+	var result = PLATEAUUtils.create_mesh_instances(mesh_data_array, mesh_container)
+	mesh_instances = result["instances"]
 
 	# Position camera to view all meshes
-	_fit_camera_to_bounds(bounds_min, bounds_max)
+	PLATEAUUtils.fit_camera_to_bounds(camera, result["bounds_min"], result["bounds_max"])
 
 	_log("[color=green]Loaded! Meshes: " + str(mesh_instances.size()) + "[/color]")
 
@@ -562,40 +541,4 @@ func _log(message: String) -> void:
 
 
 func _clear_meshes() -> void:
-	for mi in mesh_instances:
-		if is_instance_valid(mi):
-			mi.queue_free()
-	mesh_instances.clear()
-
-
-func _flatten_mesh_data(mesh_data_array: Array) -> Array:
-	var result: Array = []
-	for mesh_data in mesh_data_array:
-		if mesh_data.get_mesh() != null:
-			result.append(mesh_data)
-		var children = mesh_data.get_children()
-		if not children.is_empty():
-			result.append_array(_flatten_mesh_data(Array(children)))
-	return result
-
-
-func _fit_camera_to_bounds(bounds_min: Vector3, bounds_max: Vector3) -> void:
-	if bounds_min == Vector3.INF or bounds_max == -Vector3.INF:
-		_log("[color=yellow]No valid bounds to fit camera[/color]")
-		return
-
-	var center = (bounds_min + bounds_max) / 2.0
-	var size = bounds_max - bounds_min
-	var max_extent = max(size.x, max(size.y, size.z))
-
-	# Calculate distance based on FOV (60 degrees)
-	var fov_rad = deg_to_rad(camera.fov)
-	var distance = (max_extent / 2.0) / tan(fov_rad / 2.0)
-	distance = max(distance, 50.0)  # Minimum distance
-
-	# Position camera at 45 degrees looking at center
-	var offset = Vector3(0, distance * 0.707, distance * 0.707)
-	camera.position = center + offset
-	camera.look_at(center)
-
-	_log("Camera positioned at: " + str(camera.position))
+	PLATEAUUtils.clear_mesh_instances(mesh_instances)

@@ -74,13 +74,7 @@ func _on_mode_changed(index: int) -> void:
 
 func _on_import_pressed() -> void:
 	if gml_path.is_empty():
-		var dialog = FileDialog.new()
-		dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-		dialog.access = FileDialog.ACCESS_FILESYSTEM
-		dialog.filters = ["*.gml ; CityGML Files"]
-		dialog.file_selected.connect(_on_file_selected)
-		add_child(dialog)
-		dialog.popup_centered(Vector2i(800, 600))
+		PLATEAUUtils.show_gml_file_dialog(self, _on_file_selected)
 	else:
 		_import_gml(gml_path)
 
@@ -107,7 +101,7 @@ func _import_gml(path: String) -> void:
 	options.export_appearance = true
 
 	var root_mesh_data = city_model.extract_meshes(options)
-	current_mesh_data = _flatten_mesh_data(Array(root_mesh_data))
+	current_mesh_data = PLATEAUUtils.flatten_mesh_data(Array(root_mesh_data))
 
 	_log("Extracted " + str(current_mesh_data.size()) + " meshes")
 
@@ -215,7 +209,7 @@ func _apply_by_type() -> void:
 
 func _apply_materials_from_surface_names() -> void:
 	# Rebuild mesh instances with new materials based on surface names
-	_clear_mesh_instances_only()
+	PLATEAUUtils.clear_mesh_instances(mesh_instances)
 
 	for mesh_data in current_mesh_data:
 		var mi = MeshInstance3D.new()
@@ -311,51 +305,14 @@ func _update_legend(value_to_mat: Dictionary) -> void:
 
 
 func _clear_meshes() -> void:
-	_clear_mesh_instances_only()
+	PLATEAUUtils.clear_mesh_instances(mesh_instances)
 	current_mesh_data.clear()
 
 
-func _clear_mesh_instances_only() -> void:
-	for mi in mesh_instances:
-		mi.queue_free()
-	mesh_instances.clear()
-
-
 func _create_mesh_instances() -> void:
-	var bounds_min = Vector3.INF
-	var bounds_max = -Vector3.INF
-
-	for mesh_data in current_mesh_data:
-		var mi = MeshInstance3D.new()
-		mi.mesh = mesh_data.get_mesh()
-		mi.transform = mesh_data.get_transform()
-		mi.name = mesh_data.get_name()
-
-		add_child(mi)
-		mesh_instances.append(mi)
-
-		var aabb = mi.get_aabb()
-		var global_aabb = mi.transform * aabb
-		bounds_min = bounds_min.min(global_aabb.position)
-		bounds_max = bounds_max.max(global_aabb.position + global_aabb.size)
-
-	# Position camera
-	var center = (bounds_min + bounds_max) / 2
-	var size = (bounds_max - bounds_min).length()
-	if size > 0.001:
-		camera.position = center + Vector3(0, size * 0.5, size * 0.8)
-		camera.look_at(center)
-
-
-func _flatten_mesh_data(mesh_data_array: Array) -> Array:
-	var result: Array = []
-	for mesh_data in mesh_data_array:
-		if mesh_data.get_mesh() != null:
-			result.append(mesh_data)
-		var children = mesh_data.get_children()
-		if not children.is_empty():
-			result.append_array(_flatten_mesh_data(Array(children)))
-	return result
+	var result = PLATEAUUtils.create_mesh_instances(current_mesh_data, self)
+	mesh_instances = result["instances"]
+	PLATEAUUtils.fit_camera_to_bounds(camera, result["bounds_min"], result["bounds_max"])
 
 
 func _log(message: String) -> void:
