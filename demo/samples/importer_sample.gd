@@ -16,6 +16,9 @@ extends Node3D
 @export_file("*.gml") var gml_path: String = ""
 
 var importer: PLATEAUImporter
+var city_model: PLATEAUCityModel
+var pending_options: PLATEAUMeshExtractOptions
+var import_start_time: int = 0
 
 @onready var camera: Camera3D = $Camera3D
 @onready var log_label: RichTextLabel = $UI/LogPanel/ScrollContainer/LogLabel
@@ -26,6 +29,8 @@ var importer: PLATEAUImporter
 @onready var texture_check: CheckBox = $UI/OptionsPanel/TextureCheck
 @onready var collision_check: CheckBox = $UI/OptionsPanel/CollisionCheck
 @onready var stats_label: Label = $UI/StatsLabel
+@onready var loading_panel: Panel = $UI/LoadingPanel
+@onready var loading_label: Label = $UI/LoadingPanel/LoadingLabel
 
 
 func _ready() -> void:
@@ -33,6 +38,11 @@ func _ready() -> void:
 	importer = PLATEAUImporter.new()
 	importer.name = "PLATEAUImporter"
 	add_child(importer)
+
+	# Setup city model with async handlers
+	city_model = PLATEAUCityModel.new()
+	city_model.load_completed.connect(_on_load_completed)
+	city_model.extract_completed.connect(_on_extract_completed)
 
 	# Connect UI
 	$UI/ImportPanel/ImportButton.pressed.connect(_on_import_pressed)
@@ -46,6 +56,9 @@ func _ready() -> void:
 	granularity_option.add_item("Area (merged)", 2)
 	granularity_option.select(1)
 
+	# Hide loading panel initially
+	loading_panel.visible = false
+
 	_log("PLATEAUImporter Sample ready.")
 	_log("")
 	_log("PLATEAUImporter provides a high-level API for importing CityGML.")
@@ -55,6 +68,10 @@ func _ready() -> void:
 
 
 func _on_import_pressed() -> void:
+	if city_model.is_processing():
+		_log("[color=yellow]Already processing, please wait...[/color]")
+		return
+
 	if gml_path.is_empty():
 		var dialog = FileDialog.new()
 		dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
@@ -73,57 +90,181 @@ func _on_file_selected(path: String) -> void:
 
 
 func _import_gml(path: String) -> void:
+	if city_model.is_processing():
+		_log("[color=yellow]Already processing, please wait...[/color]")
+		return
+
 	_log("--- Import with PLATEAUImporter ---")
 	_log("File: " + path.get_file())
 
+	# Clear previous import
+	importer.clear_meshes()
+
 	# Configure extract options
-	var options = PLATEAUMeshExtractOptions.new()
-	options.coordinate_zone_id = int(zone_spin.value)
-	options.min_lod = int(min_lod_spin.value)
-	options.max_lod = int(max_lod_spin.value)
-	options.mesh_granularity = granularity_option.get_selected_id()
-	options.export_appearance = texture_check.button_pressed
+	pending_options = PLATEAUMeshExtractOptions.new()
+	pending_options.coordinate_zone_id = int(zone_spin.value)
+	pending_options.min_lod = int(min_lod_spin.value)
+	pending_options.max_lod = int(max_lod_spin.value)
+	pending_options.mesh_granularity = granularity_option.get_selected_id()
+	pending_options.export_appearance = texture_check.button_pressed
 
 	_log("Options:")
-	_log("  Zone: " + str(options.coordinate_zone_id))
-	_log("  LOD: " + str(options.min_lod) + "-" + str(options.max_lod))
+	_log("  Zone: " + str(pending_options.coordinate_zone_id))
+	_log("  LOD: " + str(pending_options.min_lod) + "-" + str(pending_options.max_lod))
 	_log("  Granularity: " + granularity_option.get_item_text(granularity_option.selected))
-	_log("  Textures: " + str(options.export_appearance))
+	_log("  Textures: " + str(pending_options.export_appearance))
 	_log("  Collision: " + str(collision_check.button_pressed))
 
-	# Configure importer
-	importer.extract_options = options
+	# Configure importer for scene building later
+	importer.extract_options = pending_options
 	importer.generate_collision = collision_check.button_pressed
 
-	# Configure geo reference (optional - importer creates default)
+	# Configure geo reference
 	var geo_ref = PLATEAUGeoReference.new()
 	geo_ref.zone_id = int(zone_spin.value)
 	importer.geo_reference = geo_ref
 
-	# Import!
-	var start_time = Time.get_ticks_msec()
-	var success = importer.import_from_path(path)
-	var elapsed = Time.get_ticks_msec() - start_time
+	# Start async import
+	import_start_time = Time.get_ticks_msec()
+	_show_loading("Loading CityGML...")
+	city_model.load_async(path)
 
-	if success:
-		_log("[color=green]Import successful! (" + str(elapsed) + " ms)[/color]")
 
-		# Get imported city model for additional info
-		var city_model = importer.get_city_model()
-		if city_model:
-			_log("CityModel loaded: " + str(city_model))
+func _on_load_completed(success: bool) -> void:
+	if not success:
+		_hide_loading()
+		_log("[color=red]ERROR: Failed to load GML[/color]")
+		return
 
-		# Count imported nodes
-		var mesh_count = _count_mesh_instances(importer)
-		var collision_count = _count_collisions(importer)
-		_log("Created " + str(mesh_count) + " mesh instances")
-		if collision_check.button_pressed:
-			_log("Created " + str(collision_count) + " collision bodies")
+	_log("GML load completed")
+	_update_loading("Extracting meshes...")
+	city_model.extract_meshes_async(pending_options)
 
+
+func _on_extract_completed(root_mesh_data: Array) -> void:
+	if root_mesh_data.is_empty():
+		_hide_loading()
+		_log("[color=yellow]No meshes extracted[/color]")
 		_update_stats()
-		_fit_camera_to_scene()
+		return
+
+	_update_loading("Building scene hierarchy...")
+	await _build_scene_async(root_mesh_data)
+
+	var elapsed = Time.get_ticks_msec() - import_start_time
+	_hide_loading()
+	_log("[color=green]Import successful! (" + str(elapsed) + " ms)[/color]")
+
+	# Count imported nodes
+	var mesh_count = _count_mesh_instances(importer)
+	var collision_count = _count_collisions(importer)
+	_log("Created " + str(mesh_count) + " mesh instances")
+	if collision_check.button_pressed:
+		_log("Created " + str(collision_count) + " collision bodies")
+
+	_update_stats()
+	_fit_camera_to_scene()
+
+
+func _build_scene_async(root_mesh_data: Array) -> void:
+	# Build scene hierarchy using PLATEAUImporter.import_to_scene
+	# Process in batches to keep UI responsive
+	var total = root_mesh_data.size()
+	var batch_size = 20
+
+	for i in range(0, total, batch_size):
+		var batch_end = mini(i + batch_size, total)
+
+		for j in range(i, batch_end):
+			var mesh_data = root_mesh_data[j]
+			var node = _create_node_from_mesh_data(mesh_data)
+			if node:
+				importer.add_child(node)
+				node.owner = importer
+
+		_update_loading("Building scene: %d/%d" % [batch_end, total])
+		await get_tree().process_frame
+
+
+func _create_node_from_mesh_data(mesh_data: PLATEAUMeshData) -> Node3D:
+	if mesh_data == null:
+		return null
+
+	var mesh = mesh_data.get_mesh()
+	var node: Node3D
+
+	if mesh != null and mesh.get_surface_count() > 0:
+		# Create MeshInstance3D for nodes with meshes
+		var mi = MeshInstance3D.new()
+		mi.name = mesh_data.get_name()
+		mi.mesh = mesh
+		mi.transform = mesh_data.get_transform()
+
+		# Generate collision if enabled
+		if collision_check.button_pressed:
+			_create_collision_for_mesh(mi)
+
+		node = mi
 	else:
-		_log("[color=red]Import failed![/color]")
+		# Create Node3D for nodes without meshes (containers)
+		node = Node3D.new()
+		node.name = mesh_data.get_name()
+		node.transform = mesh_data.get_transform()
+
+	# Recursively add children
+	var children = mesh_data.get_children()
+	for child in children:
+		var child_node = _create_node_from_mesh_data(child)
+		if child_node:
+			node.add_child(child_node)
+			child_node.owner = node
+
+	return node
+
+
+func _create_collision_for_mesh(mesh_instance: MeshInstance3D) -> void:
+	if mesh_instance == null or mesh_instance.mesh == null:
+		return
+
+	var mesh = mesh_instance.mesh
+
+	# Create trimesh collision shape from mesh
+	var shape = ConcavePolygonShape3D.new()
+
+	# Get faces from all surfaces
+	var faces = PackedVector3Array()
+	for surface_idx in range(mesh.get_surface_count()):
+		var arrays = mesh.surface_get_arrays(surface_idx)
+		if arrays.size() == 0:
+			continue
+
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays.size() > Mesh.ARRAY_INDEX else PackedInt32Array()
+
+		if indices.size() > 0:
+			# Indexed mesh
+			for idx in indices:
+				faces.push_back(vertices[idx])
+		else:
+			# Non-indexed mesh
+			for v in vertices:
+				faces.push_back(v)
+
+	if faces.size() < 3:
+		return
+
+	shape.set_faces(faces)
+
+	# Create StaticBody3D and CollisionShape3D
+	var static_body = StaticBody3D.new()
+	static_body.name = mesh_instance.name + "_collision"
+
+	var collision_shape = CollisionShape3D.new()
+	collision_shape.name = "CollisionShape3D"
+	collision_shape.shape = shape
+
+	static_body.add_child(collision_shape)
+	mesh_instance.add_child(static_body)
 
 
 func _on_clear_pressed() -> void:
@@ -134,7 +275,7 @@ func _on_clear_pressed() -> void:
 
 
 func _on_save_scene_pressed() -> void:
-	if not importer.is_imported():
+	if importer.get_child_count() == 0:
 		_log("[color=red]ERROR: No import to save. Import first.[/color]")
 		return
 
@@ -256,6 +397,19 @@ func _calculate_bounds(node: Node) -> AABB:
 				bounds = bounds.merge(child_bounds)
 
 	return bounds
+
+
+func _show_loading(message: String) -> void:
+	loading_label.text = message
+	loading_panel.visible = true
+
+
+func _update_loading(message: String) -> void:
+	loading_label.text = message
+
+
+func _hide_loading() -> void:
+	loading_panel.visible = false
 
 
 func _log(message: String) -> void:

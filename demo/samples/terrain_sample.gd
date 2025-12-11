@@ -22,6 +22,10 @@ var terrain_mesh_data: Array = []
 var building_mesh_data: Array = []
 var heightmap_data: PLATEAUHeightMapData
 var aligner: PLATEAUHeightMapAligner
+var pending_terrain_options: PLATEAUMeshExtractOptions
+var pending_building_options: PLATEAUMeshExtractOptions
+var terrain_generator: PLATEAUTerrain
+var heightmap_gen_start_time: int = 0
 
 var terrain_instances: Array[MeshInstance3D] = []
 var building_instances: Array[MeshInstance3D] = []
@@ -29,6 +33,8 @@ var building_instances: Array[MeshInstance3D] = []
 @onready var camera: Camera3D = $Camera3D
 @onready var log_label: RichTextLabel = $UI/LogPanel/ScrollContainer/LogLabel
 @onready var heightmap_preview: TextureRect = $UI/HeightmapPanel/HeightmapPreview
+@onready var loading_panel: Panel = $UI/LoadingPanel
+@onready var loading_label: Label = $UI/LoadingPanel/LoadingLabel
 
 
 func _ready() -> void:
@@ -39,6 +45,19 @@ func _ready() -> void:
 	$UI/BuildingPanel/LoadBuildingButton.pressed.connect(_on_load_building_pressed)
 	$UI/BuildingPanel/AlignButton.pressed.connect(_on_align_buildings)
 
+	# Hide loading panel initially
+	loading_panel.visible = false
+
+	# Setup terrain city model with async handlers
+	terrain_city_model = PLATEAUCityModel.new()
+	terrain_city_model.load_completed.connect(_on_terrain_load_completed)
+	terrain_city_model.extract_completed.connect(_on_terrain_extract_completed)
+
+	# Setup building city model with async handlers
+	building_city_model = PLATEAUCityModel.new()
+	building_city_model.load_completed.connect(_on_building_load_completed)
+	building_city_model.extract_completed.connect(_on_building_extract_completed)
+
 	_log("Terrain Sample ready.")
 	_log("1. Load terrain GML (DEM/TIN)")
 	_log("2. Generate heightmap")
@@ -47,6 +66,10 @@ func _ready() -> void:
 
 
 func _on_load_terrain_pressed() -> void:
+	if terrain_city_model.is_processing():
+		_log("[color=yellow]Already processing, please wait...[/color]")
+		return
+
 	if terrain_gml_path.is_empty():
 		PLATEAUUtils.show_gml_file_dialog(self, _on_terrain_file_selected)
 	else:
@@ -59,6 +82,10 @@ func _on_terrain_file_selected(path: String) -> void:
 
 
 func _load_terrain(path: String) -> void:
+	if terrain_city_model.is_processing():
+		_log("[color=yellow]Already processing, please wait...[/color]")
+		return
+
 	_log("--- Loading Terrain ---")
 	_log("File: " + path.get_file())
 
@@ -67,53 +94,79 @@ func _load_terrain(path: String) -> void:
 	terrain_mesh_data.clear()
 	heightmap_data = null
 
-	# Load terrain CityGML
-	terrain_city_model = PLATEAUCityModel.new()
-	if not terrain_city_model.load(path):
+	# Prepare extraction options
+	pending_terrain_options = PLATEAUMeshExtractOptions.new()
+	pending_terrain_options.coordinate_zone_id = zone_id
+	pending_terrain_options.min_lod = 0
+	pending_terrain_options.max_lod = 2
+	pending_terrain_options.mesh_granularity = 2  # Area (merged terrain)
+	pending_terrain_options.export_appearance = false
+
+	# Start async load
+	_show_loading("Loading terrain CityGML...")
+	terrain_city_model.load_async(path)
+
+
+func _on_terrain_load_completed(success: bool) -> void:
+	if not success:
+		_hide_loading()
 		_log("[color=red]ERROR: Failed to load terrain GML[/color]")
 		return
 
-	# Extract terrain meshes
-	var options = PLATEAUMeshExtractOptions.new()
-	options.coordinate_zone_id = zone_id
-	options.min_lod = 0
-	options.max_lod = 2
-	options.mesh_granularity = 2  # Area (merged terrain)
-	options.export_appearance = false
+	_log("Terrain load completed")
+	_update_loading("Extracting terrain meshes...")
+	terrain_city_model.extract_meshes_async(pending_terrain_options)
 
-	var root_meshes = terrain_city_model.extract_meshes(options)
+
+func _on_terrain_extract_completed(root_meshes: Array) -> void:
 	terrain_mesh_data = PLATEAUUtils.flatten_mesh_data(root_meshes)
 	_log("Terrain meshes: " + str(terrain_mesh_data.size()) + " (from " + str(root_meshes.size()) + " root nodes)")
 
 	if terrain_mesh_data.is_empty():
+		_hide_loading()
 		_log("[color=yellow]WARNING: No terrain meshes found[/color]")
 		return
 
-	# Create visual representation
+	# Create visual representation (async)
+	_update_loading("Creating terrain instances...")
+	_create_terrain_instances_async()
+
+
+func _create_terrain_instances_async() -> void:
 	var bounds_min = Vector3.INF
 	var bounds_max = -Vector3.INF
+	var total = terrain_mesh_data.size()
+	var batch_size = 50
 
-	for mesh_data in terrain_mesh_data:
-		var mi = MeshInstance3D.new()
-		mi.mesh = mesh_data.get_mesh()
-		mi.transform = mesh_data.get_transform()
-		mi.name = "Terrain_" + mesh_data.get_name()
+	for i in range(0, total, batch_size):
+		var batch_end = mini(i + batch_size, total)
 
-		# Green material for terrain
-		var material = StandardMaterial3D.new()
-		material.albedo_color = Color(0.3, 0.6, 0.3)
-		material.roughness = 0.9
-		mi.material_override = material
+		for j in range(i, batch_end):
+			var mesh_data = terrain_mesh_data[j]
+			var mi = MeshInstance3D.new()
+			mi.mesh = mesh_data.get_mesh()
+			mi.transform = mesh_data.get_transform()
+			mi.name = "Terrain_" + mesh_data.get_name()
 
-		add_child(mi)
-		terrain_instances.append(mi)
+			# Green material for terrain
+			var material = StandardMaterial3D.new()
+			material.albedo_color = Color(0.3, 0.6, 0.3)
+			material.roughness = 0.9
+			mi.material_override = material
 
-		var aabb = mi.get_aabb()
-		var global_aabb = mi.transform * aabb
-		bounds_min = bounds_min.min(global_aabb.position)
-		bounds_max = bounds_max.max(global_aabb.position + global_aabb.size)
+			add_child(mi)
+			terrain_instances.append(mi)
+
+			var aabb = mi.get_aabb()
+			var global_aabb = mi.transform * aabb
+			bounds_min = bounds_min.min(global_aabb.position)
+			bounds_max = bounds_max.max(global_aabb.position + global_aabb.size)
+
+		_update_loading("Creating terrain: %d/%d" % [batch_end, total])
+		await get_tree().process_frame
 
 	_position_camera(bounds_min, bounds_max)
+	_hide_loading()
 	_log("[color=green]Terrain loaded successfully[/color]")
 
 
@@ -122,31 +175,43 @@ func _on_generate_heightmap() -> void:
 		_log("[color=red]ERROR: Load terrain first[/color]")
 		return
 
+	if terrain_generator != null and terrain_generator.is_processing():
+		_log("[color=yellow]Already generating heightmap, please wait...[/color]")
+		return
+
 	_log("--- Generating Heightmap ---")
 
-	var terrain = PLATEAUTerrain.new()
-	terrain.texture_width = $UI/TerrainPanel/WidthSpin.value
-	terrain.texture_height = $UI/TerrainPanel/HeightSpin.value
-	terrain.fill_edges = true
-	terrain.apply_blur_filter = true
+	terrain_generator = PLATEAUTerrain.new()
+	terrain_generator.texture_width = $UI/TerrainPanel/WidthSpin.value
+	terrain_generator.texture_height = $UI/TerrainPanel/HeightSpin.value
+	terrain_generator.fill_edges = true
+	terrain_generator.apply_blur_filter = true
+	terrain_generator.generate_completed.connect(_on_heightmap_generate_completed)
 
-	_log("Size: " + str(terrain.texture_width) + "x" + str(terrain.texture_height))
-
-	var start_time = Time.get_ticks_msec()
+	_log("Size: " + str(terrain_generator.texture_width) + "x" + str(terrain_generator.texture_height))
 
 	# Convert to TypedArray
 	var typed_array: Array[PLATEAUMeshData] = []
 	for md in terrain_mesh_data:
 		typed_array.append(md)
 
-	heightmap_data = terrain.generate_from_meshes(typed_array)
+	# Start async generation
+	heightmap_gen_start_time = Time.get_ticks_msec()
+	_show_loading("Generating heightmap...")
+	terrain_generator.generate_from_meshes_async(typed_array)
 
-	var gen_time = Time.get_ticks_msec() - start_time
+
+func _on_heightmap_generate_completed(result: PLATEAUHeightMapData) -> void:
+	_hide_loading()
+
+	var gen_time = Time.get_ticks_msec() - heightmap_gen_start_time
 	_log("Generation time: " + str(gen_time) + " ms")
 
-	if heightmap_data == null:
+	if result == null:
 		_log("[color=red]ERROR: Failed to generate heightmap[/color]")
 		return
+
+	heightmap_data = result
 
 	var min_bounds = heightmap_data.get_min_bounds()
 	var max_bounds = heightmap_data.get_max_bounds()
@@ -203,6 +268,10 @@ func _do_save_heightmap(path: String) -> void:
 
 
 func _on_load_building_pressed() -> void:
+	if building_city_model.is_processing():
+		_log("[color=yellow]Already processing, please wait...[/color]")
+		return
+
 	if building_gml_path.is_empty():
 		PLATEAUUtils.show_gml_file_dialog(self, _on_building_file_selected)
 	else:
@@ -215,6 +284,10 @@ func _on_building_file_selected(path: String) -> void:
 
 
 func _load_buildings(path: String) -> void:
+	if building_city_model.is_processing():
+		_log("[color=yellow]Already processing, please wait...[/color]")
+		return
+
 	_log("--- Loading Buildings ---")
 	_log("File: " + path.get_file())
 
@@ -222,37 +295,57 @@ func _load_buildings(path: String) -> void:
 	PLATEAUUtils.clear_mesh_instances(building_instances)
 	building_mesh_data.clear()
 
-	# Load building CityGML
-	building_city_model = PLATEAUCityModel.new()
-	if not building_city_model.load(path):
+	# Prepare extraction options
+	pending_building_options = PLATEAUMeshExtractOptions.new()
+	pending_building_options.coordinate_zone_id = zone_id
+	pending_building_options.min_lod = 1
+	pending_building_options.max_lod = 2
+	pending_building_options.mesh_granularity = 1  # Primary (per building)
+	pending_building_options.export_appearance = true
+
+	# Start async load
+	_show_loading("Loading building CityGML...")
+	building_city_model.load_async(path)
+
+
+func _on_building_load_completed(success: bool) -> void:
+	if not success:
+		_hide_loading()
 		_log("[color=red]ERROR: Failed to load building GML[/color]")
 		return
 
-	# Extract building meshes
-	var options = PLATEAUMeshExtractOptions.new()
-	options.coordinate_zone_id = zone_id
-	options.min_lod = 1
-	options.max_lod = 2
-	options.mesh_granularity = 1  # Primary (per building)
-	options.export_appearance = true
+	_log("Building load completed")
+	_update_loading("Extracting building meshes...")
+	building_city_model.extract_meshes_async(pending_building_options)
 
-	building_mesh_data = Array(building_city_model.extract_meshes(options))
+
+func _on_building_extract_completed(root_meshes: Array) -> void:
+	building_mesh_data = root_meshes
 	_log("Building meshes: " + str(building_mesh_data.size()))
 
 	if building_mesh_data.is_empty():
+		_hide_loading()
 		_log("[color=yellow]WARNING: No building meshes found[/color]")
 		return
 
-	_create_building_instances()
+	_update_loading("Creating building instances...")
+	await _create_building_instances_async()
+	_hide_loading()
 	_log("[color=green]Buildings loaded successfully[/color]")
 
 
-func _create_building_instances() -> void:
+func _create_building_instances_async() -> void:
 	PLATEAUUtils.clear_mesh_instances(building_instances)
 
 	# Flatten the mesh data to include children (buildings are in child nodes)
 	var flattened = PLATEAUUtils.flatten_mesh_data(building_mesh_data)
-	var result = PLATEAUUtils.create_mesh_instances(flattened, self)
+	var result = await PLATEAUUtils.create_mesh_instances_async(
+		flattened,
+		self,
+		50,
+		func(percent, current, total):
+			_update_loading("Creating buildings: %d/%d (%d%%)" % [current, total, percent])
+	)
 	building_instances = result["instances"]
 	# Rename with Building_ prefix
 	for mi in building_instances:
@@ -288,7 +381,8 @@ func _on_align_buildings() -> void:
 
 	# Update building mesh data and instances
 	building_mesh_data = Array(aligned)
-	_create_building_instances()
+	_show_loading("Creating aligned instances...")
+	await _create_building_instances_async()
 
 	# Update camera to show buildings
 	if not building_instances.is_empty():
@@ -302,7 +396,21 @@ func _on_align_buildings() -> void:
 			bounds_max = bounds_max.max(global_aabb_end)
 		_position_camera(bounds_min, bounds_max)
 
+	_hide_loading()
 	_log("[color=green]Buildings aligned to terrain[/color]")
+
+
+func _show_loading(message: String) -> void:
+	loading_label.text = message
+	loading_panel.visible = true
+
+
+func _update_loading(message: String) -> void:
+	loading_label.text = message
+
+
+func _hide_loading() -> void:
+	loading_panel.visible = false
 
 
 func _position_camera(bounds_min: Vector3, bounds_max: Vector3) -> void:

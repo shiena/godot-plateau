@@ -816,5 +816,74 @@ void PLATEAUCityModel::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_city_object_attributes", "gml_id"), &PLATEAUCityModel::get_city_object_attributes);
     ClassDB::bind_method(D_METHOD("get_city_object_type", "gml_id"), &PLATEAUCityModel::get_city_object_type);
 
+    // Async API
+    ClassDB::bind_method(D_METHOD("load_async", "gml_path"), &PLATEAUCityModel::load_async);
+    ClassDB::bind_method(D_METHOD("extract_meshes_async", "options"), &PLATEAUCityModel::extract_meshes_async);
+    ClassDB::bind_method(D_METHOD("is_processing"), &PLATEAUCityModel::is_processing);
+
+    // Signals for async completion
+    ADD_SIGNAL(MethodInfo("load_completed", PropertyInfo(Variant::BOOL, "success")));
+    ADD_SIGNAL(MethodInfo("extract_completed", PropertyInfo(Variant::ARRAY, "meshes")));
+
     ADD_PROPERTY(PropertyInfo(Variant::STRING, "gml_path"), "", "get_gml_path");
+}
+
+// Async API implementation
+void PLATEAUCityModel::load_async(const String &gml_path) {
+    if (is_processing_.load()) {
+        UtilityFunctions::printerr("PLATEAUCityModel: Already processing, cannot start new load");
+        return;
+    }
+
+    is_processing_.store(true);
+    pending_gml_path_ = gml_path;
+
+    // Use WorkerThreadPool to run load in background
+    WorkerThreadPool::get_singleton()->add_task(
+        callable_mp(this, &PLATEAUCityModel::_load_thread_func)
+    );
+}
+
+void PLATEAUCityModel::_load_thread_func() {
+    bool success = load(pending_gml_path_);
+    is_processing_.store(false);
+    pending_gml_path_ = "";
+
+    // Emit signal on main thread via call_deferred
+    call_deferred("emit_signal", "load_completed", success);
+}
+
+void PLATEAUCityModel::extract_meshes_async(const Ref<PLATEAUMeshExtractOptions> &options) {
+    if (is_processing_.load()) {
+        UtilityFunctions::printerr("PLATEAUCityModel: Already processing, cannot start new extraction");
+        return;
+    }
+
+    if (!is_loaded_) {
+        UtilityFunctions::printerr("PLATEAUCityModel: Model not loaded, cannot extract meshes");
+        TypedArray<PLATEAUMeshData> empty_result;
+        call_deferred("emit_signal", "extract_completed", empty_result);
+        return;
+    }
+
+    is_processing_.store(true);
+    pending_options_ = options;
+
+    // Use WorkerThreadPool to run extraction in background
+    WorkerThreadPool::get_singleton()->add_task(
+        callable_mp(this, &PLATEAUCityModel::_extract_thread_func)
+    );
+}
+
+void PLATEAUCityModel::_extract_thread_func() {
+    TypedArray<PLATEAUMeshData> result = extract_meshes(pending_options_);
+    is_processing_.store(false);
+    pending_options_.unref();
+
+    // Emit signal on main thread via call_deferred
+    call_deferred("emit_signal", "extract_completed", result);
+}
+
+bool PLATEAUCityModel::is_processing() const {
+    return is_processing_.load();
 }

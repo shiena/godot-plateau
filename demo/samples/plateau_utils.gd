@@ -155,3 +155,60 @@ static func log_message(
 	if tree != null:
 		await tree.process_frame
 		scroll_container.scroll_vertical = int(scroll_container.get_v_scroll_bar().max_value)
+
+
+## Create MeshInstance3D nodes from mesh data array with batched processing (async version)
+## Prevents UI freeze by yielding control back to main thread periodically
+## @param mesh_data_array: Flat array of PLATEAUMeshData
+## @param parent: Parent node to add mesh instances to
+## @param batch_size: Number of meshes to process per frame (default 50)
+## @param progress_callback: Optional callback func(percent: int, current: int, total: int)
+## @return: Dictionary with "instances", "bounds_min", "bounds_max"
+static func create_mesh_instances_async(
+	mesh_data_array: Array,
+	parent: Node,
+	batch_size: int = 50,
+	progress_callback: Callable = Callable()
+) -> Dictionary:
+	var instances: Array[MeshInstance3D] = []
+	var bounds_min := Vector3.INF
+	var bounds_max := -Vector3.INF
+	var total := mesh_data_array.size()
+
+	for i in range(0, total, batch_size):
+		var batch_end := mini(i + batch_size, total)
+
+		for j in range(i, batch_end):
+			var mesh_data = mesh_data_array[j]
+			var mesh = mesh_data.get_mesh()
+			if mesh == null:
+				continue
+
+			var mi := MeshInstance3D.new()
+			mi.mesh = mesh
+			mi.transform = mesh_data.get_transform()
+			mi.name = mesh_data.get_name()
+
+			parent.add_child(mi)
+			instances.append(mi)
+
+			# Calculate bounds
+			var aabb := mi.get_aabb()
+			if aabb.size.length() > 0.001:
+				var global_aabb := mi.transform * aabb
+				bounds_min = bounds_min.min(global_aabb.position)
+				bounds_max = bounds_max.max(global_aabb.position + global_aabb.size)
+
+		# Report progress and yield to main thread
+		if progress_callback.is_valid():
+			var percent := int((batch_end * 100) / total) if total > 0 else 100
+			progress_callback.call(percent, batch_end, total)
+
+		# Yield to prevent UI freeze
+		await parent.get_tree().process_frame
+
+	return {
+		"instances": instances,
+		"bounds_min": bounds_min,
+		"bounds_max": bounds_max
+	}
