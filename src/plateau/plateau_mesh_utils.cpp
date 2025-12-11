@@ -1,4 +1,5 @@
 #include "plateau_mesh_utils.h"
+#include "plateau_parallel.h"
 #include <godot_cpp/classes/mesh.hpp>
 
 namespace godot {
@@ -8,49 +9,64 @@ PackedVector3Array compute_smooth_normals(
     const PackedVector3Array &vertices,
     const PackedInt32Array &indices) {
 
+    int vertex_count = vertices.size();
     PackedVector3Array normals;
-    normals.resize(vertices.size());
+    normals.resize(vertex_count);
 
-    // Initialize all normals to zero
-    for (int i = 0; i < normals.size(); i++) {
+    // Initialize all normals to zero (parallel)
+    plateau_parallel::parallel_for(0, static_cast<size_t>(vertex_count), [&](size_t i) {
         normals.set(i, Vector3(0, 0, 0));
-    }
+    });
 
-    // Calculate face normals and accumulate to vertices (area-weighted)
+    // Calculate face normals using thread-local buffers to avoid data races
     int face_count = indices.size() / 3;
-    for (int face = 0; face < face_count; face++) {
-        int i0 = indices[face * 3];
-        int i1 = indices[face * 3 + 1];
-        int i2 = indices[face * 3 + 2];
+    using NormalBuffer = std::vector<Vector3>;
 
-        if (i0 >= vertices.size() || i1 >= vertices.size() || i2 >= vertices.size()) {
-            continue;
-        }
+    plateau_parallel::parallel_for_reduce<NormalBuffer>(
+        0, static_cast<size_t>(face_count),
+        [vertex_count]() {
+            return NormalBuffer(vertex_count, Vector3(0, 0, 0));
+        },
+        [&](size_t face, NormalBuffer& local_normals) {
+            int i0 = indices[face * 3];
+            int i1 = indices[face * 3 + 1];
+            int i2 = indices[face * 3 + 2];
 
-        Vector3 v0 = vertices[i0];
-        Vector3 v1 = vertices[i1];
-        Vector3 v2 = vertices[i2];
+            if (i0 >= vertex_count || i1 >= vertex_count || i2 >= vertex_count) {
+                return;
+            }
 
-        // Calculate face normal (cross product) - not normalized for area weighting
-        Vector3 edge1 = v1 - v0;
-        Vector3 edge2 = v2 - v0;
-        Vector3 face_normal = edge1.cross(edge2);
+            Vector3 v0 = vertices[i0];
+            Vector3 v1 = vertices[i1];
+            Vector3 v2 = vertices[i2];
 
-        // Accumulate to vertices
-        normals.set(i0, normals[i0] + face_normal);
-        normals.set(i1, normals[i1] + face_normal);
-        normals.set(i2, normals[i2] + face_normal);
-    }
+            // Calculate face normal (cross product) - not normalized for area weighting
+            Vector3 edge1 = v1 - v0;
+            Vector3 edge2 = v2 - v0;
+            Vector3 face_normal = edge1.cross(edge2);
 
-    // Normalize all normals
-    for (int i = 0; i < normals.size(); i++) {
+            // Accumulate to thread-local buffer
+            local_normals[i0] += face_normal;
+            local_normals[i1] += face_normal;
+            local_normals[i2] += face_normal;
+        },
+        [&](NormalBuffer& local_normals) {
+            for (int i = 0; i < vertex_count; i++) {
+                normals.set(i, normals[i] + local_normals[i]);
+            }
+        },
+        500
+    );
+
+    // Normalize all normals (parallel)
+    plateau_parallel::parallel_for(0, static_cast<size_t>(vertex_count), [&](size_t i) {
         Vector3 n = normals[i];
         if (n.length_squared() > 0.0001f) {
             normals.set(i, n.normalized());
         } else {
             normals.set(i, Vector3(0, 1, 0)); // Default up normal
         }
-    }
+    });
 
     return normals;
 }

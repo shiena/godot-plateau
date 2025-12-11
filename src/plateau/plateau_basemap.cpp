@@ -1,9 +1,11 @@
 #include "plateau_basemap.h"
+#include "plateau_parallel.h"
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/dir_access.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/classes/os.hpp>
+#include <mutex>
 
 using namespace godot;
 
@@ -438,24 +440,40 @@ Ref<ImageTexture> PLATEAUVectorTileDownloader::create_combined_texture(const Typ
         return Ref<ImageTexture>();
     }
 
-    // Find min/max column and row
-    int min_col = INT_MAX, max_col = INT_MIN;
-    int min_row = INT_MAX, max_row = INT_MIN;
+    int tile_count = tiles.size();
 
-    for (int i = 0; i < tiles.size(); i++) {
+    // Find min/max column and row using parallel reduction
+    struct MinMax {
+        int min_col = INT_MAX, max_col = INT_MIN;
+        int min_row = INT_MAX, max_row = INT_MIN;
+    };
+
+    MinMax bounds;
+    std::mutex bounds_mutex;
+
+    plateau_parallel::parallel_for(0, static_cast<size_t>(tile_count), [&](size_t i) {
         Ref<PLATEAUVectorTile> tile = tiles[i];
-        if (tile.is_null() || tile->get_coordinate().is_null()) continue;
+        if (tile.is_null() || tile->get_coordinate().is_null()) return;
 
         Ref<PLATEAUTileCoordinate> coord = tile->get_coordinate();
-        min_col = Math::min(min_col, coord->get_column());
-        max_col = Math::max(max_col, coord->get_column());
-        min_row = Math::min(min_row, coord->get_row());
-        max_row = Math::max(max_row, coord->get_row());
-    }
+        int col = coord->get_column();
+        int row = coord->get_row();
 
-    if (min_col > max_col || min_row > max_row) {
+        std::lock_guard<std::mutex> lock(bounds_mutex);
+        bounds.min_col = Math::min(bounds.min_col, col);
+        bounds.max_col = Math::max(bounds.max_col, col);
+        bounds.min_row = Math::min(bounds.min_row, row);
+        bounds.max_row = Math::max(bounds.max_row, row);
+    }, 10);  // Small min_chunk since this is quick per item
+
+    if (bounds.min_col > bounds.max_col || bounds.min_row > bounds.max_row) {
         return Ref<ImageTexture>();
     }
+
+    int min_col = bounds.min_col;
+    int max_col = bounds.max_col;
+    int min_row = bounds.min_row;
+    int max_row = bounds.max_row;
 
     int cols = max_col - min_col + 1;
     int rows = max_row - min_row + 1;
@@ -465,7 +483,7 @@ Ref<ImageTexture> PLATEAUVectorTileDownloader::create_combined_texture(const Typ
     int tile_height = 256;
     Image::Format format = Image::FORMAT_RGBA8;
 
-    for (int i = 0; i < tiles.size(); i++) {
+    for (int i = 0; i < tile_count; i++) {
         Ref<PLATEAUVectorTile> tile = tiles[i];
         if (tile.is_valid() && tile->is_success()) {
             Ref<Image> img = tile->load_image();
@@ -489,25 +507,44 @@ Ref<ImageTexture> PLATEAUVectorTileDownloader::create_combined_texture(const Typ
     }
     combined->fill(Color(0.5, 0.5, 0.5, 1.0)); // Gray background for missing tiles
 
-    // Copy tiles to combined image
-    for (int i = 0; i < tiles.size(); i++) {
+    // Pre-load and convert all tile images in parallel
+    // Store results for serial blit (blit_rect may not be thread-safe)
+    struct TileData {
+        Ref<Image> image;
+        int x = 0;
+        int y = 0;
+        bool valid = false;
+    };
+    std::vector<TileData> tile_data(tile_count);
+
+    plateau_parallel::parallel_for(0, static_cast<size_t>(tile_count), [&](size_t i) {
         Ref<PLATEAUVectorTile> tile = tiles[i];
-        if (tile.is_null() || !tile->is_success() || tile->get_coordinate().is_null()) continue;
+        if (tile.is_null() || !tile->is_success() || tile->get_coordinate().is_null()) return;
 
         Ref<Image> tile_img = tile->load_image();
-        if (tile_img.is_null()) continue;
+        if (tile_img.is_null()) return;
 
-        Ref<PLATEAUTileCoordinate> coord = tile->get_coordinate();
-        int x = (coord->get_column() - min_col) * tile_width;
-        int y = (coord->get_row() - min_row) * tile_height;
-
-        // Convert format if needed
+        // Convert format if needed (this is the expensive operation)
         if (tile_img->get_format() != format) {
+            // Create a copy to avoid modifying cached image
+            tile_img = tile_img->duplicate();
             tile_img->convert(format);
         }
 
-        // Copy tile to combined image
-        combined->blit_rect(tile_img, Rect2i(0, 0, tile_width, tile_height), Vector2i(x, y));
+        Ref<PLATEAUTileCoordinate> coord = tile->get_coordinate();
+        tile_data[i].image = tile_img;
+        tile_data[i].x = (coord->get_column() - min_col) * tile_width;
+        tile_data[i].y = (coord->get_row() - min_row) * tile_height;
+        tile_data[i].valid = true;
+    }, 1);  // Process each tile in parallel (disk I/O bound)
+
+    // Serial blit to combined image (ensure thread safety)
+    for (int i = 0; i < tile_count; i++) {
+        if (tile_data[i].valid) {
+            combined->blit_rect(tile_data[i].image,
+                               Rect2i(0, 0, tile_width, tile_height),
+                               Vector2i(tile_data[i].x, tile_data[i].y));
+        }
     }
 
     return ImageTexture::create_from_image(combined);
