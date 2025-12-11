@@ -50,13 +50,7 @@ func _ready() -> void:
 
 func _on_import_pressed() -> void:
 	if gml_path.is_empty():
-		var dialog = FileDialog.new()
-		dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-		dialog.access = FileDialog.ACCESS_FILESYSTEM
-		dialog.filters = ["*.gml ; CityGML Files"]
-		dialog.file_selected.connect(_on_file_selected)
-		add_child(dialog)
-		dialog.popup_centered(Vector2i(800, 600))
+		PLATEAUUtils.show_gml_file_dialog(self, _on_file_selected)
 	else:
 		_import_gml(gml_path)
 
@@ -115,7 +109,7 @@ func _import_gml(path: String) -> void:
 	_log("Root nodes extracted: " + str(root_mesh_data.size()))
 
 	# Flatten hierarchy to get actual meshes (children of LOD nodes)
-	current_mesh_data = _flatten_mesh_data(Array(root_mesh_data))
+	current_mesh_data = PLATEAUUtils.flatten_mesh_data(Array(root_mesh_data))
 	_log("Meshes after flatten: " + str(current_mesh_data.size()))
 
 	if current_mesh_data.is_empty():
@@ -129,40 +123,14 @@ func _import_gml(path: String) -> void:
 
 
 func _clear_meshes() -> void:
-	for mi in mesh_instances:
-		mi.queue_free()
-	mesh_instances.clear()
+	PLATEAUUtils.clear_mesh_instances(mesh_instances)
 	current_mesh_data.clear()
 
 
 func _create_mesh_instances() -> void:
-	var bounds_min = Vector3.INF
-	var bounds_max = -Vector3.INF
-
-	for mesh_data in current_mesh_data:
-		var mesh_instance = MeshInstance3D.new()
-		mesh_instance.mesh = mesh_data.get_mesh()
-		mesh_instance.transform = mesh_data.get_transform()
-		mesh_instance.name = mesh_data.get_name()
-
-		add_child(mesh_instance)
-		mesh_instances.append(mesh_instance)
-
-		# Calculate bounds
-		var aabb = mesh_instance.get_aabb()
-		var global_aabb = mesh_instance.transform * aabb
-		bounds_min = bounds_min.min(global_aabb.position)
-		bounds_max = bounds_max.max(global_aabb.position + global_aabb.size)
-
-	# Position camera
-	if mesh_instances.size() > 0:
-		var center = (bounds_min + bounds_max) / 2
-		var size = (bounds_max - bounds_min).length()
-		if size < 0.001:
-			size = 100.0  # Default size if bounds are too small
-		camera.position = center + Vector3(0, size * 0.5, size * 0.8)
-		if not camera.position.is_equal_approx(center):
-			camera.look_at(center)
+	var result = PLATEAUUtils.create_mesh_instances(current_mesh_data, self)
+	mesh_instances = result["instances"]
+	PLATEAUUtils.fit_camera_to_bounds(camera, result["bounds_min"], result["bounds_max"])
 
 
 func _export_meshes(format: int) -> void:
@@ -173,14 +141,12 @@ func _export_meshes(format: int) -> void:
 	var ext = PLATEAUMeshExporter.get_format_extension(format)
 	var format_name = PLATEAUMeshExporter.get_supported_formats()[format]
 
-	var dialog = FileDialog.new()
-	dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
-	dialog.access = FileDialog.ACCESS_FILESYSTEM
-	dialog.filters = ["*." + ext + " ; " + format_name + " Files"]
-	dialog.current_file = "export." + ext
-	dialog.file_selected.connect(func(path): _do_export(path, format))
-	add_child(dialog)
-	dialog.popup_centered(Vector2i(800, 600))
+	PLATEAUUtils.show_save_file_dialog(
+		self,
+		PackedStringArray(["*." + ext + " ; " + format_name + " Files"]),
+		"export." + ext,
+		func(path): _do_export(path, format)
+	)
 
 
 func _do_export(path: String, format: int) -> void:
@@ -273,16 +239,3 @@ func _log(message: String) -> void:
 	var scroll = $UI/LogPanel/ScrollContainer as ScrollContainer
 	scroll.scroll_vertical = scroll.get_v_scroll_bar().max_value
 	print(message)
-
-
-func _flatten_mesh_data(mesh_data_array: Array) -> Array:
-	## Recursively collect all mesh data including children
-	var result: Array = []
-	for mesh_data in mesh_data_array:
-		if mesh_data.get_mesh() != null:
-			result.append(mesh_data)
-		# Recursively add children
-		var children = mesh_data.get_children()
-		if not children.is_empty():
-			result.append_array(_flatten_mesh_data(Array(children)))
-	return result

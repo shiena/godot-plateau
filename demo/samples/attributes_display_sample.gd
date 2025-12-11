@@ -35,13 +35,7 @@ func _input(event: InputEvent) -> void:
 
 func _on_import_pressed() -> void:
 	if gml_path.is_empty():
-		var dialog = FileDialog.new()
-		dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-		dialog.access = FileDialog.ACCESS_FILESYSTEM
-		dialog.filters = ["*.gml ; CityGML Files"]
-		dialog.file_selected.connect(_on_file_selected)
-		add_child(dialog)
-		dialog.popup_centered(Vector2i(800, 600))
+		PLATEAUUtils.show_gml_file_dialog(self, _on_file_selected)
 	else:
 		_import_gml(gml_path)
 
@@ -82,11 +76,11 @@ func _import_gml(path: String) -> void:
 		return
 
 	# Flatten hierarchy to get actual building meshes (children of LOD nodes)
-	var mesh_data_array = _flatten_mesh_data(root_mesh_data)
+	var mesh_data_array = PLATEAUUtils.flatten_mesh_data(root_mesh_data)
 
-	# Create MeshInstance3D for each mesh
-	var bounds_min = Vector3.INF
-	var bounds_max = -Vector3.INF
+	# Create MeshInstance3D for each mesh (with collision for raycasting)
+	var bounds_min := Vector3.INF
+	var bounds_max := -Vector3.INF
 
 	for mesh_data in mesh_data_array:
 		var mesh_instance = MeshInstance3D.new()
@@ -107,13 +101,7 @@ func _import_gml(path: String) -> void:
 		bounds_max = bounds_max.max(global_aabb.position + global_aabb.size)
 
 	# Position camera to view all meshes
-	var center = (bounds_min + bounds_max) / 2
-	var size = (bounds_max - bounds_min).length()
-	if size < 0.001:
-		size = 100.0  # Default size if bounds are too small
-	camera.position = center + Vector3(0, size * 0.5, size * 0.8)
-	if not camera.position.is_equal_approx(center):
-		camera.look_at(center)
+	PLATEAUUtils.fit_camera_to_bounds(camera, bounds_min, bounds_max)
 
 	_update_info("Loaded " + str(mesh_data_array.size()) + " meshes. Click on buildings to see attributes.")
 
@@ -179,16 +167,3 @@ func _format_attributes(attrs: Dictionary, indent: int) -> String:
 func _update_info(message: String) -> void:
 	info_label.text = message
 	print(message)
-
-
-func _flatten_mesh_data(mesh_data_array: Array) -> Array:
-	## Recursively collect all mesh data including children
-	var result: Array = []
-	for mesh_data in mesh_data_array:
-		if mesh_data.get_mesh() != null:
-			result.append(mesh_data)
-		# Recursively add children
-		var children = mesh_data.get_children()
-		if not children.is_empty():
-			result.append_array(_flatten_mesh_data(Array(children)))
-	return result
