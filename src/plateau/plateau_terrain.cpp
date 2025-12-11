@@ -62,33 +62,54 @@ String PLATEAUHeightMapData::get_texture_path() const {
 }
 
 PackedByteArray PLATEAUHeightMapData::get_heightmap_raw() const {
-    PackedByteArray result;
     if (heightmap_data_.empty()) {
-        return result;
+        return PackedByteArray();
     }
 
-    // Convert uint16 to bytes (little-endian)
-    result.resize(heightmap_data_.size() * 2);
+    // Return cached data if valid
+    if (cached_raw_valid_) {
+        return cached_raw_;
+    }
+
+    // Convert uint16 to bytes (little-endian) and cache
+    cached_raw_.resize(heightmap_data_.size() * 2);
     for (size_t i = 0; i < heightmap_data_.size(); i++) {
         uint16_t val = heightmap_data_[i];
-        result.set(i * 2, val & 0xFF);
-        result.set(i * 2 + 1, (val >> 8) & 0xFF);
+        cached_raw_.set(i * 2, val & 0xFF);
+        cached_raw_.set(i * 2 + 1, (val >> 8) & 0xFF);
     }
-    return result;
+    cached_raw_valid_ = true;
+    return cached_raw_;
 }
 
 PackedFloat32Array PLATEAUHeightMapData::get_heightmap_normalized() const {
-    PackedFloat32Array result;
     if (heightmap_data_.empty()) {
-        return result;
+        return PackedFloat32Array();
     }
 
-    result.resize(heightmap_data_.size());
-    for (size_t i = 0; i < heightmap_data_.size(); i++) {
-        // Normalize uint16 to [0.0, 1.0]
-        result.set(i, static_cast<float>(heightmap_data_[i]) / 65535.0f);
+    // Return cached data if valid
+    if (cached_normalized_valid_) {
+        return cached_normalized_;
     }
-    return result;
+
+    // Normalize uint16 to [0.0, 1.0] and cache
+    cached_normalized_.resize(heightmap_data_.size());
+    for (size_t i = 0; i < heightmap_data_.size(); i++) {
+        cached_normalized_.set(i, static_cast<float>(heightmap_data_[i]) / 65535.0f);
+    }
+    cached_normalized_valid_ = true;
+    return cached_normalized_;
+}
+
+void PLATEAUHeightMapData::invalidate_cache() {
+    cached_raw_valid_ = false;
+    cached_normalized_valid_ = false;
+    cached_raw_.resize(0);
+    cached_normalized_.resize(0);
+}
+
+void PLATEAUHeightMapData::clear_cache() {
+    invalidate_cache();
 }
 
 bool PLATEAUHeightMapData::save_png(const String &path) const {
@@ -279,6 +300,8 @@ void PLATEAUHeightMapData::set_data(const HeightMapT &heightmap,
     max_ = max;
     uv_min_ = uv_min;
     uv_max_ = uv_max;
+    // Invalidate cache when data changes
+    invalidate_cache();
 }
 
 const HeightMapT& PLATEAUHeightMapData::get_heightmap_internal() const {
@@ -322,6 +345,8 @@ void PLATEAUHeightMapData::_bind_methods() {
     ClassDB::bind_method(D_METHOD("save_raw", "path"), &PLATEAUHeightMapData::save_raw);
 
     ClassDB::bind_method(D_METHOD("generate_mesh"), &PLATEAUHeightMapData::generate_mesh);
+
+    ClassDB::bind_method(D_METHOD("clear_cache"), &PLATEAUHeightMapData::clear_cache);
 }
 
 // ============================================================================
