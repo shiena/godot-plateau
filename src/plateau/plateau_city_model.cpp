@@ -1,12 +1,10 @@
 #include "plateau_city_model.h"
-#include "plateau_parallel.h"
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <cmath>
 #include <unordered_set>
 #include <unordered_map>
-#include <mutex>
 
 using namespace godot;
 
@@ -415,72 +413,51 @@ Ref<PLATEAUMeshData> PLATEAUCityModel::convert_node(const plateau::polygonMesh::
     return mesh_data;
 }
 
-// Compute smooth normals for mesh (area-weighted vertex normals) - parallelized
+// Compute smooth normals for mesh (area-weighted vertex normals)
 PackedVector3Array PLATEAUCityModel::compute_normals(const PackedVector3Array &vertices, const PackedInt32Array &indices) {
     PackedVector3Array normals;
-    int vertex_count = vertices.size();
-    normals.resize(vertex_count);
+    normals.resize(vertices.size());
 
-    // Initialize all normals to zero (parallel)
-    plateau_parallel::parallel_for(0, static_cast<size_t>(vertex_count), [&](size_t i) {
+    // Initialize all normals to zero
+    for (int i = 0; i < normals.size(); i++) {
         normals.set(i, Vector3(0, 0, 0));
-    });
+    }
 
     // Calculate face normals and accumulate to vertices
-    // Use thread-local buffers to avoid data races, then merge
     int face_count = indices.size() / 3;
+    for (int face = 0; face < face_count; face++) {
+        int i0 = indices[face * 3];
+        int i1 = indices[face * 3 + 1];
+        int i2 = indices[face * 3 + 2];
 
-    // Thread-local normal buffer type
-    using NormalBuffer = std::vector<Vector3>;
+        if (i0 >= vertices.size() || i1 >= vertices.size() || i2 >= vertices.size()) {
+            continue;
+        }
 
-    plateau_parallel::parallel_for_reduce<NormalBuffer>(
-        0, static_cast<size_t>(face_count),
-        // init_local: create thread-local normal buffer
-        [vertex_count]() {
-            return NormalBuffer(vertex_count, Vector3(0, 0, 0));
-        },
-        // process: calculate face normal and accumulate to thread-local buffer
-        [&](size_t face, NormalBuffer& local_normals) {
-            int i0 = indices[face * 3];
-            int i1 = indices[face * 3 + 1];
-            int i2 = indices[face * 3 + 2];
+        Vector3 v0 = vertices[i0];
+        Vector3 v1 = vertices[i1];
+        Vector3 v2 = vertices[i2];
 
-            if (i0 >= vertex_count || i1 >= vertex_count || i2 >= vertex_count) {
-                return;
-            }
+        // Calculate face normal (cross product)
+        Vector3 edge1 = v1 - v0;
+        Vector3 edge2 = v2 - v0;
+        Vector3 face_normal = edge1.cross(edge2);
 
-            Vector3 v0 = vertices[i0];
-            Vector3 v1 = vertices[i1];
-            Vector3 v2 = vertices[i2];
+        // Don't normalize yet - larger faces contribute more (area weighting)
+        normals.set(i0, normals[i0] + face_normal);
+        normals.set(i1, normals[i1] + face_normal);
+        normals.set(i2, normals[i2] + face_normal);
+    }
 
-            // Calculate face normal (cross product)
-            Vector3 edge1 = v1 - v0;
-            Vector3 edge2 = v2 - v0;
-            Vector3 face_normal = edge1.cross(edge2);
-
-            // Don't normalize yet - larger faces contribute more (area weighting)
-            local_normals[i0] += face_normal;
-            local_normals[i1] += face_normal;
-            local_normals[i2] += face_normal;
-        },
-        // merge: add thread-local results to global normals
-        [&](NormalBuffer& local_normals) {
-            for (int i = 0; i < vertex_count; i++) {
-                normals.set(i, normals[i] + local_normals[i]);
-            }
-        },
-        500  // min_chunk: fewer faces per chunk since each face does more work
-    );
-
-    // Normalize all normals (parallel)
-    plateau_parallel::parallel_for(0, static_cast<size_t>(vertex_count), [&](size_t i) {
+    // Normalize all normals
+    for (int i = 0; i < normals.size(); i++) {
         Vector3 n = normals[i];
         if (n.length_squared() > 0.0001f) {
             normals.set(i, n.normalized());
         } else {
             normals.set(i, Vector3(0, 1, 0)); // Default up normal
         }
-    });
+    }
 
     return normals;
 }
@@ -528,37 +505,37 @@ Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &
         return array_mesh;
     }
 
-    // Convert vertices (parallel)
+    // Convert vertices
     PackedVector3Array godot_vertices;
     godot_vertices.resize(vertices.size());
-    plateau_parallel::parallel_for(0, vertices.size(), [&](size_t i) {
+    for (size_t i = 0; i < vertices.size(); i++) {
         const auto &v = vertices[i];
         godot_vertices.set(i, Vector3(v.x, v.y, v.z));
-    });
+    }
 
-    // Convert UV1 (texture coordinates) with Y-axis flip (parallel)
+    // Convert UV1 (texture coordinates) with Y-axis flip
     PackedVector2Array godot_uvs;
     godot_uvs.resize(uv1.size());
-    plateau_parallel::parallel_for(0, uv1.size(), [&](size_t i) {
+    for (size_t i = 0; i < uv1.size(); i++) {
         const auto &uv = uv1[i];
         // Flip Y coordinate for correct texture orientation
         godot_uvs.set(i, Vector2(uv.x, 1.0f - uv.y));
-    });
+    }
 
-    // Convert UV4 (CityObjectIndex) - store in ARRAY_TEX_UV2 for later attribute lookup (parallel)
+    // Convert UV4 (CityObjectIndex) - store in ARRAY_TEX_UV2 for later attribute lookup
     PackedVector2Array godot_uv4;
     godot_uv4.resize(uv4.size());
-    plateau_parallel::parallel_for(0, uv4.size(), [&](size_t i) {
+    for (size_t i = 0; i < uv4.size(); i++) {
         const auto &uv = uv4[i];
         godot_uv4.set(i, Vector2(uv.x, uv.y));
-    });
+    }
 
-    // Convert all indices for normal calculation (parallel)
+    // Convert all indices for normal calculation
     PackedInt32Array all_indices;
     all_indices.resize(indices.size());
-    plateau_parallel::parallel_for(0, indices.size(), [&](size_t i) {
+    for (size_t i = 0; i < indices.size(); i++) {
         all_indices.set(i, indices[i]);
-    });
+    }
 
     // Compute normals
     PackedVector3Array godot_normals = compute_normals(godot_vertices, all_indices);
