@@ -3,6 +3,8 @@
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <cmath>
+#include <unordered_set>
+#include <unordered_map>
 
 using namespace godot;
 
@@ -538,7 +540,7 @@ Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &
     // Compute normals
     PackedVector3Array godot_normals = compute_normals(godot_vertices, all_indices);
 
-    // Process each submesh
+    // Process each submesh with compact per-surface arrays to avoid memory bloat
     for (size_t sub_idx = 0; sub_idx < sub_meshes.size(); sub_idx++) {
         const auto &sub_mesh = sub_meshes[sub_idx];
         size_t start_index = sub_mesh.getStartIndex();
@@ -548,29 +550,77 @@ Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &
             continue;
         }
 
-        // Create indices for this submesh
-        // Note: libplateau uses inclusive range [start, end], so we need end_index - start_index + 1
-        PackedInt32Array godot_indices;
-        size_t index_count = end_index - start_index + 1;
-        godot_indices.resize(index_count);
+        // Collect unique vertex indices used by this submesh
+        std::unordered_set<unsigned int> used_indices_set;
         for (size_t i = start_index; i <= end_index; i++) {
-            godot_indices.set(i - start_index, indices[i]);
+            used_indices_set.insert(indices[i]);
         }
 
-        // Create surface arrays
+        // Create mapping from global index to compact index
+        std::unordered_map<unsigned int, int> global_to_compact;
+        std::vector<unsigned int> compact_to_global;
+        compact_to_global.reserve(used_indices_set.size());
+
+        for (unsigned int idx : used_indices_set) {
+            global_to_compact[idx] = static_cast<int>(compact_to_global.size());
+            compact_to_global.push_back(idx);
+        }
+
+        // Build compact arrays for this submesh only
+        int compact_vertex_count = static_cast<int>(compact_to_global.size());
+
+        PackedVector3Array submesh_vertices;
+        submesh_vertices.resize(compact_vertex_count);
+        PackedVector3Array submesh_normals;
+        submesh_normals.resize(compact_vertex_count);
+        PackedVector2Array submesh_uvs;
+        PackedVector2Array submesh_uv4;
+
+        bool has_uvs = !godot_uvs.is_empty() && godot_uvs.size() >= static_cast<int64_t>(vertices.size());
+        bool has_uv4 = !godot_uv4.is_empty() && godot_uv4.size() >= static_cast<int64_t>(vertices.size());
+
+        if (has_uvs) {
+            submesh_uvs.resize(compact_vertex_count);
+        }
+        if (has_uv4) {
+            submesh_uv4.resize(compact_vertex_count);
+        }
+
+        // Copy only the vertex data needed for this submesh
+        for (int compact_idx = 0; compact_idx < compact_vertex_count; compact_idx++) {
+            unsigned int global_idx = compact_to_global[compact_idx];
+            submesh_vertices.set(compact_idx, godot_vertices[global_idx]);
+            submesh_normals.set(compact_idx, godot_normals[global_idx]);
+            if (has_uvs) {
+                submesh_uvs.set(compact_idx, godot_uvs[global_idx]);
+            }
+            if (has_uv4) {
+                submesh_uv4.set(compact_idx, godot_uv4[global_idx]);
+            }
+        }
+
+        // Build remapped indices for this submesh (0-based for compact arrays)
+        size_t index_count = end_index - start_index + 1;
+        PackedInt32Array submesh_indices;
+        submesh_indices.resize(index_count);
+        for (size_t i = start_index; i <= end_index; i++) {
+            submesh_indices.set(i - start_index, global_to_compact[indices[i]]);
+        }
+
+        // Create surface arrays with compact data (only referenced vertices)
         Array arrays;
         arrays.resize(godot::Mesh::ARRAY_MAX);
-        arrays[godot::Mesh::ARRAY_VERTEX] = godot_vertices;
-        arrays[godot::Mesh::ARRAY_INDEX] = godot_indices;
-        arrays[godot::Mesh::ARRAY_NORMAL] = godot_normals;
+        arrays[godot::Mesh::ARRAY_VERTEX] = submesh_vertices;
+        arrays[godot::Mesh::ARRAY_INDEX] = submesh_indices;
+        arrays[godot::Mesh::ARRAY_NORMAL] = submesh_normals;
 
-        if (!godot_uvs.is_empty() && godot_uvs.size() >= static_cast<int64_t>(vertices.size())) {
-            arrays[godot::Mesh::ARRAY_TEX_UV] = godot_uvs;
+        if (!submesh_uvs.is_empty()) {
+            arrays[godot::Mesh::ARRAY_TEX_UV] = submesh_uvs;
         }
 
         // Store UV4 (CityObjectIndex) in second UV channel for raycast lookup
-        if (!godot_uv4.is_empty() && godot_uv4.size() >= static_cast<int64_t>(vertices.size())) {
-            arrays[godot::Mesh::ARRAY_TEX_UV2] = godot_uv4;
+        if (!submesh_uv4.is_empty()) {
+            arrays[godot::Mesh::ARRAY_TEX_UV2] = submesh_uv4;
         }
 
         // Add surface
