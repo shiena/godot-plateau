@@ -1,4 +1,5 @@
 #include "plateau_terrain.h"
+#include "plateau_parallel.h"
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <cmath>
@@ -71,13 +72,14 @@ PackedByteArray PLATEAUHeightMapData::get_heightmap_raw() const {
         return cached_raw_;
     }
 
-    // Convert uint16 to bytes (little-endian) and cache
-    cached_raw_.resize(heightmap_data_.size() * 2);
-    for (size_t i = 0; i < heightmap_data_.size(); i++) {
+    // Convert uint16 to bytes (little-endian) and cache (parallel)
+    size_t data_size = heightmap_data_.size();
+    cached_raw_.resize(data_size * 2);
+    plateau_parallel::parallel_for(0, data_size, [&](size_t i) {
         uint16_t val = heightmap_data_[i];
         cached_raw_.set(i * 2, val & 0xFF);
         cached_raw_.set(i * 2 + 1, (val >> 8) & 0xFF);
-    }
+    });
     cached_raw_valid_ = true;
     return cached_raw_;
 }
@@ -92,11 +94,12 @@ PackedFloat32Array PLATEAUHeightMapData::get_heightmap_normalized() const {
         return cached_normalized_;
     }
 
-    // Normalize uint16 to [0.0, 1.0] and cache
-    cached_normalized_.resize(heightmap_data_.size());
-    for (size_t i = 0; i < heightmap_data_.size(); i++) {
+    // Normalize uint16 to [0.0, 1.0] and cache (parallel)
+    size_t data_size = heightmap_data_.size();
+    cached_normalized_.resize(data_size);
+    plateau_parallel::parallel_for(0, data_size, [&](size_t i) {
         cached_normalized_.set(i, static_cast<float>(heightmap_data_[i]) / 65535.0f);
-    }
+    });
     cached_normalized_valid_ = true;
     return cached_normalized_;
 }
@@ -192,71 +195,88 @@ Ref<ArrayMesh> PLATEAUHeightMapData::generate_mesh() const {
             return array_mesh;
         }
 
-        // Convert vertices
+        // Convert vertices (parallel)
         PackedVector3Array godot_vertices;
         godot_vertices.resize(vertices.size());
-        for (size_t i = 0; i < vertices.size(); i++) {
+        plateau_parallel::parallel_for(0, vertices.size(), [&](size_t i) {
             const auto &v = vertices[i];
             godot_vertices.set(i, Vector3(v.x, v.y, v.z));
-        }
+        });
 
-        // Convert indices
+        // Convert indices (parallel)
         PackedInt32Array godot_indices;
         godot_indices.resize(indices.size());
-        for (size_t i = 0; i < indices.size(); i++) {
+        plateau_parallel::parallel_for(0, indices.size(), [&](size_t i) {
             godot_indices.set(i, indices[i]);
-        }
+        });
 
-        // Convert UVs
+        // Convert UVs (parallel)
         PackedVector2Array godot_uvs;
         if (!uvs.empty()) {
             godot_uvs.resize(uvs.size());
-            for (size_t i = 0; i < uvs.size(); i++) {
+            plateau_parallel::parallel_for(0, uvs.size(), [&](size_t i) {
                 const auto &uv = uvs[i];
                 godot_uvs.set(i, Vector2(uv.x, 1.0f - uv.y)); // Flip Y
-            }
+            });
         }
 
-        // Compute normals
+        // Compute normals with parallelization
+        int vertex_count = static_cast<int>(vertices.size());
         PackedVector3Array godot_normals;
-        godot_normals.resize(vertices.size());
-        for (int i = 0; i < godot_normals.size(); i++) {
+        godot_normals.resize(vertex_count);
+
+        // Initialize normals (parallel)
+        plateau_parallel::parallel_for(0, static_cast<size_t>(vertex_count), [&](size_t i) {
             godot_normals.set(i, Vector3(0, 0, 0));
-        }
+        });
 
-        // Calculate face normals and accumulate
+        // Calculate face normals using thread-local buffers
         int face_count = godot_indices.size() / 3;
-        for (int face = 0; face < face_count; face++) {
-            int i0 = godot_indices[face * 3];
-            int i1 = godot_indices[face * 3 + 1];
-            int i2 = godot_indices[face * 3 + 2];
+        using NormalBuffer = std::vector<Vector3>;
 
-            if (i0 >= godot_vertices.size() || i1 >= godot_vertices.size() || i2 >= godot_vertices.size()) {
-                continue;
-            }
+        plateau_parallel::parallel_for_reduce<NormalBuffer>(
+            0, static_cast<size_t>(face_count),
+            [vertex_count]() {
+                return NormalBuffer(vertex_count, Vector3(0, 0, 0));
+            },
+            [&](size_t face, NormalBuffer& local_normals) {
+                int i0 = godot_indices[face * 3];
+                int i1 = godot_indices[face * 3 + 1];
+                int i2 = godot_indices[face * 3 + 2];
 
-            Vector3 v0 = godot_vertices[i0];
-            Vector3 v1 = godot_vertices[i1];
-            Vector3 v2 = godot_vertices[i2];
+                if (i0 >= vertex_count || i1 >= vertex_count || i2 >= vertex_count) {
+                    return;
+                }
 
-            Vector3 edge1 = v1 - v0;
-            Vector3 edge2 = v2 - v0;
-            Vector3 face_normal = edge1.cross(edge2);
+                Vector3 v0 = godot_vertices[i0];
+                Vector3 v1 = godot_vertices[i1];
+                Vector3 v2 = godot_vertices[i2];
 
-            godot_normals.set(i0, godot_normals[i0] + face_normal);
-            godot_normals.set(i1, godot_normals[i1] + face_normal);
-            godot_normals.set(i2, godot_normals[i2] + face_normal);
-        }
+                Vector3 edge1 = v1 - v0;
+                Vector3 edge2 = v2 - v0;
+                Vector3 face_normal = edge1.cross(edge2);
 
-        // Normalize
-        for (int i = 0; i < godot_normals.size(); i++) {
+                local_normals[i0] += face_normal;
+                local_normals[i1] += face_normal;
+                local_normals[i2] += face_normal;
+            },
+            [&](NormalBuffer& local_normals) {
+                for (int i = 0; i < vertex_count; i++) {
+                    godot_normals.set(i, godot_normals[i] + local_normals[i]);
+                }
+            },
+            500
+        );
+
+        // Normalize (parallel)
+        plateau_parallel::parallel_for(0, static_cast<size_t>(vertex_count), [&](size_t i) {
             Vector3 n = godot_normals[i];
             if (n.length_squared() > 0.0001f) {
                 godot_normals.set(i, n.normalized());
             } else {
                 godot_normals.set(i, Vector3(0, 1, 0));
             }
-        }
+        });
 
         // Create surface arrays
         Array arrays;
