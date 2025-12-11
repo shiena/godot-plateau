@@ -116,6 +116,11 @@ Ref<Image> PLATEAUVectorTile::load_image() const {
         return Ref<Image>();
     }
 
+    // Return cached image if available
+    if (cached_image_.is_valid()) {
+        return cached_image_;
+    }
+
     Ref<Image> image;
     image.instantiate();
 
@@ -125,7 +130,13 @@ Ref<Image> PLATEAUVectorTile::load_image() const {
         return Ref<Image>();
     }
 
+    // Cache the loaded image for subsequent calls
+    cached_image_ = image;
     return image;
+}
+
+void PLATEAUVectorTile::clear_image_cache() {
+    cached_image_ = Ref<Image>();
 }
 
 Ref<ImageTexture> PLATEAUVectorTile::load_texture() const {
@@ -151,6 +162,7 @@ void PLATEAUVectorTile::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("load_image"), &PLATEAUVectorTile::load_image);
     ClassDB::bind_method(D_METHOD("load_texture"), &PLATEAUVectorTile::load_texture);
+    ClassDB::bind_method(D_METHOD("clear_image_cache"), &PLATEAUVectorTile::clear_image_cache);
 }
 
 // ============================================================================

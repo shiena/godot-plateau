@@ -75,11 +75,14 @@ public:
     void set_success(bool success);
     bool is_success() const;
 
-    // Load the tile image as Godot Image
+    // Load the tile image as Godot Image (cached after first load)
     Ref<Image> load_image() const;
 
     // Load the tile image as ImageTexture
     Ref<ImageTexture> load_texture() const;
+
+    // Clear the cached image to free memory
+    void clear_image_cache();
 
 protected:
     static void _bind_methods();
@@ -88,6 +91,9 @@ private:
     Ref<PLATEAUTileCoordinate> coordinate_;
     String image_path_;
     bool success_;
+
+    // Cached image to avoid redundant disk reads
+    mutable Ref<Image> cached_image_;
 };
 
 /**
