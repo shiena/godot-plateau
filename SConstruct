@@ -1,7 +1,22 @@
 #!/usr/bin/env python
 """
 SConstruct for godot-plateau GDExtension
-Build with: scons platform=<windows|linux|macos> target=<template_debug|template_release|editor>
+Build with: scons platform=<windows|linux|macos|android|ios|visionos> target=<template_debug|template_release|editor>
+
+Android build requires:
+  - ANDROID_HOME or ANDROID_SDK_ROOT environment variable set
+  - NDK installed (default version: 23.1.7779620)
+  - Example: scons platform=android arch=arm64
+
+iOS build requires:
+  - macOS with Xcode installed
+  - Example: scons platform=ios arch=arm64
+
+visionOS build requires:
+  - macOS with Xcode 15+ installed
+  - visionOS SDK
+  - Example: scons platform=visionos arch=arm64
+  - Simulator: scons platform=visionos arch=arm64 visionos_simulator=yes
 """
 
 import os
@@ -24,8 +39,10 @@ LIBPLATEAU_ROOT = REPO_ROOT / "libplateau"
 BUILD_ROOT = REPO_ROOT / "build"
 
 # Platform-specific libplateau build settings
-def get_libplateau_build_dir(platform):
+def get_libplateau_build_dir(platform, arch=""):
     """Get the libplateau build directory for the platform."""
+    if platform in ("android", "ios", "visionos") and arch:
+        return BUILD_ROOT / platform / arch / "libplateau"
     return BUILD_ROOT / platform / "libplateau"
 
 
@@ -36,7 +53,13 @@ def get_libplateau_lib_path(platform, build_dir, build_type):
         return build_dir / "src" / build_type / "plateau_combined.lib"
     elif platform == "macos":
         return build_dir / "src" / "libplateau.a"
-    else:
+    elif platform == "android":
+        return build_dir / "src" / "libplateau.a"
+    elif platform == "ios":
+        return build_dir / "src" / "libplateau.a"
+    elif platform == "visionos":
+        return build_dir / "src" / "libplateau.a"
+    else:  # linux
         return build_dir / "src" / "libplateau_combined.a"
 
 
@@ -50,7 +73,7 @@ def get_cmake_build_type(target_name):
     return target_to_cmake.get(target_name, "Release")
 
 
-def get_cmake_configure_args(platform, build_dir, build_type):
+def get_cmake_configure_args(platform, build_dir, build_type, env=None):
     """Get platform-specific cmake configure arguments."""
     common_args = [
         "-DPLATEAU_USE_FBX=OFF",
@@ -71,6 +94,51 @@ def get_cmake_configure_args(platform, build_dir, build_type):
             "-DCMAKE_OSX_ARCHITECTURES:STRING=arm64",
             "-G", "Ninja",
         ]
+    elif platform == "android":
+        # Get NDK path from environment
+        ndk_version = env.get("ndk_version", "23.1.7779620") if env else "23.1.7779620"
+        android_home = env.get("ANDROID_HOME", os.environ.get("ANDROID_HOME", os.environ.get("ANDROID_SDK_ROOT", ""))) if env else os.environ.get("ANDROID_HOME", os.environ.get("ANDROID_SDK_ROOT", ""))
+        ndk_root = os.path.join(android_home, "ndk", ndk_version) if android_home else os.environ.get("ANDROID_NDK_ROOT", "")
+        toolchain_file = os.path.join(ndk_root, "build", "cmake", "android.toolchain.cmake")
+
+        # Map godot-cpp arch to Android ABI
+        arch = env.get("arch", "arm64") if env else "arm64"
+        android_abi_map = {
+            "arm64": "arm64-v8a",
+            "arm32": "armeabi-v7a",
+            "x86_64": "x86_64",
+            "x86_32": "x86",
+        }
+        android_abi = android_abi_map.get(arch, "arm64-v8a")
+
+        return common_args + [
+            "-G", "Ninja",
+            "-DANDROID_PLATFORM=android-24",
+            f"-DANDROID_ABI={android_abi}",
+            f"-DCMAKE_TOOLCHAIN_FILE={toolchain_file}",
+        ]
+    elif platform == "ios":
+        arch = env.get("arch", "arm64") if env else "arm64"
+        ios_arch = "arm64" if arch in ("arm64", "universal") else arch
+        return common_args + [
+            "-G", "Ninja",
+            "-DCMAKE_SYSTEM_NAME=iOS",
+            f"-DCMAKE_OSX_ARCHITECTURES={ios_arch}",
+            "-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0",
+            "-DCMAKE_C_FLAGS=-DPNG_ARM_NEON_OPT=0",
+        ]
+    elif platform == "visionos":
+        # Use ios.toolchain.cmake with PLATFORM=VISIONOS
+        toolchain_file = str(REPO_ROOT / "godot-cpp" / "cmake" / "ios.toolchain.cmake")
+        visionos_simulator = env.get("visionos_simulator", False) if env else False
+        visionos_platform = "SIMULATOR_VISIONOS" if visionos_simulator else "VISIONOS"
+        return common_args + [
+            "-G", "Ninja",
+            f"-DCMAKE_TOOLCHAIN_FILE={toolchain_file}",
+            f"-DPLATFORM={visionos_platform}",
+            "-DDEPLOYMENT_TARGET=1.0",
+            "-DIOS=ON",  # Treat as iOS to enable mobile dummy implementations
+        ]
     else:  # linux
         return common_args
 
@@ -82,14 +150,15 @@ def configure_libplateau(target, source, env):
         raise RuntimeError("cmake executable not found in PATH.")
 
     platform = env["platform"]
+    arch = env.get("arch", "")
     build_type = env.get("LIBPLATEAU_BUILD_TYPE", "Release")
-    build_dir = get_libplateau_build_dir(platform)
+    build_dir = get_libplateau_build_dir(platform, arch)
 
     cmake_args = [
         cmake_executable,
         "-S", str(LIBPLATEAU_ROOT),
         "-B", str(build_dir),
-    ] + get_cmake_configure_args(platform, build_dir, build_type)
+    ] + get_cmake_configure_args(platform, build_dir, build_type, env)
 
     print(f"Configuring libplateau: {' '.join(cmake_args)}")
     subprocess.check_call(cmake_args)
@@ -107,8 +176,9 @@ def build_libplateau(target, source, env):
         raise RuntimeError("cmake executable not found in PATH.")
 
     platform = env["platform"]
+    arch = env.get("arch", "")
     build_type = env.get("LIBPLATEAU_BUILD_TYPE", "Release")
-    build_dir = get_libplateau_build_dir(platform)
+    build_dir = get_libplateau_build_dir(platform, arch)
 
     cmake_args = [
         cmake_executable,
@@ -146,12 +216,20 @@ Run the following command to download godot-cpp:
     git submodule update --init --recursive""")
     sys.exit(1)
 
+# Copy visionOS platform support to godot-cpp/tools before loading godot-cpp
+visionos_src = REPO_ROOT / "patches" / "visionos.py"
+visionos_dst = REPO_ROOT / "godot-cpp" / "tools" / "visionos.py"
+if visionos_src.exists() and not visionos_dst.exists():
+    print(f"Copying visionOS platform support: {visionos_src} -> {visionos_dst}")
+    shutil.copy(str(visionos_src), str(visionos_dst))
+
 # Load godot-cpp environment
 env = SConscript("godot-cpp/SConstruct", {"env": env, "customs": customs})
 
 # Get platform info
 platform = env["platform"]
 target = env["target"]
+arch = env.get("arch", "")
 
 # Ensure libplateau exists
 if not LIBPLATEAU_ROOT.exists():
@@ -164,7 +242,7 @@ if not LIBPLATEAU_ROOT.exists():
 libplateau_build_type = get_cmake_build_type(target)
 env["LIBPLATEAU_BUILD_TYPE"] = libplateau_build_type
 
-libplateau_build_dir = get_libplateau_build_dir(platform)
+libplateau_build_dir = get_libplateau_build_dir(platform, arch)
 libplateau_lib_path = get_libplateau_lib_path(platform, libplateau_build_dir, libplateau_build_type)
 
 # Check if we need to build libplateau
@@ -213,12 +291,20 @@ elif platform == "linux":
     env.Append(LIBS=["GL", "GLU", "pthread", "dl"])
 elif platform == "macos":
     env.Append(FRAMEWORKS=["OpenGL"])
+elif platform == "android":
+    env.Append(LIBS=["log", "android"])
+elif platform == "ios":
+    env.Append(FRAMEWORKS=["Foundation", "CoreGraphics"])
+elif platform == "visionos":
+    env.Append(FRAMEWORKS=["Foundation", "CoreGraphics"])
 
 # Suppress warnings from libplateau headers and enable C++ exceptions
 if platform == "windows":
     env.Append(CXXFLAGS=["/wd4251", "/wd4275", "/EHsc"])
 else:
     env.Append(CXXFLAGS=["-Wno-deprecated-declarations"])
+    if platform in ("android", "ios", "visionos"):
+        env.Append(CXXFLAGS=["-fexceptions"])
 
 # Source files
 env.Append(CPPPATH=["src/"])
@@ -229,9 +315,17 @@ suffix = env['suffix'].replace(".dev", "").replace(".universal", "")
 
 lib_filename = "{}{}{}{}".format(env.subst('$SHLIBPREFIX'), LIB_NAME, suffix, env.subst('$SHLIBSUFFIX'))
 
+# Determine output directory (include arch for mobile platforms)
+if platform in ("android", "ios", "visionos"):
+    bin_dir = "bin/{}/{}".format(platform, arch)
+    addons_dir = "{}/addons/plateau/{}/{}/".format(GODOT_PROJECT_DIR, platform, arch)
+else:
+    bin_dir = "bin/{}".format(platform)
+    addons_dir = "{}/addons/plateau/{}/".format(GODOT_PROJECT_DIR, platform)
+
 # Build the library
 library = env.SharedLibrary(
-    "bin/{}/{}".format(platform, lib_filename),
+    "{}/{}".format(bin_dir, lib_filename),
     source=sources,
 )
 
@@ -240,7 +334,7 @@ if libplateau_build_node:
     env.Depends(library, libplateau_build_node)
 
 # Copy to demo project addons folder
-copy_addons = env.Install("{}/addons/plateau/{}/".format(GODOT_PROJECT_DIR, platform), library)
+copy_addons = env.Install(addons_dir, library)
 
 default_args = [library] + copy_addons
 Default(*default_args)
