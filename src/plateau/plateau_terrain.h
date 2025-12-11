@@ -76,6 +76,9 @@ public:
     TVec3d get_min_internal() const;
     TVec3d get_max_internal() const;
 
+    // Clear cached data to free memory
+    void clear_cache();
+
 protected:
     static void _bind_methods();
 
@@ -89,6 +92,15 @@ private:
     TVec2f uv_min_;
     TVec2f uv_max_;
     plateau::heightMapGenerator::HeightMapT heightmap_data_;
+
+    // Cached converted data
+    mutable PackedByteArray cached_raw_;
+    mutable PackedFloat32Array cached_normalized_;
+    mutable bool cached_raw_valid_ = false;
+    mutable bool cached_normalized_valid_ = false;
+
+    // Internal: Invalidate cache when data changes
+    void invalidate_cache();
 };
 
 /**
