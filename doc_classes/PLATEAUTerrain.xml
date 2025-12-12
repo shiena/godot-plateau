@@ -21,6 +21,7 @@
 			<param index="0" name="mesh_data" type="PLATEAUMeshData" />
 			<description>
 				Generate a heightmap from a single [PLATEAUMeshData]. Returns a [PLATEAUHeightMapData] containing the generated heightmap.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS).
 			</description>
 		</method>
 		<method name="generate_from_meshes">
@@ -28,6 +29,7 @@
 			<param index="0" name="mesh_data_array" type="PLATEAUMeshData[]" />
 			<description>
 				Generate a heightmap from an array of [PLATEAUMeshData]. All meshes are merged before heightmap generation. Returns a [PLATEAUHeightMapData] containing the generated heightmap.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS).
 			</description>
 		</method>
 	</methods>

@@ -61,6 +61,7 @@
 			<param index="0" name="index" type="int" />
 			<description>
 				Download a single tile at the specified index.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS).
 			</description>
 		</method>
 		<method name="download_tile">
@@ -74,6 +75,7 @@
 			<return type="PLATEAUVectorTile[]" />
 			<description>
 				Download all tiles in the current extent.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS).
 			</description>
 		</method>
 		<method name="create_combined_texture">

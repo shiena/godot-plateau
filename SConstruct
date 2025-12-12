@@ -17,6 +17,12 @@ visionOS build requires:
   - visionOS SDK
   - Example: scons platform=visionos arch=arm64
   - Simulator: scons platform=visionos arch=arm64 visionos_simulator=yes
+
+Linux build requires:
+  - GCC 13 (recommended, Ubuntu 24.04 default) or Clang
+  - OpenGL development libraries: sudo apt-get install libgl1-mesa-dev libglu1-mesa-dev
+  - Example: scons platform=linux arch=x86_64
+  - For GCC 15+ environments, use Clang: scons platform=linux arch=x86_64 use_clang=yes
 """
 
 import os
@@ -140,7 +146,22 @@ def get_cmake_configure_args(platform, build_dir, build_type, env=None):
             "-DIOS=ON",  # Treat as iOS to enable mobile dummy implementations
         ]
     else:  # linux
-        return common_args
+        use_clang = env.get("use_clang", False) if env else False
+        if use_clang:
+            # Use Clang to avoid GCC 15+ strict C++23 header requirements
+            # Skip tests (-DANDROID=ON) as libplateau tests have libjpeg path issues on Linux
+            return common_args + [
+                "-DCMAKE_C_COMPILER=clang",
+                "-DCMAKE_CXX_COMPILER=clang++",
+                "-DCMAKE_CXX_FLAGS=-w -Wno-c++11-narrowing -include cstdint -include climits -include algorithm",
+                "-DANDROID=ON",  # Skip test build (tests are excluded for Android/iOS)
+            ]
+        else:
+            # Default: GCC 13 (Ubuntu 24.04 default) - matches libplateau CI environment
+            # -include climits: Required for INT_MAX/INT_MIN in vector_tile_downloader.cpp
+            return common_args + [
+                "-DCMAKE_CXX_FLAGS=-w -include climits",
+            ]
 
 
 def configure_libplateau(target, source, env):
@@ -241,6 +262,7 @@ if not LIBPLATEAU_ROOT.exists():
 # Setup libplateau build
 libplateau_build_type = get_cmake_build_type(target)
 env["LIBPLATEAU_BUILD_TYPE"] = libplateau_build_type
+env["use_clang"] = ARGUMENTS.get("use_clang", "no") == "yes"
 
 libplateau_build_dir = get_libplateau_build_dir(platform, arch)
 libplateau_lib_path = get_libplateau_lib_path(platform, libplateau_build_dir, libplateau_build_type)
@@ -303,7 +325,7 @@ if platform == "windows":
     env.Append(CXXFLAGS=["/wd4251", "/wd4275", "/EHsc"])
 else:
     env.Append(CXXFLAGS=["-Wno-deprecated-declarations"])
-    if platform in ("android", "ios", "visionos"):
+    if platform in ("linux", "android", "ios", "visionos"):
         env.Append(CXXFLAGS=["-fexceptions"])
 
 # Source files

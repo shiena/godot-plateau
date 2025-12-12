@@ -62,6 +62,7 @@
 			<param index="0" name="path" type="String" />
 			<description>
 				Save the heightmap as a PNG file. Returns [code]true[/code] on success.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS).
 			</description>
 		</method>
 		<method name="save_raw" qualifiers="const">
@@ -69,12 +70,14 @@
 			<param index="0" name="path" type="String" />
 			<description>
 				Save the heightmap as raw binary data. Returns [code]true[/code] on success.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS).
 			</description>
 		</method>
 		<method name="generate_mesh" qualifiers="const">
 			<return type="ArrayMesh" />
 			<description>
 				Generate a mesh from the heightmap data.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS).
 			</description>
 		</method>
 	</methods>

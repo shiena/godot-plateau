@@ -1,4 +1,5 @@
 #include "plateau_city_model.h"
+#include "plateau_platform.h"
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -244,6 +245,9 @@ PLATEAUCityModel::~PLATEAUCityModel() {
 }
 
 bool PLATEAUCityModel::load(const String &gml_path) {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(false);
+#endif
     // Convert Godot String to std::string
     std::string path = gml_path.utf8().get_data();
 
@@ -283,6 +287,10 @@ String PLATEAUCityModel::get_gml_path() const {
 
 TypedArray<PLATEAUMeshData> PLATEAUCityModel::extract_meshes(const Ref<PLATEAUMeshExtractOptions> &options) {
     TypedArray<PLATEAUMeshData> result;
+
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(result);
+#endif
 
     if (!is_loaded_ || city_model_ == nullptr) {
         UtilityFunctions::printerr("CityModel not loaded");
@@ -830,6 +838,9 @@ void PLATEAUCityModel::_bind_methods() {
 
 // Async API implementation
 void PLATEAUCityModel::load_async(const String &gml_path) {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED();
+#endif
     if (is_processing_.load()) {
         UtilityFunctions::printerr("PLATEAUCityModel: Already processing, cannot start new load");
         return;
@@ -854,6 +865,9 @@ void PLATEAUCityModel::_load_thread_func() {
 }
 
 void PLATEAUCityModel::extract_meshes_async(const Ref<PLATEAUMeshExtractOptions> &options) {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED();
+#endif
     if (is_processing_.load()) {
         UtilityFunctions::printerr("PLATEAUCityModel: Already processing, cannot start new extraction");
         return;

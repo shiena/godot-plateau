@@ -1,4 +1,5 @@
 #include "plateau_granularity_converter.h"
+#include "plateau_platform.h"
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/classes/array_mesh.hpp>
 
@@ -31,6 +32,10 @@ TypedArray<PLATEAUMeshData> PLATEAUGranularityConverter::convert(
     int target_granularity) {
 
     TypedArray<PLATEAUMeshData> result;
+
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(result);
+#endif
 
     if (mesh_data_array.is_empty()) {
         UtilityFunctions::printerr("PLATEAUGranularityConverter: mesh_data_array is empty");
