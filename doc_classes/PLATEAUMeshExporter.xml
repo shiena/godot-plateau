@@ -20,6 +20,7 @@
 			<param index="2" name="format" type="int" />
 			<description>
 				Export mesh data to the specified file path in the given format. Returns [code]true[/code] on success.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS).
 			</description>
 		</method>
 		<method name="get_supported_formats" qualifiers="static">

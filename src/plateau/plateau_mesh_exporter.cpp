@@ -1,4 +1,5 @@
 #include "plateau_mesh_exporter.h"
+#include "plateau_platform.h"
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/classes/array_mesh.hpp>
 
@@ -32,6 +33,10 @@ bool PLATEAUMeshExporter::export_to_file(
     const TypedArray<PLATEAUMeshData> &mesh_data_array,
     const String &file_path,
     int format) {
+
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(false);
+#endif
 
     if (mesh_data_array.is_empty()) {
         UtilityFunctions::printerr("PLATEAUMeshExporter: mesh_data_array is empty");

@@ -23,6 +23,7 @@
 			<param index="1" name="target_granularity" type="int" />
 			<description>
 				Convert mesh data to the specified granularity level. Returns array of converted [PLATEAUMeshData].
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS).
 			</description>
 		</method>
 		<method name="detect_granularity" qualifiers="static">

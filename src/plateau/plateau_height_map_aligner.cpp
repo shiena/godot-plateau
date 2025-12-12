@@ -1,4 +1,5 @@
 #include "plateau_height_map_aligner.h"
+#include "plateau_platform.h"
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <cmath>
 
@@ -98,6 +99,10 @@ int PLATEAUHeightMapAligner::get_heightmap_count() const {
 TypedArray<PLATEAUMeshData> PLATEAUHeightMapAligner::align(const TypedArray<PLATEAUMeshData> &mesh_data_array) {
     TypedArray<PLATEAUMeshData> result;
 
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(result);
+#endif
+
     if (heightmap_refs_.empty()) {
         UtilityFunctions::printerr("PLATEAUHeightMapAligner: no heightmaps registered");
         return result;
@@ -161,6 +166,10 @@ TypedArray<PLATEAUMeshData> PLATEAUHeightMapAligner::align(const TypedArray<PLAT
 
 TypedArray<PLATEAUHeightMapData> PLATEAUHeightMapAligner::align_invert(const TypedArray<PLATEAUMeshData> &mesh_data_array) {
     TypedArray<PLATEAUHeightMapData> result;
+
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(result);
+#endif
 
     if (heightmap_refs_.empty()) {
         UtilityFunctions::printerr("PLATEAUHeightMapAligner: no heightmaps registered");

@@ -1,4 +1,5 @@
 #include "plateau_terrain.h"
+#include "plateau_platform.h"
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <cmath>
@@ -113,6 +114,9 @@ void PLATEAUHeightMapData::clear_cache() {
 }
 
 bool PLATEAUHeightMapData::save_png(const String &path) const {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(false);
+#endif
     if (heightmap_data_.empty() || width_ <= 0 || height_ <= 0) {
         UtilityFunctions::printerr("Cannot save PNG: no heightmap data");
         return false;
@@ -132,6 +136,9 @@ bool PLATEAUHeightMapData::save_png(const String &path) const {
 }
 
 bool PLATEAUHeightMapData::save_raw(const String &path) const {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(false);
+#endif
     if (heightmap_data_.empty() || width_ <= 0 || height_ <= 0) {
         UtilityFunctions::printerr("Cannot save RAW: no heightmap data");
         return false;
@@ -153,6 +160,10 @@ bool PLATEAUHeightMapData::save_raw(const String &path) const {
 Ref<ArrayMesh> PLATEAUHeightMapData::generate_mesh() const {
     Ref<ArrayMesh> array_mesh;
     array_mesh.instantiate();
+
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(array_mesh);
+#endif
 
     if (heightmap_data_.empty() || width_ <= 0 || height_ <= 0) {
         UtilityFunctions::printerr("Cannot generate mesh: no heightmap data");
@@ -567,6 +578,11 @@ Ref<PLATEAUHeightMapData> PLATEAUTerrain::generate_from_meshes(const TypedArray<
 
 Ref<PLATEAUHeightMapData> PLATEAUTerrain::generate_from_plateau_mesh(const plateau::polygonMesh::Mesh &mesh, const String &name) {
     Ref<PLATEAUHeightMapData> result;
+
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(result);
+#endif
+
     result.instantiate();
     result->set_name(name);
 
@@ -612,6 +628,9 @@ Ref<PLATEAUHeightMapData> PLATEAUTerrain::generate_from_plateau_mesh(const plate
 }
 
 void PLATEAUTerrain::generate_from_meshes_async(const TypedArray<PLATEAUMeshData> &mesh_data_array) {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED();
+#endif
     if (is_processing_.load()) {
         UtilityFunctions::printerr("PLATEAUTerrain: Already processing");
         return;

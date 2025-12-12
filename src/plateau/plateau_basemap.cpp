@@ -1,4 +1,5 @@
 #include "plateau_basemap.h"
+#include "plateau_platform.h"
 #include "plateau_parallel.h"
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/classes/file_access.hpp>
@@ -295,10 +296,14 @@ Ref<PLATEAUTileCoordinate> PLATEAUVectorTileDownloader::get_tile_coordinate(int 
 }
 
 Ref<PLATEAUVectorTile> PLATEAUVectorTileDownloader::download(int index) {
-    ensure_downloader();
-
     Ref<PLATEAUVectorTile> result;
     result.instantiate();
+
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(result);
+#endif
+
+    ensure_downloader();
 
     if (!downloader_ || index < 0 || index >= downloader_->getTileCount()) {
         UtilityFunctions::printerr("PLATEAUVectorTileDownloader: Invalid index: ", index);
@@ -393,6 +398,10 @@ Ref<PLATEAUVectorTile> PLATEAUVectorTileDownloader::download_tile(const Ref<PLAT
 
 TypedArray<PLATEAUVectorTile> PLATEAUVectorTileDownloader::download_all() {
     TypedArray<PLATEAUVectorTile> result;
+
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(result);
+#endif
 
     ensure_downloader();
     if (!downloader_) {
