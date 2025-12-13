@@ -35,7 +35,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "visionOS" OR VISIONOS)
     set(LIBPLATEAU_LIB_DEFAULT "${LIBPLATEAU_BUILD_DIR_DEFAULT}/src/libplateau.a")
 elseif(APPLE)
     set(LIBPLATEAU_BUILD_DIR_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/build/macos/libplateau")
-    set(LIBPLATEAU_LIB_DEFAULT "${LIBPLATEAU_BUILD_DIR_DEFAULT}/src/libplateau.a")
+    set(LIBPLATEAU_LIB_DEFAULT "${LIBPLATEAU_BUILD_DIR_DEFAULT}/src/libplateau_combined.a")
 else()
     set(LIBPLATEAU_BUILD_DIR_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/build/linux/libplateau")
     set(LIBPLATEAU_LIB_DEFAULT "${LIBPLATEAU_BUILD_DIR_DEFAULT}/src/libplateau_combined.a")
@@ -150,7 +150,33 @@ if(EXISTS "${LIBPLATEAU_COMBINED_LIB}")
         target_link_libraries(${LIBNAME} PRIVATE ${FOUNDATION_FRAMEWORK} ${COREGRAPHICS_FRAMEWORK})
     elseif(APPLE)
         find_library(OPENGL_FRAMEWORK OpenGL)
-        target_link_libraries(${LIBNAME} PRIVATE ${OPENGL_FRAMEWORK})
+        find_library(COREFOUNDATION_FRAMEWORK CoreFoundation)
+        find_library(CORESERVICES_FRAMEWORK CoreServices)
+        target_link_libraries(${LIBNAME} PRIVATE
+            ${OPENGL_FRAMEWORK}
+            ${COREFOUNDATION_FRAMEWORK}
+            ${CORESERVICES_FRAMEWORK}
+        )
+        # Find Homebrew prefix
+        execute_process(
+            COMMAND brew --prefix
+            OUTPUT_VARIABLE HOMEBREW_PREFIX
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+        if(NOT HOMEBREW_PREFIX)
+            set(HOMEBREW_PREFIX "/opt/homebrew")
+        endif()
+        # Add mesa-glu for GLU functions (required by libcitygml)
+        set(MESA_GLU_PREFIX "${HOMEBREW_PREFIX}/opt/mesa-glu")
+        if(EXISTS "${MESA_GLU_PREFIX}")
+            target_include_directories(${LIBNAME} PRIVATE "${MESA_GLU_PREFIX}/include")
+            target_link_directories(${LIBNAME} PRIVATE "${MESA_GLU_PREFIX}/lib")
+            target_link_libraries(${LIBNAME} PRIVATE GLU)
+        endif()
+        # Add liblzma and libdeflate for libtiff compression support
+        target_link_directories(${LIBNAME} PRIVATE "${HOMEBREW_PREFIX}/lib")
+        target_link_libraries(${LIBNAME} PRIVATE lzma deflate)
     else()
         # Linux
         find_package(OpenGL REQUIRED)
@@ -216,7 +242,7 @@ set_property(TARGET ${LIBNAME} PROPERTY CXX_STANDARD 17)
 if(MSVC)
     target_compile_options(${LIBNAME} PRIVATE /wd4251 /wd4275)
 else()
-    target_compile_options(${LIBNAME} PRIVATE -Wno-deprecated-declarations)
+    target_compile_options(${LIBNAME} PRIVATE -Wno-deprecated-declarations -Wno-switch -fexceptions)
 endif()
 
 set_target_properties(${LIBNAME}

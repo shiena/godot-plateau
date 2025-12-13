@@ -134,8 +134,16 @@ PLATEAU SDKの主要APIを示します。
 - Python 3.8以上
 - SCons 4.0以上
 - CMake 3.17以上
-- Visual Studio 2022 (Windows) / Ninja (macOS)
+- Visual Studio 2022 (Windows) / Ninja + Xcode (macOS)
 - Git
+
+#### macOS 追加要件
+
+以下のHomebrewパッケージをインストールしてください：
+
+```bash
+brew install mesa-glu xz libdeflate
+```
 
 ### SConsでビルド（推奨）
 
@@ -168,6 +176,9 @@ scons platform=macos target=template_release
 ```bash
 # libplateauのビルドをスキップ（ビルド済みの場合）
 scons platform=windows target=template_release skip_libplateau_build=yes
+
+# macOS: Homebrewのカスタムプレフィックス（デフォルト: /opt/homebrew）
+scons platform=macos target=template_release homebrew_prefix=/usr/local
 ```
 
 ### CMakeでビルド（代替方法）

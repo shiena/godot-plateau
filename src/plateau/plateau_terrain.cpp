@@ -570,8 +570,8 @@ Ref<PLATEAUHeightMapData> PLATEAUTerrain::generate_from_meshes(const TypedArray<
         return result;
     }
 
-    UtilityFunctions::print("PLATEAUTerrain: merged ", mesh_data_array.size(), " meshes, ",
-                           merged_mesh.getVertices().size(), " vertices");
+    UtilityFunctions::print("PLATEAUTerrain: merged ", static_cast<int64_t>(mesh_data_array.size()), " meshes, ",
+                           static_cast<int64_t>(merged_mesh.getVertices().size()), " vertices");
 
     return generate_from_plateau_mesh(merged_mesh, combined_name);
 }

@@ -23,6 +23,12 @@ Linux build requires:
   - OpenGL development libraries: sudo apt-get install libgl1-mesa-dev libglu1-mesa-dev
   - Example: scons platform=linux arch=x86_64
   - For GCC 15+ environments, use Clang: scons platform=linux arch=x86_64 use_clang=yes
+
+macOS build requires:
+  - Xcode with Command Line Tools
+  - Homebrew packages: brew install mesa-glu xz libdeflate
+  - Example: scons platform=macos arch=arm64
+  - Custom Homebrew prefix: scons platform=macos arch=arm64 homebrew_prefix=/usr/local
 """
 
 import os
@@ -39,6 +45,7 @@ from methods import print_error, print_warning
 # Configuration
 LIB_NAME = "godot-plateau"
 GODOT_PROJECT_DIR = "demo"
+DEFAULT_HOMEBREW_PREFIX = "/opt/homebrew"
 
 REPO_ROOT = Path(Dir('#').abspath)
 LIBPLATEAU_ROOT = REPO_ROOT / "libplateau"
@@ -58,7 +65,8 @@ def get_libplateau_lib_path(platform, build_dir, build_type):
         # Windows uses build type as subdirectory (Release/RelWithDebInfo/Debug)
         return build_dir / "src" / build_type / "plateau_combined.lib"
     elif platform == "macos":
-        return build_dir / "src" / "libplateau.a"
+        # Use combined library that includes all dependencies
+        return build_dir / "src" / "libplateau_combined.a"
     elif platform == "android":
         return build_dir / "src" / "libplateau.a"
     elif platform == "ios":
@@ -94,10 +102,14 @@ def get_cmake_configure_args(platform, build_dir, build_type, env=None):
             "-G", "Visual Studio 17 2022",
         ]
     elif platform == "macos":
+        # Get Homebrew prefix for liblzma and libdeflate
+        homebrew_prefix = env.get("homebrew_prefix", DEFAULT_HOMEBREW_PREFIX) if env else DEFAULT_HOMEBREW_PREFIX
         return common_args + [
             "-DRUNTIME_LIB_TYPE=MD",
             '-DCMAKE_CXX_FLAGS=-w',
             "-DCMAKE_OSX_ARCHITECTURES:STRING=arm64",
+            # Enable lzma and libdeflate for libtiff
+            f"-DCMAKE_PREFIX_PATH={homebrew_prefix}",
             "-G", "Ninja",
         ]
     elif platform == "android":
@@ -223,6 +235,7 @@ customs = ["custom.py"]
 customs = [os.path.abspath(path) for path in customs]
 
 opts = Variables(customs, ARGUMENTS)
+opts.Add("homebrew_prefix", "Homebrew installation prefix (macOS only)", DEFAULT_HOMEBREW_PREFIX)
 opts.Update(localEnv)
 
 Help(opts.GenerateHelpText(localEnv))
@@ -263,6 +276,7 @@ if not LIBPLATEAU_ROOT.exists():
 libplateau_build_type = get_cmake_build_type(target)
 env["LIBPLATEAU_BUILD_TYPE"] = libplateau_build_type
 env["use_clang"] = ARGUMENTS.get("use_clang", "no") == "yes"
+env["homebrew_prefix"] = ARGUMENTS.get("homebrew_prefix", DEFAULT_HOMEBREW_PREFIX)
 
 libplateau_build_dir = get_libplateau_build_dir(platform, arch)
 libplateau_lib_path = get_libplateau_lib_path(platform, libplateau_build_dir, libplateau_build_type)
@@ -303,16 +317,46 @@ env.Append(CPPPATH=[
     str(LIBPLATEAU_ROOT / "3rdparty" / "glm"),
 ])
 
-# Link libplateau
+# Link libplateau and its dependencies
 env.Append(LIBS=[libplateau_lib_file])
 
-# Platform-specific libraries
+# Platform-specific libraries and frameworks
 if platform == "windows":
     env.Append(LIBS=["glu32", "opengl32", "advapi32", "user32"])
 elif platform == "linux":
+    # Linux needs 3rdparty libs separately (no combined lib)
+    libplateau_3rdparty = libplateau_build_dir / "3rdparty"
+    env.Append(LIBS=[
+        File(str(libplateau_3rdparty / "libcitygml" / "lib" / "libcitygml.a")),
+        File(str(libplateau_3rdparty / "openmesh" / "src" / "OpenMesh" / "Core" / "libOpenMeshCore.a")),
+        File(str(libplateau_3rdparty / "openmesh" / "src" / "OpenMesh" / "Tools" / "libOpenMeshTools.a")),
+        File(str(libplateau_3rdparty / "hmm" / "src" / "libhmm.a")),
+        File(str(libplateau_3rdparty / "glTF-SDK" / "glTF-SDK" / "GLTFSDK" / "libGLTFSDK.a")),
+        File(str(libplateau_3rdparty / "xerces-c" / "src" / "libxerces-c.a")),
+        File(str(libplateau_3rdparty / "libtiff" / "libtiff" / "libtiff.a")),
+        File(str(libplateau_3rdparty / "libpng" / "libpng.a")),
+        File(str(libplateau_3rdparty / "libjpeg-turbo" / "lib" / "libturbojpeg.a")),
+        File(str(libplateau_3rdparty / "zlib" / "libz.a")),
+    ])
     env.Append(LIBS=["GL", "GLU", "pthread", "dl"])
 elif platform == "macos":
-    env.Append(FRAMEWORKS=["OpenGL"])
+    # macOS uses combined lib; add required system frameworks via LINKFLAGS
+    env.Append(LINKFLAGS=[
+        "-framework", "OpenGL",
+        "-framework", "CoreFoundation",
+        "-framework", "CoreServices",
+    ])
+    # Add Homebrew libraries
+    homebrew_prefix = env["homebrew_prefix"]
+    env.Append(LIBPATH=[homebrew_prefix + "/lib"])
+    # Add mesa-glu for GLU functions (required by libcitygml)
+    mesa_glu_prefix = homebrew_prefix + "/opt/mesa-glu"
+    if os.path.exists(mesa_glu_prefix):
+        env.Append(CPPPATH=[mesa_glu_prefix + "/include"])
+        env.Append(LIBPATH=[mesa_glu_prefix + "/lib"])
+        env.Append(LIBS=["GLU"])
+    # Add liblzma and libdeflate for libtiff compression support
+    env.Append(LIBS=["lzma", "deflate"])
 elif platform == "android":
     env.Append(LIBS=["log", "android"])
 elif platform == "ios":
@@ -324,8 +368,8 @@ elif platform == "visionos":
 if platform == "windows":
     env.Append(CXXFLAGS=["/wd4251", "/wd4275", "/EHsc"])
 else:
-    env.Append(CXXFLAGS=["-Wno-deprecated-declarations"])
-    if platform in ("linux", "android", "ios", "visionos"):
+    env.Append(CXXFLAGS=["-Wno-deprecated-declarations", "-Wno-switch"])
+    if platform in ("macos", "linux", "android", "ios", "visionos"):
         env.Append(CXXFLAGS=["-fexceptions"])
 
 # Source files

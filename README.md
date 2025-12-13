@@ -136,8 +136,16 @@ Demonstrates map tile download features.
 - Python 3.8+
 - SCons 4.0+
 - CMake 3.17+
-- Visual Studio 2022 (Windows) / Ninja (macOS)
+- Visual Studio 2022 (Windows) / Ninja + Xcode (macOS)
 - Git
+
+#### macOS Additional Requirements
+
+Install the following Homebrew packages:
+
+```bash
+brew install mesa-glu xz libdeflate
+```
 
 ### Build with SCons (Recommended)
 
@@ -170,6 +178,9 @@ The built library will be copied to `bin/<platform>/` and `demo/bin/<platform>/`
 ```bash
 # Skip libplateau build (if already built)
 scons platform=windows target=template_release skip_libplateau_build=yes
+
+# macOS: Custom Homebrew prefix (default: /opt/homebrew)
+scons platform=macos target=template_release homebrew_prefix=/usr/local
 ```
 
 ### Build with CMake (Alternative)
