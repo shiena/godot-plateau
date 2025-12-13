@@ -192,6 +192,148 @@ offset_right = 330.0
 offset_bottom = 450.0
 text = "Load Selected GML"
 
+[node name="TexturePanel" type="Panel" parent="UI"]
+offset_left = 10.0
+offset_top = 490.0
+offset_right = 400.0
+offset_bottom = 630.0
+
+[node name="Title" type="Label" parent="UI/TexturePanel"]
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 380.0
+offset_bottom = 25.0
+text = "Terrain Texture"
+horizontal_alignment = 1
+
+[node name="TileSourceLabel" type="Label" parent="UI/TexturePanel"]
+offset_left = 10.0
+offset_top = 30.0
+offset_right = 100.0
+offset_bottom = 50.0
+text = "Tile Source:"
+
+[node name="TileSourceOption" type="OptionButton" parent="UI/TexturePanel"]
+offset_left = 105.0
+offset_top = 28.0
+offset_right = 280.0
+offset_bottom = 52.0
+
+[node name="ZoomLabel" type="Label" parent="UI/TexturePanel"]
+offset_left = 290.0
+offset_top = 30.0
+offset_right = 330.0
+offset_bottom = 50.0
+text = "Zoom:"
+
+[node name="ZoomSpin" type="SpinBox" parent="UI/TexturePanel"]
+offset_left = 335.0
+offset_top = 28.0
+offset_right = 380.0
+offset_bottom = 52.0
+min_value = 10.0
+max_value = 18.0
+value = 15.0
+
+[node name="DownloadTextureButton" type="Button" parent="UI/TexturePanel"]
+offset_left = 10.0
+offset_top = 60.0
+offset_right = 190.0
+offset_bottom = 85.0
+text = "Download Texture"
+
+[node name="ApplyTextureButton" type="Button" parent="UI/TexturePanel"]
+offset_left = 200.0
+offset_top = 60.0
+offset_right = 380.0
+offset_bottom = 85.0
+text = "Apply to Terrain"
+disabled = true
+
+[node name="TextureProgress" type="ProgressBar" parent="UI/TexturePanel"]
+offset_left = 10.0
+offset_top = 95.0
+offset_right = 380.0
+offset_bottom = 115.0
+show_percentage = true
+
+[node name="TextureStatus" type="Label" parent="UI/TexturePanel"]
+offset_left = 10.0
+offset_top = 118.0
+offset_right = 380.0
+offset_bottom = 138.0
+text = ""
+theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="NavigationPanel" type="Panel" parent="UI"]
+offset_left = 10.0
+offset_top = 640.0
+offset_right = 400.0
+offset_bottom = 780.0
+
+[node name="Title" type="Label" parent="UI/NavigationPanel"]
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 380.0
+offset_bottom = 25.0
+text = "Navigation"
+horizontal_alignment = 1
+
+[node name="JumpCenterButton" type="Button" parent="UI/NavigationPanel"]
+offset_left = 10.0
+offset_top = 30.0
+offset_right = 190.0
+offset_bottom = 55.0
+text = "Jump to Center"
+
+[node name="FitViewButton" type="Button" parent="UI/NavigationPanel"]
+offset_left = 200.0
+offset_top = 30.0
+offset_right = 380.0
+offset_bottom = 55.0
+text = "Fit View"
+
+[node name="LatLabel" type="Label" parent="UI/NavigationPanel"]
+offset_left = 10.0
+offset_top = 65.0
+offset_right = 60.0
+offset_bottom = 85.0
+text = "Latitude:"
+
+[node name="LatSpin" type="SpinBox" parent="UI/NavigationPanel"]
+offset_left = 65.0
+offset_top = 63.0
+offset_right = 180.0
+offset_bottom = 87.0
+min_value = -90.0
+max_value = 90.0
+step = 0.0001
+value = 35.6812
+
+[node name="LonLabel" type="Label" parent="UI/NavigationPanel"]
+offset_left = 190.0
+offset_top = 65.0
+offset_right = 250.0
+offset_bottom = 85.0
+text = "Longitude:"
+
+[node name="LonSpin" type="SpinBox" parent="UI/NavigationPanel"]
+offset_left = 255.0
+offset_top = 63.0
+offset_right = 380.0
+offset_bottom = 87.0
+min_value = -180.0
+max_value = 180.0
+step = 0.0001
+value = 139.7671
+
+[node name="JumpToLocationButton" type="Button" parent="UI/NavigationPanel"]
+offset_left = 10.0
+offset_top = 95.0
+offset_right = 380.0
+offset_bottom = 120.0
+text = "Jump to Lat/Lon"
+
 [node name="LogPanel" type="Panel" parent="UI"]
 anchors_preset = 3
 anchor_left = 1.0
@@ -238,3 +380,9 @@ timeout = 30
 [node name="DownloadRequest" type="HTTPRequest" parent="."]
 timeout = 120
 download_chunk_size = 65536
+
+[node name="TileRequest" type="HTTPRequest" parent="."]
+timeout = 30
+
+[node name="Marker" type="MeshInstance3D" parent="."]
+visible = false
