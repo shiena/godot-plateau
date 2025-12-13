@@ -167,9 +167,18 @@ scons platform=windows target=template_release
 
 # macOS
 scons platform=macos target=template_release
+
+# Linux
+scons platform=linux target=template_release
+
+# Android（ANDROID_HOMEまたはANDROID_SDK_ROOT環境変数が必要）
+scons platform=android arch=arm64 target=template_release
+
+# iOS（macOSとXcodeが必要）
+scons platform=ios arch=arm64 target=template_release
 ```
 
-ビルドされたライブラリは `bin/<platform>/` と `demo/bin/<platform>/` にコピーされます。
+ビルドされたライブラリは `bin/<platform>/` と `demo/addons/plateau/<platform>/` にコピーされます。
 
 #### ビルドオプション
 
@@ -179,7 +188,26 @@ scons platform=windows target=template_release skip_libplateau_build=yes
 
 # macOS: Homebrewのカスタムプレフィックス（デフォルト: /opt/homebrew）
 scons platform=macos target=template_release homebrew_prefix=/usr/local
+
+# Linux: GCCの代わりにClangを使用（GCC 15+環境向け）
+scons platform=linux target=template_release use_clang=yes
 ```
+
+#### Androidビルド要件
+
+- `ANDROID_HOME`または`ANDROID_SDK_ROOT`環境変数にAndroid SDKパスを設定
+- Android NDKがインストール済み（デフォルトバージョン: 23.1.7779620）
+- Ninjaビルドツール
+
+```bash
+# カスタムNDKバージョンの例
+scons platform=android arch=arm64 target=template_release ndk_version=23.1.7779620
+```
+
+#### iOSビルド要件
+
+- macOSとXcode、Command Line Toolsがインストール済み
+- Ninjaビルドツール（`brew install ninja`）
 
 ### CMakeでビルド（代替方法）
 

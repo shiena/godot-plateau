@@ -138,7 +138,6 @@ def get_cmake_configure_args(platform, build_dir, build_type, env=None):
             "-DCMAKE_SYSTEM_NAME=iOS",
             f"-DCMAKE_OSX_ARCHITECTURES={ios_arch}",
             "-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0",
-            "-DCMAKE_C_FLAGS=-DPNG_ARM_NEON_OPT=0",
         ]
     else:  # linux
         use_clang = env.get("use_clang", False) if env else False
