@@ -70,9 +70,11 @@ def get_libplateau_lib_path(platform, build_dir, build_type):
     elif platform == "android":
         return build_dir / "src" / "libplateau.a"
     elif platform == "ios":
-        return build_dir / "src" / "libplateau.a"
+        # iOS builds as a framework
+        return build_dir / "src" / "plateau.framework" / "plateau"
     elif platform == "visionos":
-        return build_dir / "src" / "libplateau.a"
+        # visionOS builds as a framework
+        return build_dir / "src" / "plateau.framework" / "plateau"
     else:  # linux
         return build_dir / "src" / "libplateau_combined.a"
 
@@ -361,8 +363,26 @@ elif platform == "android":
     env.Append(LIBS=["log", "android"])
 elif platform == "ios":
     env.Append(FRAMEWORKS=["Foundation", "CoreGraphics"])
+    # iOS needs 3rdparty libs separately (framework doesn't include them)
+    libplateau_3rdparty = libplateau_build_dir / "3rdparty"
+    env.Append(LIBS=[
+        File(str(libplateau_3rdparty / "libcitygml" / "lib" / "libcitygml.a")),
+        File(str(libplateau_3rdparty / "openmesh" / "src" / "OpenMesh" / "Core" / "libOpenMeshCore.a")),
+        File(str(libplateau_3rdparty / "openmesh" / "src" / "OpenMesh" / "Tools" / "libOpenMeshTools.a")),
+        File(str(libplateau_3rdparty / "hmm" / "src" / "libhmm.a")),
+        File(str(libplateau_3rdparty / "glTF-SDK" / "glTF-SDK" / "GLTFSDK" / "libGLTFSDK.a")),
+    ])
 elif platform == "visionos":
     env.Append(FRAMEWORKS=["Foundation", "CoreGraphics"])
+    # visionOS needs 3rdparty libs separately (framework doesn't include them)
+    libplateau_3rdparty = libplateau_build_dir / "3rdparty"
+    env.Append(LIBS=[
+        File(str(libplateau_3rdparty / "libcitygml" / "lib" / "libcitygml.a")),
+        File(str(libplateau_3rdparty / "openmesh" / "src" / "OpenMesh" / "Core" / "libOpenMeshCore.a")),
+        File(str(libplateau_3rdparty / "openmesh" / "src" / "OpenMesh" / "Tools" / "libOpenMeshTools.a")),
+        File(str(libplateau_3rdparty / "hmm" / "src" / "libhmm.a")),
+        File(str(libplateau_3rdparty / "glTF-SDK" / "glTF-SDK" / "GLTFSDK" / "libGLTFSDK.a")),
+    ])
 
 # Suppress warnings from libplateau headers and enable C++ exceptions
 if platform == "windows":

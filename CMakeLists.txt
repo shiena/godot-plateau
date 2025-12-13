@@ -29,10 +29,12 @@ elseif(ANDROID)
     set(LIBPLATEAU_LIB_DEFAULT "${LIBPLATEAU_BUILD_DIR_DEFAULT}/src/libplateau.a")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set(LIBPLATEAU_BUILD_DIR_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/build/ios/${CMAKE_OSX_ARCHITECTURES}/libplateau")
-    set(LIBPLATEAU_LIB_DEFAULT "${LIBPLATEAU_BUILD_DIR_DEFAULT}/src/libplateau.a")
+    # iOS builds as a framework
+    set(LIBPLATEAU_LIB_DEFAULT "${LIBPLATEAU_BUILD_DIR_DEFAULT}/src/plateau.framework/plateau")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "visionOS" OR VISIONOS)
     set(LIBPLATEAU_BUILD_DIR_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/build/visionos/${CMAKE_OSX_ARCHITECTURES}/libplateau")
-    set(LIBPLATEAU_LIB_DEFAULT "${LIBPLATEAU_BUILD_DIR_DEFAULT}/src/libplateau.a")
+    # visionOS builds as a framework
+    set(LIBPLATEAU_LIB_DEFAULT "${LIBPLATEAU_BUILD_DIR_DEFAULT}/src/plateau.framework/plateau")
 elseif(APPLE)
     set(LIBPLATEAU_BUILD_DIR_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/build/macos/libplateau")
     set(LIBPLATEAU_LIB_DEFAULT "${LIBPLATEAU_BUILD_DIR_DEFAULT}/src/libplateau_combined.a")
@@ -144,10 +146,26 @@ if(EXISTS "${LIBPLATEAU_COMBINED_LIB}")
         find_library(FOUNDATION_FRAMEWORK Foundation)
         find_library(COREGRAPHICS_FRAMEWORK CoreGraphics)
         target_link_libraries(${LIBNAME} PRIVATE ${FOUNDATION_FRAMEWORK} ${COREGRAPHICS_FRAMEWORK})
+        # iOS needs 3rdparty libs separately (framework doesn't include them)
+        target_link_libraries(${LIBNAME} PRIVATE
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/libcitygml/lib/libcitygml.a"
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/openmesh/src/OpenMesh/Core/libOpenMeshCore.a"
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/openmesh/src/OpenMesh/Tools/libOpenMeshTools.a"
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/hmm/src/libhmm.a"
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/glTF-SDK/glTF-SDK/GLTFSDK/libGLTFSDK.a"
+        )
     elseif(CMAKE_SYSTEM_NAME STREQUAL "visionOS" OR VISIONOS)
         find_library(FOUNDATION_FRAMEWORK Foundation)
         find_library(COREGRAPHICS_FRAMEWORK CoreGraphics)
         target_link_libraries(${LIBNAME} PRIVATE ${FOUNDATION_FRAMEWORK} ${COREGRAPHICS_FRAMEWORK})
+        # visionOS needs 3rdparty libs separately (framework doesn't include them)
+        target_link_libraries(${LIBNAME} PRIVATE
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/libcitygml/lib/libcitygml.a"
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/openmesh/src/OpenMesh/Core/libOpenMeshCore.a"
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/openmesh/src/OpenMesh/Tools/libOpenMeshTools.a"
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/hmm/src/libhmm.a"
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/glTF-SDK/glTF-SDK/GLTFSDK/libGLTFSDK.a"
+        )
     elseif(APPLE)
         find_library(OPENGL_FRAMEWORK OpenGL)
         find_library(COREFOUNDATION_FRAMEWORK CoreFoundation)

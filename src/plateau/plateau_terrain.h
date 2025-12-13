@@ -1,5 +1,15 @@
 #pragma once
 
+// Platform detection for mobile exclusions
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+#if defined(__ANDROID__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE) || (defined(TARGET_OS_VISION) && TARGET_OS_VISION)
+#define PLATEAU_MOBILE_PLATFORM 1
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
+
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/standard_material3d.hpp>
@@ -180,3 +190,5 @@ private:
 };
 
 } // namespace godot
+
+#endif // !PLATEAU_MOBILE_PLATFORM

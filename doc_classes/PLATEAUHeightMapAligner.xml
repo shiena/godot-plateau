@@ -5,6 +5,7 @@
 	</brief_description>
 	<description>
 		PLATEAUHeightMapAligner adjusts building and model heights to match terrain, or adjusts terrain to match roads and other features.
+		[b]Note:[/b] This class is not available on mobile platforms (iOS/Android/visionOS).
 		[codeblock]
 		var aligner = PLATEAUHeightMapAligner.new()
 		aligner.height_offset = -0.15  # Sink buildings slightly

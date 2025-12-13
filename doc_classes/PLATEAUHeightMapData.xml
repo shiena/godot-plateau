@@ -5,6 +5,7 @@
 	</brief_description>
 	<description>
 		PLATEAUHeightMapData stores generated heightmap data along with metadata such as bounds and UV coordinates. It can save heightmaps to files and generate meshes from the heightmap data.
+		[b]Note:[/b] This class is not available on mobile platforms (iOS/Android/visionOS).
 	</description>
 	<tutorials>
 	</tutorials>
