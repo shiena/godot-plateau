@@ -237,7 +237,7 @@ When exporting to OBJ format, libplateau creates one group per CityObject (build
 
 **Workaround**: Use AREA granularity (`mesh_granularity = 2`) before exporting to merge buildings into fewer meshes.
 
-### Mobile Platforms (iOS/Android/visionOS)
+### Mobile Platforms (iOS/Android)
 
 The following classes are **not available** on mobile platforms due to libpng dependency in height map generation:
 

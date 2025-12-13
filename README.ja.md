@@ -235,7 +235,7 @@ OBJ形式でエクスポートする場合、libplateauはCityObject（建物）
 
 **回避策**: エクスポート前にAREA粒度（`mesh_granularity = 2`）を使用して建物をより少ないメッシュに結合してください。
 
-### モバイルプラットフォーム (iOS/Android/visionOS)
+### モバイルプラットフォーム (iOS/Android)
 
 以下のクラスはモバイルプラットフォームでは**利用できません**（ハイトマップ生成のlibpng依存のため）：
 

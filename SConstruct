@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 SConstruct for godot-plateau GDExtension
-Build with: scons platform=<windows|linux|macos|android|ios|visionos> target=<template_debug|template_release|editor>
+Build with: scons platform=<windows|linux|macos|android|ios> target=<template_debug|template_release|editor>
 
 Android build requires:
   - ANDROID_HOME or ANDROID_SDK_ROOT environment variable set
@@ -11,12 +11,6 @@ Android build requires:
 iOS build requires:
   - macOS with Xcode installed
   - Example: scons platform=ios arch=arm64
-
-visionOS build requires:
-  - macOS with Xcode 15+ installed
-  - visionOS SDK
-  - Example: scons platform=visionos arch=arm64
-  - Simulator: scons platform=visionos arch=arm64 visionos_simulator=yes
 
 Linux build requires:
   - GCC 13 (recommended, Ubuntu 24.04 default) or Clang
@@ -54,7 +48,7 @@ BUILD_ROOT = REPO_ROOT / "build"
 # Platform-specific libplateau build settings
 def get_libplateau_build_dir(platform, arch=""):
     """Get the libplateau build directory for the platform."""
-    if platform in ("android", "ios", "visionos") and arch:
+    if platform in ("android", "ios") and arch:
         return BUILD_ROOT / platform / arch / "libplateau"
     return BUILD_ROOT / platform / "libplateau"
 
@@ -71,9 +65,6 @@ def get_libplateau_lib_path(platform, build_dir, build_type):
         return build_dir / "src" / "libplateau.a"
     elif platform == "ios":
         # iOS builds as a framework
-        return build_dir / "src" / "plateau.framework" / "plateau"
-    elif platform == "visionos":
-        # visionOS builds as a framework
         return build_dir / "src" / "plateau.framework" / "plateau"
     else:  # linux
         return build_dir / "src" / "libplateau_combined.a"
@@ -146,18 +137,6 @@ def get_cmake_configure_args(platform, build_dir, build_type, env=None):
             f"-DCMAKE_OSX_ARCHITECTURES={ios_arch}",
             "-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0",
             "-DCMAKE_C_FLAGS=-DPNG_ARM_NEON_OPT=0",
-        ]
-    elif platform == "visionos":
-        # Use ios.toolchain.cmake with PLATFORM=VISIONOS
-        toolchain_file = str(REPO_ROOT / "godot-cpp" / "cmake" / "ios.toolchain.cmake")
-        visionos_simulator = env.get("visionos_simulator", False) if env else False
-        visionos_platform = "SIMULATOR_VISIONOS" if visionos_simulator else "VISIONOS"
-        return common_args + [
-            "-G", "Ninja",
-            f"-DCMAKE_TOOLCHAIN_FILE={toolchain_file}",
-            f"-DPLATFORM={visionos_platform}",
-            "-DDEPLOYMENT_TARGET=1.0",
-            "-DIOS=ON",  # Treat as iOS to enable mobile dummy implementations
         ]
     else:  # linux
         use_clang = env.get("use_clang", False) if env else False
@@ -251,13 +230,6 @@ Run the following command to download godot-cpp:
 
     git submodule update --init --recursive""")
     sys.exit(1)
-
-# Copy visionOS platform support to godot-cpp/tools before loading godot-cpp
-visionos_src = REPO_ROOT / "patches" / "visionos.py"
-visionos_dst = REPO_ROOT / "godot-cpp" / "tools" / "visionos.py"
-if visionos_src.exists() and not visionos_dst.exists():
-    print(f"Copying visionOS platform support: {visionos_src} -> {visionos_dst}")
-    shutil.copy(str(visionos_src), str(visionos_dst))
 
 # Load godot-cpp environment
 env = SConscript("godot-cpp/SConstruct", {"env": env, "customs": customs})
@@ -372,24 +344,13 @@ elif platform == "ios":
         File(str(libplateau_3rdparty / "hmm" / "src" / "libhmm.a")),
         File(str(libplateau_3rdparty / "glTF-SDK" / "glTF-SDK" / "GLTFSDK" / "libGLTFSDK.a")),
     ])
-elif platform == "visionos":
-    env.Append(FRAMEWORKS=["Foundation", "CoreGraphics"])
-    # visionOS needs 3rdparty libs separately (framework doesn't include them)
-    libplateau_3rdparty = libplateau_build_dir / "3rdparty"
-    env.Append(LIBS=[
-        File(str(libplateau_3rdparty / "libcitygml" / "lib" / "libcitygml.a")),
-        File(str(libplateau_3rdparty / "openmesh" / "src" / "OpenMesh" / "Core" / "libOpenMeshCore.a")),
-        File(str(libplateau_3rdparty / "openmesh" / "src" / "OpenMesh" / "Tools" / "libOpenMeshTools.a")),
-        File(str(libplateau_3rdparty / "hmm" / "src" / "libhmm.a")),
-        File(str(libplateau_3rdparty / "glTF-SDK" / "glTF-SDK" / "GLTFSDK" / "libGLTFSDK.a")),
-    ])
 
 # Suppress warnings from libplateau headers and enable C++ exceptions
 if platform == "windows":
     env.Append(CXXFLAGS=["/wd4251", "/wd4275", "/EHsc"])
 else:
     env.Append(CXXFLAGS=["-Wno-deprecated-declarations", "-Wno-switch"])
-    if platform in ("macos", "linux", "android", "ios", "visionos"):
+    if platform in ("macos", "linux", "android", "ios"):
         env.Append(CXXFLAGS=["-fexceptions"])
 
 # Source files
@@ -402,7 +363,7 @@ suffix = env['suffix'].replace(".dev", "").replace(".universal", "")
 lib_filename = "{}{}{}{}".format(env.subst('$SHLIBPREFIX'), LIB_NAME, suffix, env.subst('$SHLIBSUFFIX'))
 
 # Determine output directory (include arch for mobile platforms)
-if platform in ("android", "ios", "visionos"):
+if platform in ("android", "ios"):
     bin_dir = "bin/{}/{}".format(platform, arch)
     addons_dir = "{}/addons/plateau/{}/{}/".format(GODOT_PROJECT_DIR, platform, arch)
 else:
