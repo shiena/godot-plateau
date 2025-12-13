@@ -300,20 +300,7 @@ env.Append(LIBS=[libplateau_lib_file])
 if platform == "windows":
     env.Append(LIBS=["glu32", "opengl32", "advapi32", "user32"])
 elif platform == "linux":
-    # Linux needs 3rdparty libs separately (no combined lib)
-    libplateau_3rdparty = libplateau_build_dir / "3rdparty"
-    env.Append(LIBS=[
-        File(str(libplateau_3rdparty / "libcitygml" / "lib" / "libcitygml.a")),
-        File(str(libplateau_3rdparty / "openmesh" / "src" / "OpenMesh" / "Core" / "libOpenMeshCore.a")),
-        File(str(libplateau_3rdparty / "openmesh" / "src" / "OpenMesh" / "Tools" / "libOpenMeshTools.a")),
-        File(str(libplateau_3rdparty / "hmm" / "src" / "libhmm.a")),
-        File(str(libplateau_3rdparty / "glTF-SDK" / "glTF-SDK" / "GLTFSDK" / "libGLTFSDK.a")),
-        File(str(libplateau_3rdparty / "xerces-c" / "src" / "libxerces-c.a")),
-        File(str(libplateau_3rdparty / "libtiff" / "libtiff" / "libtiff.a")),
-        File(str(libplateau_3rdparty / "libpng" / "libpng.a")),
-        File(str(libplateau_3rdparty / "libjpeg-turbo" / "lib" / "libturbojpeg.a")),
-        File(str(libplateau_3rdparty / "zlib" / "libz.a")),
-    ])
+    # Linux uses combined lib (same as macOS/Windows)
     env.Append(LIBS=["GL", "GLU", "pthread", "dl"])
 elif platform == "macos":
     # macOS uses combined lib; add required system frameworks via LINKFLAGS
