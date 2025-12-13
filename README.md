@@ -237,6 +237,19 @@ When exporting to OBJ format, libplateau creates one group per CityObject (build
 
 **Workaround**: Use AREA granularity (`mesh_granularity = 2`) before exporting to merge buildings into fewer meshes.
 
+### Mobile Platforms (iOS/Android/visionOS)
+
+The following classes are **not available** on mobile platforms due to libpng dependency in height map generation:
+
+- `PLATEAUTerrain` - Height map generation from terrain meshes
+- `PLATEAUHeightMapData` - Height map data container
+- `PLATEAUHeightMapAligner` - Building height alignment to terrain
+- `PLATEAUVectorTileDownloader` - Map tile downloading
+- `PLATEAUTileCoordinate` - Tile coordinate utilities
+- `PLATEAUVectorTile` - Downloaded tile information
+
+Core functionality (CityGML loading, mesh extraction, coordinate conversion) works on all platforms.
+
 ## License
 
 - godot-plateau: MIT License

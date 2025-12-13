@@ -5,6 +5,7 @@
 	</brief_description>
 	<description>
 		PLATEAUVectorTileDownloader downloads map tiles (aerial photos, standard maps, etc.) for a given geographic extent. Tiles are saved as image files to the specified destination directory.
+		[b]Note:[/b] This class is not available on mobile platforms (iOS/Android/visionOS).
 		[codeblock]
 		var downloader = PLATEAUVectorTileDownloader.new()
 		downloader.destination = "user://map_tiles"

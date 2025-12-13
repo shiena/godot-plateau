@@ -1,3 +1,13 @@
+// Platform detection for mobile exclusions
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+#if defined(__ANDROID__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE) || (defined(TARGET_OS_VISION) && TARGET_OS_VISION)
+#define PLATEAU_MOBILE_PLATFORM 1
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
+
 #include "plateau_terrain.h"
 #include "plateau_platform.h"
 #include <godot_cpp/classes/file_access.hpp>
@@ -692,3 +702,5 @@ void PLATEAUTerrain::_bind_methods() {
     // Signal for async completion
     ADD_SIGNAL(MethodInfo("generate_completed", PropertyInfo(Variant::OBJECT, "heightmap_data", PROPERTY_HINT_RESOURCE_TYPE, "PLATEAUHeightMapData")));
 }
+
+#endif // !PLATEAU_MOBILE_PLATFORM

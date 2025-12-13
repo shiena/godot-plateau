@@ -1,3 +1,13 @@
+// Platform detection for mobile exclusions
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+#if defined(__ANDROID__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE) || (defined(TARGET_OS_VISION) && TARGET_OS_VISION)
+#define PLATEAU_MOBILE_PLATFORM 1
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
+
 #include "plateau_height_map_aligner.h"
 #include "plateau_platform.h"
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -600,3 +610,5 @@ void PLATEAUHeightMapAligner::_bind_methods() {
     ClassDB::bind_method(D_METHOD("align_invert", "mesh_data_array"), &PLATEAUHeightMapAligner::align_invert);
     ClassDB::bind_method(D_METHOD("get_height_at", "xz_position"), &PLATEAUHeightMapAligner::get_height_at);
 }
+
+#endif // !PLATEAU_MOBILE_PLATFORM

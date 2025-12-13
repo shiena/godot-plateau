@@ -1,3 +1,13 @@
+// Platform detection for mobile exclusions
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+#if defined(__ANDROID__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE) || (defined(TARGET_OS_VISION) && TARGET_OS_VISION)
+#define PLATEAU_MOBILE_PLATFORM 1
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
+
 #include "plateau_basemap.h"
 #include "plateau_platform.h"
 #include "plateau_parallel.h"
@@ -697,3 +707,5 @@ void PLATEAUVectorTileDownloader::_bind_methods() {
     BIND_ENUM_CONSTANT(TILE_SOURCE_OSM);
     BIND_ENUM_CONSTANT(TILE_SOURCE_CUSTOM);
 }
+
+#endif // !PLATEAU_MOBILE_PLATFORM

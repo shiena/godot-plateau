@@ -5,6 +5,7 @@
 	</brief_description>
 	<description>
 		PLATEAUTileCoordinate represents a tile coordinate in the XYZ tile system used by GSI and other map tile servers.
+		[b]Note:[/b] This class is not available on mobile platforms (iOS/Android/visionOS).
 	</description>
 	<tutorials>
 	</tutorials>

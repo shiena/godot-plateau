@@ -235,6 +235,19 @@ OBJ形式でエクスポートする場合、libplateauはCityObject（建物）
 
 **回避策**: エクスポート前にAREA粒度（`mesh_granularity = 2`）を使用して建物をより少ないメッシュに結合してください。
 
+### モバイルプラットフォーム (iOS/Android/visionOS)
+
+以下のクラスはモバイルプラットフォームでは**利用できません**（ハイトマップ生成のlibpng依存のため）：
+
+- `PLATEAUTerrain` - 地形メッシュからのハイトマップ生成
+- `PLATEAUHeightMapData` - ハイトマップデータコンテナ
+- `PLATEAUHeightMapAligner` - 建物の地形高さ合わせ
+- `PLATEAUVectorTileDownloader` - 地図タイルダウンロード
+- `PLATEAUTileCoordinate` - タイル座標ユーティリティ
+- `PLATEAUVectorTile` - ダウンロードしたタイル情報
+
+コア機能（CityGML読み込み、メッシュ抽出、座標変換）は全プラットフォームで動作します。
+
 ## 使用方法
 
 1. `demo/bin/` フォルダを Godot プロジェクトの `addons/` にコピー
