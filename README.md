@@ -169,9 +169,18 @@ scons platform=windows target=template_release
 
 # macOS
 scons platform=macos target=template_release
+
+# Linux
+scons platform=linux target=template_release
+
+# Android (requires ANDROID_HOME or ANDROID_SDK_ROOT environment variable)
+scons platform=android arch=arm64 target=template_release
+
+# iOS (requires macOS with Xcode)
+scons platform=ios arch=arm64 target=template_release
 ```
 
-The built library will be copied to `bin/<platform>/` and `demo/bin/<platform>/`.
+The built library will be copied to `bin/<platform>/` and `demo/addons/plateau/<platform>/`.
 
 #### Build Options
 
@@ -181,7 +190,26 @@ scons platform=windows target=template_release skip_libplateau_build=yes
 
 # macOS: Custom Homebrew prefix (default: /opt/homebrew)
 scons platform=macos target=template_release homebrew_prefix=/usr/local
+
+# Linux: Use Clang instead of GCC (for GCC 15+ environments)
+scons platform=linux target=template_release use_clang=yes
 ```
+
+#### Android Build Requirements
+
+- `ANDROID_HOME` or `ANDROID_SDK_ROOT` environment variable set to Android SDK path
+- Android NDK installed (default version: 23.1.7779620)
+- Ninja build tool
+
+```bash
+# Example with custom NDK version
+scons platform=android arch=arm64 target=template_release ndk_version=23.1.7779620
+```
+
+#### iOS Build Requirements
+
+- macOS with Xcode and Command Line Tools installed
+- Ninja build tool (`brew install ninja`)
 
 ### Build with CMake (Alternative)
 

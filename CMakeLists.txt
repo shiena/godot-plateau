@@ -1,4 +1,17 @@
-# Using the same minimum as the godot-cpp project
+# CMakeLists.txt for godot-plateau GDExtension
+# Build with: cmake -S . -B build -G <generator> && cmake --build build
+#
+# Android build requires:
+#   - ANDROID_NDK environment variable or CMAKE_TOOLCHAIN_FILE
+#   - NDK installed (tested with 23.1.7779620)
+#
+# iOS build requires:
+#   - macOS with Xcode installed
+#   - CMAKE_SYSTEM_NAME=iOS
+#
+# Note: SCons build (SConstruct) is recommended as it automatically builds libplateau.
+#       CMake requires pre-built libplateau library.
+
 cmake_minimum_required(VERSION 3.17)
 
 # Silence unused variable warning when specified from toolchain
@@ -130,6 +143,14 @@ if(EXISTS "${LIBPLATEAU_COMBINED_LIB}")
         target_link_libraries(${LIBNAME} PRIVATE glu32 opengl32 advapi32 user32)
     elseif(ANDROID)
         target_link_libraries(${LIBNAME} PRIVATE log android)
+        # Android needs 3rdparty libs separately (libplateau.a doesn't include them)
+        target_link_libraries(${LIBNAME} PRIVATE
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/libcitygml/lib/libcitygml.a"
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/openmesh/src/OpenMesh/Core/libOpenMeshCore.a"
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/openmesh/src/OpenMesh/Tools/libOpenMeshTools.a"
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/hmm/src/libhmm.a"
+            "${LIBPLATEAU_BUILD_DIR}/3rdparty/glTF-SDK/glTF-SDK/GLTFSDK/libGLTFSDK.a"
+        )
     elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
         find_library(FOUNDATION_FRAMEWORK Foundation)
         find_library(COREGRAPHICS_FRAMEWORK CoreGraphics)
@@ -195,7 +216,7 @@ else()
         message(FATAL_ERROR
             "Pre-built libplateau not found at: ${LIBPLATEAU_COMBINED_LIB}\n"
             "Please build libplateau first:\n"
-            "  cmake -S libplateau -B build/ios/${CMAKE_OSX_ARCHITECTURES}/libplateau -G \"Ninja\" -DPLATEAU_USE_FBX=OFF -DPLATEAU_USE_HTTP=OFF -DBUILD_LIB_TYPE=static -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES} -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_C_FLAGS=\"-DPNG_ARM_NEON_OPT=0\"\n"
+            "  cmake -S libplateau -B build/ios/${CMAKE_OSX_ARCHITECTURES}/libplateau -G \"Ninja\" -DPLATEAU_USE_FBX=OFF -DPLATEAU_USE_HTTP=OFF -DBUILD_LIB_TYPE=static -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES} -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0\n"
             "  cmake --build build/ios/${CMAKE_OSX_ARCHITECTURES}/libplateau --config Release"
         )
     elseif(APPLE)
