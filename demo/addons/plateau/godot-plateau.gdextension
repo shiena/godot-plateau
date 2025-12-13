@@ -5,22 +5,35 @@ compatibility_minimum = "4.1"
 
 [libraries]
 ; Relative paths ensure that our GDExtension can be placed anywhere in the project directory.
-macos.single.debug = "./macos/libgodot-plateau.macos.template_debug.dylib"
-macos.double.debug = "./macos/libgodot-plateau.macos.template_debug.double.dylib"
-macos.single.release = "./macos/libgodot-plateau.macos.template_release.dylib"
-macos.double.release = "./macos/libgodot-plateau.macos.template_release.double.dylib"
 
+; macOS (arm64)
+macos.single.debug = "./macos/libgodot-plateau.macos.template_debug.arm64.dylib"
+macos.double.debug = "./macos/libgodot-plateau.macos.template_debug.arm64.double.dylib"
+macos.single.release = "./macos/libgodot-plateau.macos.template_release.arm64.dylib"
+macos.double.release = "./macos/libgodot-plateau.macos.template_release.arm64.double.dylib"
+
+; Windows (x86_64)
 windows.x86_64.single.debug = "./windows/godot-plateau.windows.template_debug.x86_64.dll"
 windows.x86_64.double.debug = "./windows/godot-plateau.windows.template_debug.x86_64.double.dll"
 windows.x86_64.single.release = "./windows/godot-plateau.windows.template_release.x86_64.dll"
 windows.x86_64.double.release = "./windows/godot-plateau.windows.template_release.x86_64.double.dll"
 
+; Linux (x86_64)
 linux.x86_64.single.debug = "./linux/libgodot-plateau.linux.template_debug.x86_64.so"
 linux.x86_64.double.debug = "./linux/libgodot-plateau.linux.template_debug.x86_64.double.so"
 linux.x86_64.single.release = "./linux/libgodot-plateau.linux.template_release.x86_64.so"
 linux.x86_64.double.release = "./linux/libgodot-plateau.linux.template_release.x86_64.double.so"
 
+; Linux (arm64)
 linux.arm64.single.debug = "./linux/libgodot-plateau.linux.template_debug.arm64.so"
 linux.arm64.double.debug = "./linux/libgodot-plateau.linux.template_debug.arm64.double.so"
 linux.arm64.single.release = "./linux/libgodot-plateau.linux.template_release.arm64.so"
 linux.arm64.double.release = "./linux/libgodot-plateau.linux.template_release.arm64.double.so"
+
+; Android (arm64)
+android.arm64.debug = "./android/arm64/godot-plateau.android.template_debug.arm64.so"
+android.arm64.release = "./android/arm64/godot-plateau.android.template_release.arm64.so"
+
+; iOS (arm64)
+ios.arm64.debug = "./ios/arm64/libgodot-plateau.ios.template_debug.arm64.dylib"
+ios.arm64.release = "./ios/arm64/libgodot-plateau.ios.template_release.arm64.dylib"

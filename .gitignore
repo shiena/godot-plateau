@@ -63,3 +63,5 @@ CMakeUserPresets.json
 
 # libplateau
 /build/
+!bin/**/*.so
+!demo/addons/**/*.so
