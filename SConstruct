@@ -97,10 +97,12 @@ def get_cmake_configure_args(platform, build_dir, build_type, env=None):
     elif platform == "macos":
         # Get Homebrew prefix for liblzma and libdeflate
         homebrew_prefix = env.get("homebrew_prefix", DEFAULT_HOMEBREW_PREFIX) if env else DEFAULT_HOMEBREW_PREFIX
+        arch = env.get("arch", "arm64") if env else "arm64"
+        macos_arch = "arm64" if arch in ("arm64", "universal") else arch
         return common_args + [
             "-DRUNTIME_LIB_TYPE=MD",
             '-DCMAKE_CXX_FLAGS=-w',
-            "-DCMAKE_OSX_ARCHITECTURES:STRING=arm64",
+            f"-DCMAKE_OSX_ARCHITECTURES:STRING={macos_arch}",
             # Enable lzma and libdeflate for libtiff
             f"-DCMAKE_PREFIX_PATH={homebrew_prefix}",
             "-G", "Ninja",
@@ -333,6 +335,15 @@ elif platform == "macos":
     env.Append(LIBS=["lzma", "deflate"])
 elif platform == "android":
     env.Append(LIBS=["log", "android"])
+    # Android needs 3rdparty libs separately (libplateau.a doesn't include them)
+    libplateau_3rdparty = libplateau_build_dir / "3rdparty"
+    env.Append(LIBS=[
+        File(str(libplateau_3rdparty / "libcitygml" / "lib" / "libcitygml.a")),
+        File(str(libplateau_3rdparty / "openmesh" / "src" / "OpenMesh" / "Core" / "libOpenMeshCore.a")),
+        File(str(libplateau_3rdparty / "openmesh" / "src" / "OpenMesh" / "Tools" / "libOpenMeshTools.a")),
+        File(str(libplateau_3rdparty / "hmm" / "src" / "libhmm.a")),
+        File(str(libplateau_3rdparty / "glTF-SDK" / "glTF-SDK" / "GLTFSDK" / "libGLTFSDK.a")),
+    ])
 elif platform == "ios":
     env.Append(FRAMEWORKS=["Foundation", "CoreGraphics"])
     # iOS needs 3rdparty libs separately (framework doesn't include them)
