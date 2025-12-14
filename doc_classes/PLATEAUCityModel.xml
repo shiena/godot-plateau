@@ -21,7 +21,7 @@
 			<param index="0" name="gml_path" type="String" />
 			<description>
 				Load a CityGML file from the specified path. Returns [code]true[/code] if loading was successful.
-				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS). Use pre-converted assets instead.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS). Use pre-converted assets instead.
 			</description>
 		</method>
 		<method name="is_loaded" qualifiers="const">
@@ -41,7 +41,7 @@
 			<param index="0" name="options" type="PLATEAUMeshExtractOptions" />
 			<description>
 				Extract meshes from the loaded CityGML using the specified options. Returns an array of [PLATEAUMeshData] objects.
-				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS). Use pre-converted assets instead.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS). Use pre-converted assets instead.
 			</description>
 		</method>
 		<method name="get_center_point" qualifiers="const">

@@ -5,7 +5,7 @@
 	</brief_description>
 	<description>
 		PLATEAUHeightMapAligner adjusts building and model heights to match terrain, or adjusts terrain to match roads and other features.
-		[b]Note:[/b] This class is not available on mobile platforms (iOS/Android/visionOS).
+		[b]Note:[/b] This class is not available on mobile platforms (iOS/Android).
 		[codeblock]
 		var aligner = PLATEAUHeightMapAligner.new()
 		aligner.height_offset = -0.15  # Sink buildings slightly
@@ -41,7 +41,7 @@
 			<param index="0" name="mesh_data_array" type="PLATEAUMeshData[]" />
 			<description>
 				Align model heights to the registered heightmaps. Returns array of aligned [PLATEAUMeshData].
-				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS).
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 		<method name="align_invert">
@@ -49,7 +49,7 @@
 			<param index="0" name="mesh_data_array" type="PLATEAUMeshData[]" />
 			<description>
 				Align heightmaps to model heights (inverse alignment). Used for aligning terrain to roads. Returns array of updated [PLATEAUHeightMapData].
-				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS).
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 		<method name="get_height_at" qualifiers="const">

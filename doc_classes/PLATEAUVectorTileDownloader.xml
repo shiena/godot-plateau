@@ -5,7 +5,7 @@
 	</brief_description>
 	<description>
 		PLATEAUVectorTileDownloader downloads map tiles (aerial photos, standard maps, etc.) for a given geographic extent. Tiles are saved as image files to the specified destination directory.
-		[b]Note:[/b] This class is not available on mobile platforms (iOS/Android/visionOS).
+		[b]Note:[/b] This class is not available on mobile platforms (iOS/Android).
 		[codeblock]
 		var downloader = PLATEAUVectorTileDownloader.new()
 		downloader.destination = "user://map_tiles"
@@ -62,7 +62,7 @@
 			<param index="0" name="index" type="int" />
 			<description>
 				Download a single tile at the specified index.
-				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS).
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 		<method name="download_tile">
@@ -76,7 +76,7 @@
 			<return type="PLATEAUVectorTile[]" />
 			<description>
 				Download all tiles in the current extent.
-				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS/visionOS).
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 		<method name="create_combined_texture">

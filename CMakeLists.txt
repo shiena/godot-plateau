@@ -31,10 +31,6 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set(LIBPLATEAU_BUILD_DIR_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/build/ios/${CMAKE_OSX_ARCHITECTURES}/libplateau")
     # iOS builds as a framework
     set(LIBPLATEAU_LIB_DEFAULT "${LIBPLATEAU_BUILD_DIR_DEFAULT}/src/plateau.framework/plateau")
-elseif(CMAKE_SYSTEM_NAME STREQUAL "visionOS" OR VISIONOS)
-    set(LIBPLATEAU_BUILD_DIR_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/build/visionos/${CMAKE_OSX_ARCHITECTURES}/libplateau")
-    # visionOS builds as a framework
-    set(LIBPLATEAU_LIB_DEFAULT "${LIBPLATEAU_BUILD_DIR_DEFAULT}/src/plateau.framework/plateau")
 elseif(APPLE)
     set(LIBPLATEAU_BUILD_DIR_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/build/macos/libplateau")
     set(LIBPLATEAU_LIB_DEFAULT "${LIBPLATEAU_BUILD_DIR_DEFAULT}/src/libplateau_combined.a")
@@ -60,14 +56,6 @@ if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/godot-cpp/src")
         WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
         COMMAND_ERROR_IS_FATAL ANY
     )
-endif()
-
-# Copy visionOS platform support to godot-cpp/tools before loading godot-cpp
-set(VISIONOS_PATCH_SRC "${CMAKE_CURRENT_LIST_DIR}/patches/visionos.py")
-set(VISIONOS_PATCH_DST "${CMAKE_CURRENT_LIST_DIR}/godot-cpp/tools/visionos.py")
-if(EXISTS "${VISIONOS_PATCH_SRC}" AND NOT EXISTS "${VISIONOS_PATCH_DST}")
-    message(STATUS "Copying visionOS platform support: ${VISIONOS_PATCH_SRC} -> ${VISIONOS_PATCH_DST}")
-    file(COPY "${VISIONOS_PATCH_SRC}" DESTINATION "${CMAKE_CURRENT_LIST_DIR}/godot-cpp/tools")
 endif()
 
 # Add godot-cpp subdirectory
@@ -154,18 +142,6 @@ if(EXISTS "${LIBPLATEAU_COMBINED_LIB}")
             "${LIBPLATEAU_BUILD_DIR}/3rdparty/hmm/src/libhmm.a"
             "${LIBPLATEAU_BUILD_DIR}/3rdparty/glTF-SDK/glTF-SDK/GLTFSDK/libGLTFSDK.a"
         )
-    elseif(CMAKE_SYSTEM_NAME STREQUAL "visionOS" OR VISIONOS)
-        find_library(FOUNDATION_FRAMEWORK Foundation)
-        find_library(COREGRAPHICS_FRAMEWORK CoreGraphics)
-        target_link_libraries(${LIBNAME} PRIVATE ${FOUNDATION_FRAMEWORK} ${COREGRAPHICS_FRAMEWORK})
-        # visionOS needs 3rdparty libs separately (framework doesn't include them)
-        target_link_libraries(${LIBNAME} PRIVATE
-            "${LIBPLATEAU_BUILD_DIR}/3rdparty/libcitygml/lib/libcitygml.a"
-            "${LIBPLATEAU_BUILD_DIR}/3rdparty/openmesh/src/OpenMesh/Core/libOpenMeshCore.a"
-            "${LIBPLATEAU_BUILD_DIR}/3rdparty/openmesh/src/OpenMesh/Tools/libOpenMeshTools.a"
-            "${LIBPLATEAU_BUILD_DIR}/3rdparty/hmm/src/libhmm.a"
-            "${LIBPLATEAU_BUILD_DIR}/3rdparty/glTF-SDK/glTF-SDK/GLTFSDK/libGLTFSDK.a"
-        )
     elseif(APPLE)
         find_library(OPENGL_FRAMEWORK OpenGL)
         find_library(COREFOUNDATION_FRAMEWORK CoreFoundation)
@@ -221,13 +197,6 @@ else()
             "Please build libplateau first:\n"
             "  cmake -S libplateau -B build/ios/${CMAKE_OSX_ARCHITECTURES}/libplateau -G \"Ninja\" -DPLATEAU_USE_FBX=OFF -DPLATEAU_USE_HTTP=OFF -DBUILD_LIB_TYPE=static -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES} -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_C_FLAGS=\"-DPNG_ARM_NEON_OPT=0\"\n"
             "  cmake --build build/ios/${CMAKE_OSX_ARCHITECTURES}/libplateau --config Release"
-        )
-    elseif(CMAKE_SYSTEM_NAME STREQUAL "visionOS" OR VISIONOS)
-        message(FATAL_ERROR
-            "Pre-built libplateau not found at: ${LIBPLATEAU_COMBINED_LIB}\n"
-            "Please build libplateau first:\n"
-            "  cmake -S libplateau -B build/visionos/${CMAKE_OSX_ARCHITECTURES}/libplateau -G \"Ninja\" -DPLATEAU_USE_FBX=OFF -DPLATEAU_USE_HTTP=OFF -DBUILD_LIB_TYPE=static -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=godot-cpp/cmake/ios.toolchain.cmake -DPLATFORM=VISIONOS -DDEPLOYMENT_TARGET=1.0 -DIOS=ON\n"
-            "  cmake --build build/visionos/${CMAKE_OSX_ARCHITECTURES}/libplateau --config Release"
         )
     elseif(APPLE)
         message(FATAL_ERROR
