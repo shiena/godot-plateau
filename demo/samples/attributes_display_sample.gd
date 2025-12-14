@@ -15,16 +15,28 @@ extends Node3D
 
 var city_model: PLATEAUCityModel
 var mesh_data_map: Dictionary = {}  # MeshInstance3D -> PLATEAUMeshData
+var pending_options: PLATEAUMeshExtractOptions
+var pending_mesh_data: Array = []
 
 @onready var camera: Camera3D = $Camera3D
 @onready var attributes_label: RichTextLabel = $UI/Panel/ScrollContainer/AttributesLabel
 @onready var info_label: Label = $UI/InfoLabel
 @onready var import_button: Button = $UI/ImportButton
+@onready var loading_panel: Panel = $UI/LoadingPanel
+@onready var loading_label: Label = $UI/LoadingPanel/LoadingLabel
 
 
 func _ready() -> void:
 	import_button.pressed.connect(_on_import_pressed)
 	_update_info("Click 'Import GML' or set gml_path and run")
+
+	# Hide loading panel initially
+	loading_panel.visible = false
+
+	# Setup city model with async handlers
+	city_model = PLATEAUCityModel.new()
+	city_model.load_completed.connect(_on_load_completed)
+	city_model.extract_completed.connect(_on_extract_completed)
 
 
 func _input(event: InputEvent) -> void:
@@ -34,6 +46,10 @@ func _input(event: InputEvent) -> void:
 
 
 func _on_import_pressed() -> void:
+	if city_model.is_processing():
+		_update_info("Already processing, please wait...")
+		return
+
 	if gml_path.is_empty():
 		PLATEAUUtils.show_gml_file_dialog(self, _on_file_selected)
 	else:
@@ -46,6 +62,10 @@ func _on_file_selected(path: String) -> void:
 
 
 func _import_gml(path: String) -> void:
+	if city_model.is_processing():
+		_update_info("Already processing, please wait...")
+		return
+
 	_update_info("Loading: " + path.get_file() + "...")
 
 	# Clear previous data
@@ -54,56 +74,80 @@ func _import_gml(path: String) -> void:
 			child.queue_free()
 	mesh_data_map.clear()
 
-	# Load CityGML
-	city_model = PLATEAUCityModel.new()
-	if not city_model.load(path):
-		_update_info("Failed to load: " + path)
+	# Prepare extraction options
+	pending_options = PLATEAUMeshExtractOptions.new()
+	pending_options.coordinate_zone_id = zone_id
+	pending_options.min_lod = 1
+	pending_options.max_lod = 2
+	pending_options.mesh_granularity = 1  # Primary feature (per building)
+	pending_options.export_appearance = true
+
+	# Start async load
+	_show_loading("Loading CityGML...")
+	city_model.load_async(path)
+
+
+func _on_load_completed(success: bool) -> void:
+	if not success:
+		_hide_loading()
+		_update_info("Failed to load: " + gml_path)
 		return
 
-	# Setup extraction options
-	var options = PLATEAUMeshExtractOptions.new()
-	options.coordinate_zone_id = zone_id
-	options.min_lod = 1
-	options.max_lod = 2
-	options.mesh_granularity = 1  # Primary feature (per building)
-	options.export_appearance = true
+	_update_loading("Extracting meshes...")
+	city_model.extract_meshes_async(pending_options)
 
-	# Extract meshes
-	var root_mesh_data = city_model.extract_meshes(options)
 
+func _on_extract_completed(root_mesh_data: Array) -> void:
 	if root_mesh_data.is_empty():
-		_update_info("No meshes extracted from: " + path)
+		_hide_loading()
+		_update_info("No meshes extracted from: " + gml_path)
 		return
 
 	# Flatten hierarchy to get actual building meshes (children of LOD nodes)
-	var mesh_data_array = PLATEAUUtils.flatten_mesh_data(root_mesh_data)
+	pending_mesh_data = PLATEAUUtils.flatten_mesh_data(root_mesh_data)
 
-	# Create MeshInstance3D for each mesh (with collision for raycasting)
+	# Create MeshInstance3D for each mesh (async with collision)
+	_update_loading("Creating mesh instances...")
+	await _create_mesh_instances_with_collision()
+
+	_hide_loading()
+	_update_info("Loaded " + str(pending_mesh_data.size()) + " meshes. Click on buildings to see attributes.")
+
+
+func _create_mesh_instances_with_collision() -> void:
 	var bounds_min := Vector3.INF
 	var bounds_max := -Vector3.INF
+	var total := pending_mesh_data.size()
+	var batch_size := 50
 
-	for mesh_data in mesh_data_array:
-		var mesh_instance = MeshInstance3D.new()
-		mesh_instance.mesh = mesh_data.get_mesh()
-		mesh_instance.transform = mesh_data.get_transform()
-		mesh_instance.name = mesh_data.get_name()
+	for i in range(0, total, batch_size):
+		var batch_end := mini(i + batch_size, total)
 
-		# Create collision for raycasting
-		mesh_instance.create_trimesh_collision()
+		for j in range(i, batch_end):
+			var mesh_data = pending_mesh_data[j]
+			var mesh_instance = MeshInstance3D.new()
+			mesh_instance.mesh = mesh_data.get_mesh()
+			mesh_instance.transform = mesh_data.get_transform()
+			mesh_instance.name = mesh_data.get_name()
 
-		add_child(mesh_instance)
-		mesh_data_map[mesh_instance] = mesh_data
+			# Create collision for raycasting
+			mesh_instance.create_trimesh_collision()
 
-		# Calculate bounds
-		var aabb = mesh_instance.get_aabb()
-		var global_aabb = mesh_instance.transform * aabb
-		bounds_min = bounds_min.min(global_aabb.position)
-		bounds_max = bounds_max.max(global_aabb.position + global_aabb.size)
+			add_child(mesh_instance)
+			mesh_data_map[mesh_instance] = mesh_data
+
+			# Calculate bounds
+			var aabb = mesh_instance.get_aabb()
+			var global_aabb = mesh_instance.transform * aabb
+			bounds_min = bounds_min.min(global_aabb.position)
+			bounds_max = bounds_max.max(global_aabb.position + global_aabb.size)
+
+		var percent := int((batch_end * 100) / total) if total > 0 else 100
+		_update_loading("Creating instances: %d/%d (%d%%)" % [batch_end, total, percent])
+		await get_tree().process_frame
 
 	# Position camera to view all meshes
 	PLATEAUUtils.fit_camera_to_bounds(camera, bounds_min, bounds_max)
-
-	_update_info("Loaded " + str(mesh_data_array.size()) + " meshes. Click on buildings to see attributes.")
 
 
 func _handle_click(screen_pos: Vector2) -> void:
@@ -162,6 +206,19 @@ func _format_attributes(attrs: Dictionary, indent: int) -> String:
 			text += prefix + "[color=yellow]" + str(key) + ":[/color] " + str(value) + "\n"
 
 	return text
+
+
+func _show_loading(message: String) -> void:
+	loading_label.text = message
+	loading_panel.visible = true
+
+
+func _update_loading(message: String) -> void:
+	loading_label.text = message
+
+
+func _hide_loading() -> void:
+	loading_panel.visible = false
 
 
 func _update_info(message: String) -> void:

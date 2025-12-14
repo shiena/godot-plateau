@@ -611,6 +611,39 @@ Ref<PLATEAUHeightMapData> PLATEAUTerrain::generate_from_plateau_mesh(const plate
     return result;
 }
 
+void PLATEAUTerrain::generate_from_meshes_async(const TypedArray<PLATEAUMeshData> &mesh_data_array) {
+    if (is_processing_.load()) {
+        UtilityFunctions::printerr("PLATEAUTerrain: Already processing");
+        return;
+    }
+
+    if (mesh_data_array.is_empty()) {
+        UtilityFunctions::printerr("PLATEAUTerrain: mesh_data_array is empty");
+        call_deferred("emit_signal", "generate_completed", Ref<PLATEAUHeightMapData>());
+        return;
+    }
+
+    is_processing_.store(true);
+    pending_mesh_data_ = mesh_data_array;
+
+    WorkerThreadPool::get_singleton()->add_task(
+        callable_mp(this, &PLATEAUTerrain::_generate_thread_func)
+    );
+}
+
+void PLATEAUTerrain::_generate_thread_func() {
+    Ref<PLATEAUHeightMapData> result = generate_from_meshes(pending_mesh_data_);
+
+    is_processing_.store(false);
+    pending_mesh_data_.clear();
+
+    call_deferred("emit_signal", "generate_completed", result);
+}
+
+bool PLATEAUTerrain::is_processing() const {
+    return is_processing_.load();
+}
+
 void PLATEAUTerrain::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_texture_width", "width"), &PLATEAUTerrain::set_texture_width);
     ClassDB::bind_method(D_METHOD("get_texture_width"), &PLATEAUTerrain::get_texture_width);
@@ -634,4 +667,9 @@ void PLATEAUTerrain::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("generate_from_mesh", "mesh_data"), &PLATEAUTerrain::generate_from_mesh);
     ClassDB::bind_method(D_METHOD("generate_from_meshes", "mesh_data_array"), &PLATEAUTerrain::generate_from_meshes);
+    ClassDB::bind_method(D_METHOD("generate_from_meshes_async", "mesh_data_array"), &PLATEAUTerrain::generate_from_meshes_async);
+    ClassDB::bind_method(D_METHOD("is_processing"), &PLATEAUTerrain::is_processing);
+
+    // Signal for async completion
+    ADD_SIGNAL(MethodInfo("generate_completed", PropertyInfo(Variant::OBJECT, "heightmap_data", PROPERTY_HINT_RESOURCE_TYPE, "PLATEAUHeightMapData")));
 }

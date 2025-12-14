@@ -4,8 +4,11 @@
 #include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/standard_material3d.hpp>
 #include <godot_cpp/classes/image_texture.hpp>
+#include <godot_cpp/classes/worker_thread_pool.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
+
+#include <atomic>
 
 #include <citygml/citygml.h>
 #include <citygml/citymodel.h>
@@ -158,6 +161,11 @@ public:
     // Get city object type by GML ID
     int64_t get_city_object_type(const String &gml_id) const;
 
+    // Async API - load/extract in background thread
+    void load_async(const String &gml_path);
+    void extract_meshes_async(const Ref<PLATEAUMeshExtractOptions> &options);
+    bool is_processing() const;
+
 protected:
     static void _bind_methods();
 
@@ -165,6 +173,15 @@ private:
     std::shared_ptr<const citygml::CityModel> city_model_;
     String gml_path_;
     bool is_loaded_;
+
+    // Async processing state
+    std::atomic<bool> is_processing_{false};
+    String pending_gml_path_;
+    Ref<PLATEAUMeshExtractOptions> pending_options_;
+
+    // Async worker functions (called from WorkerThreadPool)
+    void _load_thread_func();
+    void _extract_thread_func();
 
     // Texture cache to avoid reloading same textures
     HashMap<String, Ref<ImageTexture>> texture_cache_;

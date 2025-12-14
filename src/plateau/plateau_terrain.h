@@ -4,6 +4,7 @@
 #include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/standard_material3d.hpp>
 #include <godot_cpp/classes/image_texture.hpp>
+#include <godot_cpp/classes/worker_thread_pool.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/packed_byte_array.hpp>
@@ -15,6 +16,8 @@
 #include <plateau/geometry/geo_reference.h>
 
 #include "plateau_city_model.h"
+
+#include <atomic>
 
 namespace godot {
 
@@ -148,6 +151,12 @@ public:
     // Returns PLATEAUHeightMapData containing the generated heightmap
     Ref<PLATEAUHeightMapData> generate_from_meshes(const TypedArray<PLATEAUMeshData> &mesh_data_array);
 
+    // Async version - emits generate_completed signal when done
+    void generate_from_meshes_async(const TypedArray<PLATEAUMeshData> &mesh_data_array);
+
+    // Check if async generation is in progress
+    bool is_processing() const;
+
     // Generate heightmap from raw plateau::polygonMesh::Mesh
     // (Internal use, for direct mesh processing)
     Ref<PLATEAUHeightMapData> generate_from_plateau_mesh(const plateau::polygonMesh::Mesh &mesh, const String &name);
@@ -161,6 +170,13 @@ private:
     Vector2 offset_;
     bool fill_edges_;
     bool apply_blur_filter_;
+
+    // Async processing state
+    std::atomic<bool> is_processing_{false};
+    TypedArray<PLATEAUMeshData> pending_mesh_data_;
+
+    // Async worker function
+    void _generate_thread_func();
 };
 
 } // namespace godot

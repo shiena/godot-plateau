@@ -16,6 +16,7 @@ extends Node3D
 var city_model: PLATEAUCityModel
 var current_mesh_data: Array = []
 var mesh_instances: Array[MeshInstance3D] = []
+var pending_options: PLATEAUMeshExtractOptions
 
 # Material palette
 var materials: Array[StandardMaterial3D] = []
@@ -35,6 +36,8 @@ var material_colors = [
 @onready var mode_option: OptionButton = $UI/AdjustPanel/ModeOption
 @onready var attr_key_edit: LineEdit = $UI/AdjustPanel/AttrKeyRow/AttrKeyEdit
 @onready var legend_container: VBoxContainer = $UI/LegendPanel/ScrollContainer/LegendContainer
+@onready var loading_panel: Panel = $UI/LoadingPanel
+@onready var loading_label: Label = $UI/LoadingPanel/LoadingLabel
 
 
 func _ready() -> void:
@@ -52,6 +55,14 @@ func _ready() -> void:
 	mode_option.add_item("By CityObjectType")
 
 	attr_key_edit.text = "bldg:storeysaboveground"
+
+	# Hide loading panel initially
+	loading_panel.visible = false
+
+	# Setup city model with async handlers
+	city_model = PLATEAUCityModel.new()
+	city_model.load_completed.connect(_on_load_completed)
+	city_model.extract_completed.connect(_on_extract_completed)
 
 	_log("Material Adjuster Sample ready.")
 	_log("Click 'Import GML' to load a CityGML file.")
@@ -73,6 +84,10 @@ func _on_mode_changed(index: int) -> void:
 
 
 func _on_import_pressed() -> void:
+	if city_model.is_processing():
+		_log("[color=yellow]Already processing, please wait...[/color]")
+		return
+
 	if gml_path.is_empty():
 		PLATEAUUtils.show_gml_file_dialog(self, _on_file_selected)
 	else:
@@ -85,27 +100,49 @@ func _on_file_selected(path: String) -> void:
 
 
 func _import_gml(path: String) -> void:
+	if city_model.is_processing():
+		_log("[color=yellow]Already processing, please wait...[/color]")
+		return
+
 	_log("--- Import GML ---")
 	_log("File: " + path.get_file())
 
 	_clear_meshes()
 
-	city_model = PLATEAUCityModel.new()
-	if not city_model.load(path):
+	# Prepare extraction options
+	pending_options = PLATEAUMeshExtractOptions.new()
+	pending_options.coordinate_zone_id = zone_id
+	pending_options.mesh_granularity = 1  # Primary (per building)
+	pending_options.export_appearance = true
+
+	# Start async load
+	_show_loading("Loading CityGML...")
+	city_model.load_async(path)
+
+
+func _on_load_completed(success: bool) -> void:
+	if not success:
+		_hide_loading()
 		_log("[color=red]ERROR: Failed to load GML[/color]")
 		return
 
-	var options = PLATEAUMeshExtractOptions.new()
-	options.coordinate_zone_id = zone_id
-	options.mesh_granularity = 1  # Primary (per building)
-	options.export_appearance = true
+	_log("Load completed")
+	_update_loading("Extracting meshes...")
+	city_model.extract_meshes_async(pending_options)
 
-	var root_mesh_data = city_model.extract_meshes(options)
-	current_mesh_data = PLATEAUUtils.flatten_mesh_data(Array(root_mesh_data))
 
+func _on_extract_completed(root_mesh_data: Array) -> void:
+	current_mesh_data = PLATEAUUtils.flatten_mesh_data(root_mesh_data)
 	_log("Extracted " + str(current_mesh_data.size()) + " meshes")
 
-	_create_mesh_instances()
+	if current_mesh_data.is_empty():
+		_hide_loading()
+		_log("[color=yellow]WARNING: No meshes extracted[/color]")
+		return
+
+	_update_loading("Creating mesh instances...")
+	await _create_mesh_instances_async()
+	_hide_loading()
 	_log("[color=green]Import complete![/color]")
 
 
@@ -304,13 +341,32 @@ func _update_legend(value_to_mat: Dictionary) -> void:
 		legend_container.add_child(hbox)
 
 
+func _show_loading(message: String) -> void:
+	loading_label.text = message
+	loading_panel.visible = true
+
+
+func _update_loading(message: String) -> void:
+	loading_label.text = message
+
+
+func _hide_loading() -> void:
+	loading_panel.visible = false
+
+
 func _clear_meshes() -> void:
 	PLATEAUUtils.clear_mesh_instances(mesh_instances)
 	current_mesh_data.clear()
 
 
-func _create_mesh_instances() -> void:
-	var result = PLATEAUUtils.create_mesh_instances(current_mesh_data, self)
+func _create_mesh_instances_async() -> void:
+	var result = await PLATEAUUtils.create_mesh_instances_async(
+		current_mesh_data,
+		self,
+		50,
+		func(percent, current, total):
+			_update_loading("Creating instances: %d/%d (%d%%)" % [current, total, percent])
+	)
 	mesh_instances = result["instances"]
 	PLATEAUUtils.fit_camera_to_bounds(camera, result["bounds_min"], result["bounds_max"])
 

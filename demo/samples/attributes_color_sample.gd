@@ -24,8 +24,10 @@ enum ColorMode {
 var city_model: PLATEAUCityModel
 var mesh_instances: Array[MeshInstance3D] = []
 var mesh_data_map: Dictionary = {}  # MeshInstance3D -> PLATEAUMeshData
+var mesh_data_array: Array = []
 var original_materials: Dictionary = {}  # MeshInstance3D -> Material
 var current_mode: ColorMode = ColorMode.ORIGINAL
+var pending_options: PLATEAUMeshExtractOptions
 
 # Color mappings for building usage (bldg:usage)
 var usage_colors: Dictionary = {
@@ -68,6 +70,8 @@ var flood_risk_colors: Dictionary = {
 @onready var camera: Camera3D = $Camera3D
 @onready var info_label: Label = $UI/InfoLabel
 @onready var legend_label: RichTextLabel = $UI/LegendPanel/LegendLabel
+@onready var loading_panel: Panel = $UI/LoadingPanel
+@onready var loading_label: Label = $UI/LoadingPanel/LoadingLabel
 
 
 func _ready() -> void:
@@ -78,8 +82,20 @@ func _ready() -> void:
 	$UI/ModeButtons/FloodButton.pressed.connect(func(): _set_color_mode(ColorMode.BY_FLOOD_RISK))
 	_update_legend()
 
+	# Hide loading panel initially
+	loading_panel.visible = false
+
+	# Setup city model with async handlers
+	city_model = PLATEAUCityModel.new()
+	city_model.load_completed.connect(_on_load_completed)
+	city_model.extract_completed.connect(_on_extract_completed)
+
 
 func _on_import_pressed() -> void:
+	if city_model.is_processing():
+		_update_info("Already processing, please wait...")
+		return
+
 	if gml_path.is_empty():
 		PLATEAUUtils.show_gml_file_dialog(self, _on_file_selected)
 	else:
@@ -92,6 +108,10 @@ func _on_file_selected(path: String) -> void:
 
 
 func _import_gml(path: String) -> void:
+	if city_model.is_processing():
+		_update_info("Already processing, please wait...")
+		return
+
 	_update_info("Loading: " + path.get_file() + "...")
 
 	# Clear previous data
@@ -99,32 +119,47 @@ func _import_gml(path: String) -> void:
 	mesh_data_map.clear()
 	original_materials.clear()
 
-	# Load CityGML
-	city_model = PLATEAUCityModel.new()
-	if not city_model.load(path):
-		_update_info("Failed to load: " + path)
+	# Prepare extraction options
+	pending_options = PLATEAUMeshExtractOptions.new()
+	pending_options.coordinate_zone_id = zone_id
+	pending_options.min_lod = 1
+	pending_options.max_lod = 2
+	pending_options.mesh_granularity = 1  # Primary feature
+	pending_options.export_appearance = true
+
+	# Start async load
+	_show_loading("Loading CityGML...")
+	city_model.load_async(path)
+
+
+func _on_load_completed(success: bool) -> void:
+	if not success:
+		_hide_loading()
+		_update_info("Failed to load: " + gml_path)
 		return
 
-	# Setup extraction options
-	var options = PLATEAUMeshExtractOptions.new()
-	options.coordinate_zone_id = zone_id
-	options.min_lod = 1
-	options.max_lod = 2
-	options.mesh_granularity = 1  # Primary feature
-	options.export_appearance = true
+	_update_loading("Extracting meshes...")
+	city_model.extract_meshes_async(pending_options)
 
-	# Extract meshes
-	var root_mesh_data = city_model.extract_meshes(options)
 
+func _on_extract_completed(root_mesh_data: Array) -> void:
 	if root_mesh_data.is_empty():
-		_update_info("No meshes extracted from: " + path)
+		_hide_loading()
+		_update_info("No meshes extracted from: " + gml_path)
 		return
 
 	# Flatten hierarchy to get actual building meshes (children of LOD nodes)
-	var mesh_data_array = PLATEAUUtils.flatten_mesh_data(root_mesh_data)
+	mesh_data_array = PLATEAUUtils.flatten_mesh_data(root_mesh_data)
 
-	# Create MeshInstance3D for each mesh
-	var result = PLATEAUUtils.create_mesh_instances(mesh_data_array, self)
+	# Create MeshInstance3D for each mesh (async)
+	_update_loading("Creating mesh instances...")
+	var result = await PLATEAUUtils.create_mesh_instances_async(
+		mesh_data_array,
+		self,
+		50,
+		func(percent, current, total):
+			_update_loading("Creating instances: %d/%d (%d%%)" % [current, total, percent])
+	)
 	mesh_instances = result["instances"]
 
 	# Build mesh_data_map and store original materials
@@ -138,6 +173,7 @@ func _import_gml(path: String) -> void:
 	# Position camera
 	PLATEAUUtils.fit_camera_to_bounds(camera, result["bounds_min"], result["bounds_max"])
 
+	_hide_loading()
 	_update_info("Loaded " + str(mesh_data_array.size()) + " meshes. Use buttons to change color mode.")
 	_apply_color_mode()
 
@@ -251,6 +287,19 @@ func _update_legend() -> void:
 			text += "[color=#%s]■[/color] > 5m (High)\n" % flood_risk_colors[5].to_html(false)
 
 	legend_label.text = text
+
+
+func _show_loading(message: String) -> void:
+	loading_label.text = message
+	loading_panel.visible = true
+
+
+func _update_loading(message: String) -> void:
+	loading_label.text = message
+
+
+func _hide_loading() -> void:
+	loading_panel.visible = false
 
 
 func _update_info(message: String) -> void:

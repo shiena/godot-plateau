@@ -2,7 +2,7 @@ extends Node3D
 ## API Sample
 ##
 ## Demonstrates the main PLATEAU SDK APIs:
-## - Import: Load CityGML files with various options
+## - Import: Load CityGML files with various options (async to prevent UI freeze)
 ## - Export: Save meshes to glTF/GLB/OBJ formats
 ## - Granularity: Convert between mesh granularity levels
 ## - Dataset: Access local dataset files
@@ -18,10 +18,13 @@ extends Node3D
 var city_model: PLATEAUCityModel
 var current_mesh_data: Array = []
 var mesh_instances: Array[MeshInstance3D] = []
+var pending_options: PLATEAUMeshExtractOptions
 
 @onready var camera: Camera3D = $Camera3D
 @onready var log_label: RichTextLabel = $UI/LogPanel/ScrollContainer/LogLabel
 @onready var stats_label: Label = $UI/StatsLabel
+@onready var loading_panel: Panel = $UI/LoadingPanel
+@onready var loading_label: Label = $UI/LoadingPanel/LoadingLabel
 
 
 func _ready() -> void:
@@ -44,11 +47,23 @@ func _ready() -> void:
 	granularity_option.add_item("Area (merged)", 2)
 	granularity_option.select(1)
 
+	# Hide loading panel initially
+	loading_panel.visible = false
+
+	# Setup async signal handlers
+	city_model = PLATEAUCityModel.new()
+	city_model.load_completed.connect(_on_load_completed)
+	city_model.extract_completed.connect(_on_extract_completed)
+
 	_log("PLATEAU SDK API Sample ready.")
 	_log("Click 'Import GML' to load a CityGML file.")
 
 
 func _on_import_pressed() -> void:
+	if city_model.is_processing():
+		_log("[color=yellow]Already processing, please wait...[/color]")
+		return
+
 	if gml_path.is_empty():
 		PLATEAUUtils.show_gml_file_dialog(self, _on_file_selected)
 	else:
@@ -61,76 +76,104 @@ func _on_file_selected(path: String) -> void:
 
 
 func _on_granularity_changed(_index: int) -> void:
-	if city_model == null:
+	if city_model == null or not city_model.is_loaded():
+		return
+	if city_model.is_processing():
 		return
 	_import_gml(gml_path)
 
 
 func _import_gml(path: String) -> void:
+	if city_model.is_processing():
+		_log("[color=yellow]Already processing, please wait...[/color]")
+		return
+
 	_log("--- Import Start ---")
 	_log("File: " + path.get_file())
 
 	# Clear previous
 	_clear_meshes()
 
-	# Load CityGML
-	city_model = PLATEAUCityModel.new()
-	var start_time = Time.get_ticks_msec()
-
-	if not city_model.load(path):
-		_log("[color=red]ERROR: Failed to load CityGML[/color]")
-		return
-
-	var load_time = Time.get_ticks_msec() - start_time
-	_log("Load time: " + str(load_time) + " ms")
-
-	# Get granularity setting
+	# Prepare extraction options for later use
 	var granularity_option = $UI/ImportPanel/GranularityOption as OptionButton
 	var granularity = granularity_option.get_selected_id()
 
-	# Setup extraction options
-	var options = PLATEAUMeshExtractOptions.new()
-	options.coordinate_zone_id = zone_id
-	options.min_lod = $UI/ImportPanel/MinLODSpin.value
-	options.max_lod = $UI/ImportPanel/MaxLODSpin.value
-	options.mesh_granularity = granularity
-	options.export_appearance = $UI/ImportPanel/TextureCheck.button_pressed
+	pending_options = PLATEAUMeshExtractOptions.new()
+	pending_options.coordinate_zone_id = zone_id
+	pending_options.min_lod = $UI/ImportPanel/MinLODSpin.value
+	pending_options.max_lod = $UI/ImportPanel/MaxLODSpin.value
+	pending_options.mesh_granularity = granularity
+	pending_options.export_appearance = $UI/ImportPanel/TextureCheck.button_pressed
 
-	_log("Options: LOD " + str(options.min_lod) + "-" + str(options.max_lod) +
+	_log("Options: LOD " + str(pending_options.min_lod) + "-" + str(pending_options.max_lod) +
 		 ", Granularity: " + str(granularity) +
-		 ", Textures: " + str(options.export_appearance))
+		 ", Textures: " + str(pending_options.export_appearance))
 
-	# Extract meshes
-	start_time = Time.get_ticks_msec()
-	var root_mesh_data = city_model.extract_meshes(options)
-	var extract_time = Time.get_ticks_msec() - start_time
+	# Start async load
+	_show_loading("Loading CityGML...")
+	city_model.load_async(path)
 
-	_log("Extract time: " + str(extract_time) + " ms")
+
+func _on_load_completed(success: bool) -> void:
+	if not success:
+		_hide_loading()
+		_log("[color=red]ERROR: Failed to load CityGML[/color]")
+		return
+
+	_log("Load completed successfully")
+
+	# Start async mesh extraction
+	_update_loading("Extracting meshes...")
+	city_model.extract_meshes_async(pending_options)
+
+
+func _on_extract_completed(root_mesh_data: Array) -> void:
+	_log("Extract completed")
 	_log("Root nodes extracted: " + str(root_mesh_data.size()))
 
 	# Flatten hierarchy to get actual meshes (children of LOD nodes)
-	current_mesh_data = PLATEAUUtils.flatten_mesh_data(Array(root_mesh_data))
+	current_mesh_data = PLATEAUUtils.flatten_mesh_data(root_mesh_data)
 	_log("Meshes after flatten: " + str(current_mesh_data.size()))
 
 	if current_mesh_data.is_empty():
+		_hide_loading()
 		_log("[color=yellow]WARNING: No meshes extracted[/color]")
 		return
 
-	# Create visual representation
-	_create_mesh_instances()
+	# Create visual representation (async with progress)
+	_update_loading("Creating mesh instances...")
+	var result = await PLATEAUUtils.create_mesh_instances_async(
+		current_mesh_data,
+		self,
+		50,
+		func(percent, current, total):
+			_update_loading("Creating instances: %d/%d (%d%%)" % [current, total, percent])
+	)
+
+	mesh_instances = result["instances"]
+	PLATEAUUtils.fit_camera_to_bounds(camera, result["bounds_min"], result["bounds_max"])
+
+	_hide_loading()
 	_update_stats()
 	_log("[color=green]Import complete![/color]")
+
+
+func _show_loading(message: String) -> void:
+	loading_label.text = message
+	loading_panel.visible = true
+
+
+func _update_loading(message: String) -> void:
+	loading_label.text = message
+
+
+func _hide_loading() -> void:
+	loading_panel.visible = false
 
 
 func _clear_meshes() -> void:
 	PLATEAUUtils.clear_mesh_instances(mesh_instances)
 	current_mesh_data.clear()
-
-
-func _create_mesh_instances() -> void:
-	var result = PLATEAUUtils.create_mesh_instances(current_mesh_data, self)
-	mesh_instances = result["instances"]
-	PLATEAUUtils.fit_camera_to_bounds(camera, result["bounds_min"], result["bounds_max"])
 
 
 func _export_meshes(format: int) -> void:
@@ -204,9 +247,22 @@ func _convert_granularity(target_granularity: int) -> void:
 	# Update current mesh data
 	_clear_meshes()
 	current_mesh_data = Array(converted)
-	_create_mesh_instances()
-	_update_stats()
 
+	# Use async for mesh instance creation
+	_show_loading("Creating mesh instances...")
+	var result = await PLATEAUUtils.create_mesh_instances_async(
+		current_mesh_data,
+		self,
+		50,
+		func(percent, _current, _total):
+			_update_loading("Creating instances: %d%%" % percent)
+	)
+
+	mesh_instances = result["instances"]
+	PLATEAUUtils.fit_camera_to_bounds(camera, result["bounds_min"], result["bounds_max"])
+
+	_hide_loading()
+	_update_stats()
 	_log("[color=green]Conversion complete![/color]")
 
 
