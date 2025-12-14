@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUHeightMapData" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Container for heightmap data and metadata.
+	</brief_description>
+	<description>
+		PLATEAUHeightMapData stores generated heightmap data along with metadata such as bounds and UV coordinates. It can save heightmaps to files and generate meshes from the heightmap data.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_width" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the width of the heightmap in pixels.
+			</description>
+		</method>
+		<method name="get_height" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the height of the heightmap in pixels.
+			</description>
+		</method>
+		<method name="get_min_bounds" qualifiers="const">
+			<return type="Vector3" />
+			<description>
+				Returns the minimum bounds of the heightmap in local coordinates.
+			</description>
+		</method>
+		<method name="get_max_bounds" qualifiers="const">
+			<return type="Vector3" />
+			<description>
+				Returns the maximum bounds of the heightmap in local coordinates.
+			</description>
+		</method>
+		<method name="get_min_uv" qualifiers="const">
+			<return type="Vector2" />
+			<description>
+				Returns the minimum UV coordinates for texture mapping.
+			</description>
+		</method>
+		<method name="get_max_uv" qualifiers="const">
+			<return type="Vector2" />
+			<description>
+				Returns the maximum UV coordinates for texture mapping.
+			</description>
+		</method>
+		<method name="get_heightmap_raw" qualifiers="const">
+			<return type="PackedByteArray" />
+			<description>
+				Returns the heightmap data as raw bytes (uint16 array).
+			</description>
+		</method>
+		<method name="get_heightmap_normalized" qualifiers="const">
+			<return type="PackedFloat32Array" />
+			<description>
+				Returns the heightmap as normalized float array [0.0 - 1.0].
+			</description>
+		</method>
+		<method name="save_png" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="path" type="String" />
+			<description>
+				Save the heightmap as a PNG file. Returns [code]true[/code] on success.
+			</description>
+		</method>
+		<method name="save_raw" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="path" type="String" />
+			<description>
+				Save the heightmap as raw binary data. Returns [code]true[/code] on success.
+			</description>
+		</method>
+		<method name="generate_mesh" qualifiers="const">
+			<return type="ArrayMesh" />
+			<description>
+				Generate a mesh from the heightmap data.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="name" type="String" setter="set_name" getter="get_name" default="&quot;&quot;">
+			Name/identifier for this heightmap.
+		</member>
+		<member name="texture_path" type="String" setter="set_texture_path" getter="get_texture_path" default="&quot;&quot;">
+			Path to the diffuse texture for this terrain.
+		</member>
+	</members>
+</class>

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUMeshData" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Container for extracted mesh data from CityGML.
+	</brief_description>
+	<description>
+		PLATEAUMeshData holds extracted mesh geometry, transform, and attribute information from a CityGML file. It can contain child meshes forming a hierarchy.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_mesh" qualifiers="const">
+			<return type="ArrayMesh" />
+			<description>
+				Returns the ArrayMesh containing the geometry.
+			</description>
+		</method>
+		<method name="get_transform" qualifiers="const">
+			<return type="Transform3D" />
+			<description>
+				Returns the transform for this mesh.
+			</description>
+		</method>
+		<method name="get_children" qualifiers="const">
+			<return type="PLATEAUMeshData[]" />
+			<description>
+				Returns an array of child [PLATEAUMeshData] objects.
+			</description>
+		</method>
+		<method name="get_child_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the number of child meshes.
+			</description>
+		</method>
+		<method name="get_child" qualifiers="const">
+			<return type="PLATEAUMeshData" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the child mesh at the specified index.
+			</description>
+		</method>
+		<method name="get_attribute" qualifiers="const">
+			<return type="Variant" />
+			<param index="0" name="key" type="String" />
+			<description>
+				Get an attribute value by key. Supports nested keys with "/" separator (e.g., "bldg:measuredHeight").
+			</description>
+		</method>
+		<method name="has_city_object_info" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if this mesh has associated CityObject information.
+			</description>
+		</method>
+		<method name="get_city_object_type_name" qualifiers="const">
+			<return type="String" />
+			<description>
+				Returns the CityObject type as a human-readable string.
+			</description>
+		</method>
+		<method name="get_gml_id_from_uv" qualifiers="const">
+			<return type="String" />
+			<param index="0" name="uv" type="Vector2" />
+			<description>
+				Get the GML ID from UV4 coordinates (used for raycast hit lookup).
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="name" type="String" setter="set_name" getter="get_name" default="&quot;&quot;">
+			The name of this mesh node.
+		</member>
+		<member name="gml_id" type="String" setter="set_gml_id" getter="get_gml_id" default="&quot;&quot;">
+			The GML ID of the associated CityObject.
+		</member>
+		<member name="city_object_type" type="int" setter="set_city_object_type" getter="get_city_object_type" default="0">
+			The CityObject type as [enum PLATEAUCityObjectType].
+		</member>
+		<member name="attributes" type="Dictionary" setter="set_attributes" getter="get_attributes" default="{}">
+			Dictionary containing all CityObject attributes.
+		</member>
+	</members>
+</class>

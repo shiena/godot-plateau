@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUDatasetGroup" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Group of PLATEAU datasets (typically represents a prefecture).
+	</brief_description>
+	<description>
+		PLATEAUDatasetGroup contains a collection of datasets, typically grouped by prefecture.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_dataset_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the number of datasets in this group.
+			</description>
+		</method>
+		<method name="get_dataset" qualifiers="const">
+			<return type="PLATEAUDatasetMetadata" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the dataset at the specified index.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="id" type="String" setter="set_id" getter="get_id" default="&quot;&quot;">
+			Unique identifier for the group.
+		</member>
+		<member name="title" type="String" setter="set_title" getter="get_title" default="&quot;&quot;">
+			Display title (typically prefecture name).
+		</member>
+		<member name="datasets" type="PLATEAUDatasetMetadata[]" setter="set_datasets" getter="get_datasets" default="[]">
+			Array of datasets in this group.
+		</member>
+	</members>
+</class>

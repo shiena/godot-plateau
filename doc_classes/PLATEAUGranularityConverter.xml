@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUGranularityConverter" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Converts mesh granularity between different levels.
+	</brief_description>
+	<description>
+		PLATEAUGranularityConverter converts meshes between different granularity levels: atomic (individual parts), primary (whole features), and area (merged regions).
+		[codeblock]
+		var converter = PLATEAUGranularityConverter.new()
+		# Combine atomic parts into primary features
+		var primary_meshes = converter.convert(atomic_mesh_array, PLATEAUGranularityConverter.CONVERT_GRANULARITY_PRIMARY)
+		# Merge into area with grid subdivision
+		converter.grid_count = 4
+		var area_meshes = converter.convert(mesh_array, PLATEAUGranularityConverter.CONVERT_GRANULARITY_AREA)
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="convert">
+			<return type="PLATEAUMeshData[]" />
+			<param index="0" name="mesh_data_array" type="PLATEAUMeshData[]" />
+			<param index="1" name="target_granularity" type="int" />
+			<description>
+				Convert mesh data to the specified granularity level. Returns array of converted [PLATEAUMeshData].
+			</description>
+		</method>
+		<method name="detect_granularity" qualifiers="static">
+			<return type="int" />
+			<param index="0" name="mesh_data_array" type="PLATEAUMeshData[]" />
+			<description>
+				Detect the current granularity of the mesh data (best guess based on structure).
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="grid_count" type="int" setter="set_grid_count" getter="get_grid_count" default="1">
+			Grid count for area granularity (creates NxN grid).
+		</member>
+	</members>
+	<constants>
+		<constant name="CONVERT_GRANULARITY_ATOMIC" value="0">
+			Atomic feature level (LOD2/3 components like walls, roofs).
+		</constant>
+		<constant name="CONVERT_GRANULARITY_PRIMARY" value="1">
+			Primary feature level (whole building, road, etc.).
+		</constant>
+		<constant name="CONVERT_GRANULARITY_AREA" value="2">
+			City model area level (entire GML file).
+		</constant>
+		<constant name="CONVERT_GRANULARITY_MATERIAL_IN_PRIMARY" value="3">
+			Material-based grouping within primary features.
+		</constant>
+	</constants>
+</class>

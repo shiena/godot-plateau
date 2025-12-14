@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUTileCoordinate" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Map tile coordinate (column, row, zoom level).
+	</brief_description>
+	<description>
+		PLATEAUTileCoordinate represents a tile coordinate in the XYZ tile system used by GSI and other map tile servers.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_extent" qualifiers="const">
+			<return type="Dictionary" />
+			<description>
+				Returns the latitude/longitude extent for this tile as a Dictionary with min_lat, min_lon, max_lat, max_lon keys.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="column" type="int" setter="set_column" getter="get_column" default="-1">
+			X coordinate (column) of the tile.
+		</member>
+		<member name="row" type="int" setter="set_row" getter="get_row" default="-1">
+			Y coordinate (row) of the tile.
+		</member>
+		<member name="zoom_level" type="int" setter="set_zoom_level" getter="get_zoom_level" default="-1">
+			Zoom level of the tile.
+		</member>
+	</members>
+</class>

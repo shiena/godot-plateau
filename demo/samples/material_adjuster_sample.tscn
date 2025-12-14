@@ -1,0 +1,171 @@
+[gd_scene load_steps=6 format=3 uid="uid://plateau_sample_mat_adj"]
+
+[ext_resource type="Script" path="res://samples/material_adjuster_sample.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://japanese_font" path="res://fonts/japanese_font.tres" id="2_font"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_sky"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 2
+ambient_light_color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="MaterialAdjusterSample" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 100, 200)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 100, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_sky")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="ImportPanel" type="Panel" parent="UI"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 200.0
+offset_bottom = 70.0
+
+[node name="Title" type="Label" parent="UI/ImportPanel"]
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 180.0
+offset_bottom = 25.0
+text = "Import"
+horizontal_alignment = 1
+
+[node name="ImportButton" type="Button" parent="UI/ImportPanel"]
+offset_left = 10.0
+offset_top = 30.0
+offset_right = 180.0
+offset_bottom = 55.0
+text = "Import GML..."
+
+[node name="AdjustPanel" type="Panel" parent="UI"]
+offset_left = 10.0
+offset_top = 80.0
+offset_right = 280.0
+offset_bottom = 250.0
+
+[node name="Title" type="Label" parent="UI/AdjustPanel"]
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 260.0
+offset_bottom = 25.0
+text = "Material Adjustment"
+horizontal_alignment = 1
+
+[node name="ModeLabel" type="Label" parent="UI/AdjustPanel"]
+offset_left = 10.0
+offset_top = 35.0
+offset_right = 60.0
+offset_bottom = 55.0
+text = "Mode:"
+
+[node name="ModeOption" type="OptionButton" parent="UI/AdjustPanel"]
+offset_left = 65.0
+offset_top = 33.0
+offset_right = 260.0
+offset_bottom = 57.0
+
+[node name="AttrKeyRow" type="HBoxContainer" parent="UI/AdjustPanel"]
+offset_left = 10.0
+offset_top = 65.0
+offset_right = 260.0
+offset_bottom = 90.0
+
+[node name="AttrKeyLabel" type="Label" parent="UI/AdjustPanel/AttrKeyRow"]
+layout_mode = 2
+text = "Attribute Key:"
+
+[node name="AttrKeyEdit" type="LineEdit" parent="UI/AdjustPanel/AttrKeyRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "bldg:usage"
+
+[node name="ApplyButton" type="Button" parent="UI/AdjustPanel"]
+offset_left = 10.0
+offset_top = 100.0
+offset_right = 260.0
+offset_bottom = 125.0
+text = "Apply Materials"
+
+[node name="ResetButton" type="Button" parent="UI/AdjustPanel"]
+offset_left = 10.0
+offset_top = 130.0
+offset_right = 260.0
+offset_bottom = 155.0
+text = "Reset to Original"
+
+[node name="LegendPanel" type="Panel" parent="UI"]
+offset_left = 10.0
+offset_top = 260.0
+offset_right = 280.0
+offset_bottom = 500.0
+
+[node name="Title" type="Label" parent="UI/LegendPanel"]
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 260.0
+offset_bottom = 25.0
+text = "Legend"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="UI/LegendPanel"]
+offset_left = 10.0
+offset_top = 30.0
+offset_right = 260.0
+offset_bottom = 230.0
+
+[node name="LegendContainer" type="VBoxContainer" parent="UI/LegendPanel/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LogPanel" type="Panel" parent="UI"]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -420.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 0
+
+[node name="Title" type="Label" parent="UI/LogPanel"]
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 390.0
+offset_bottom = 25.0
+text = "Log"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="UI/LogPanel"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 30.0
+offset_right = 400.0
+offset_bottom = -10.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="LogLabel" type="RichTextLabel" parent="UI/LogPanel/ScrollContainer"]
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_fonts/normal_font = ExtResource("2_font")
+bbcode_enabled = true
+fit_content = true
+scroll_following = true

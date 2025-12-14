@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUHeightMapAligner" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Aligns model heights to terrain heightmaps or vice versa.
+	</brief_description>
+	<description>
+		PLATEAUHeightMapAligner adjusts building and model heights to match terrain, or adjusts terrain to match roads and other features.
+		[codeblock]
+		var aligner = PLATEAUHeightMapAligner.new()
+		aligner.height_offset = -0.15  # Sink buildings slightly
+		aligner.max_edge_length = 4.0
+		aligner.add_heightmap(terrain_heightmap_data)
+		var aligned_meshes = aligner.align(building_mesh_array)
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="add_heightmap">
+			<return type="void" />
+			<param index="0" name="heightmap_data" type="PLATEAUHeightMapData" />
+			<description>
+				Add a heightmap to use for alignment. Multiple heightmaps can be added for areas with multiple terrain pieces.
+			</description>
+		</method>
+		<method name="clear_heightmaps">
+			<return type="void" />
+			<description>
+				Clear all registered heightmaps.
+			</description>
+		</method>
+		<method name="get_heightmap_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the number of registered heightmaps.
+			</description>
+		</method>
+		<method name="align">
+			<return type="PLATEAUMeshData[]" />
+			<param index="0" name="mesh_data_array" type="PLATEAUMeshData[]" />
+			<description>
+				Align model heights to the registered heightmaps. Returns array of aligned [PLATEAUMeshData].
+			</description>
+		</method>
+		<method name="align_invert">
+			<return type="PLATEAUHeightMapData[]" />
+			<param index="0" name="mesh_data_array" type="PLATEAUMeshData[]" />
+			<description>
+				Align heightmaps to model heights (inverse alignment). Used for aligning terrain to roads. Returns array of updated [PLATEAUHeightMapData].
+			</description>
+		</method>
+		<method name="get_height_at" qualifiers="const">
+			<return type="float" />
+			<param index="0" name="xz_position" type="Vector2" />
+			<description>
+				Get height at a specific XZ position from the heightmaps. Returns NaN if position is outside all heightmaps.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="height_offset" type="float" setter="set_height_offset" getter="get_height_offset" default="0.0">
+			Height offset when aligning models to terrain. Use small negative values (e.g., -0.15) to sink buildings slightly into terrain.
+		</member>
+		<member name="max_edge_length" type="float" setter="set_max_edge_length" getter="get_max_edge_length" default="4.0">
+			Maximum edge length for mesh subdivision during alignment. Smaller values = more accurate but slower.
+		</member>
+		<member name="alpha_expand_width" type="int" setter="set_alpha_expand_width" getter="get_alpha_expand_width" default="0">
+			Alpha expand width for inverse alignment.
+		</member>
+		<member name="alpha_averaging_width" type="int" setter="set_alpha_averaging_width" getter="get_alpha_averaging_width" default="0">
+			Alpha averaging width for inverse alignment.
+		</member>
+		<member name="invert_height_offset" type="float" setter="set_invert_height_offset" getter="get_invert_height_offset" default="0.0">
+			Height offset for inverse alignment.
+		</member>
+		<member name="skip_threshold_distance" type="float" setter="set_skip_threshold_distance" getter="get_skip_threshold_distance" default="0.0">
+			Skip threshold distance for alignment.
+		</member>
+	</members>
+</class>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUTerrain" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Converts terrain meshes to heightmaps and smoothed meshes.
+	</brief_description>
+	<description>
+		PLATEAUTerrain generates heightmaps from terrain mesh data (DEM/TINRelief) and can produce smoothed terrain meshes suitable for use in games.
+		[codeblock]
+		var terrain = PLATEAUTerrain.new()
+		terrain.texture_width = 257
+		terrain.texture_height = 257
+		var heightmap_data = terrain.generate_from_mesh(terrain_mesh_data)
+		var smoothed_mesh = heightmap_data.generate_mesh()
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="generate_from_mesh">
+			<return type="PLATEAUHeightMapData" />
+			<param index="0" name="mesh_data" type="PLATEAUMeshData" />
+			<description>
+				Generate a heightmap from a single [PLATEAUMeshData]. Returns a [PLATEAUHeightMapData] containing the generated heightmap.
+			</description>
+		</method>
+		<method name="generate_from_meshes">
+			<return type="PLATEAUHeightMapData" />
+			<param index="0" name="mesh_data_array" type="PLATEAUMeshData[]" />
+			<description>
+				Generate a heightmap from an array of [PLATEAUMeshData]. All meshes are merged before heightmap generation. Returns a [PLATEAUHeightMapData] containing the generated heightmap.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="texture_width" type="int" setter="set_texture_width" getter="get_texture_width" default="257">
+			Width of the generated heightmap texture in pixels.
+		</member>
+		<member name="texture_height" type="int" setter="set_texture_height" getter="get_texture_height" default="257">
+			Height of the generated heightmap texture in pixels.
+		</member>
+		<member name="offset" type="Vector2" setter="set_offset" getter="get_offset" default="Vector2(0, 0)">
+			Offset margin for heightmap generation.
+		</member>
+		<member name="fill_edges" type="bool" setter="set_fill_edges" getter="get_fill_edges" default="true">
+			Whether to fill edge pixels that may be missing data.
+		</member>
+		<member name="apply_blur_filter" type="bool" setter="set_apply_blur_filter" getter="get_apply_blur_filter" default="true">
+			Whether to apply a blur filter to smooth the heightmap.
+		</member>
+	</members>
+</class>

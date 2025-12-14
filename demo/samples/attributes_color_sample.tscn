@@ -1,0 +1,96 @@
+[gd_scene load_steps=6 format=3 uid="uid://plateau_sample_attr_color"]
+
+[ext_resource type="Script" path="res://samples/attributes_color_sample.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://japanese_font" path="res://fonts/japanese_font.tres" id="2_font"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_sky"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 2
+ambient_light_color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="AttributesColorSample" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 100, 200)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 100, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_sky")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="InfoLabel" type="Label" parent="UI"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 600.0
+offset_bottom = 40.0
+text = "Click 'Import GML' to load a CityGML file"
+
+[node name="ImportButton" type="Button" parent="UI"]
+offset_left = 10.0
+offset_top = 50.0
+offset_right = 150.0
+offset_bottom = 80.0
+text = "Import GML..."
+
+[node name="ModeButtons" type="HBoxContainer" parent="UI"]
+offset_left = 10.0
+offset_top = 90.0
+offset_right = 500.0
+offset_bottom = 130.0
+
+[node name="Label" type="Label" parent="UI/ModeButtons"]
+layout_mode = 2
+text = "Color Mode:"
+
+[node name="OriginalButton" type="Button" parent="UI/ModeButtons"]
+layout_mode = 2
+text = "Original"
+
+[node name="UsageButton" type="Button" parent="UI/ModeButtons"]
+layout_mode = 2
+text = "By Usage"
+
+[node name="TypeButton" type="Button" parent="UI/ModeButtons"]
+layout_mode = 2
+text = "By Type"
+
+[node name="FloodButton" type="Button" parent="UI/ModeButtons"]
+layout_mode = 2
+text = "By Flood Risk"
+
+[node name="LegendPanel" type="Panel" parent="UI"]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -220.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 300.0
+grow_horizontal = 0
+
+[node name="LegendLabel" type="RichTextLabel" parent="UI/LegendPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+theme_override_fonts/normal_font = ExtResource("2_font")
+theme_override_fonts/bold_font = ExtResource("2_font")
+bbcode_enabled = true
+text = "Legend"

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUCityModel" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Main class for loading and processing CityGML files.
+	</brief_description>
+	<description>
+		PLATEAUCityModel is the primary class for loading PLATEAU CityGML files and extracting mesh data. It handles parsing of CityGML format, texture loading, and conversion to Godot-compatible meshes.
+		[codeblock]
+		var city_model = PLATEAUCityModel.new()
+		if city_model.load("path/to/file.gml"):
+		    var options = PLATEAUMeshExtractOptions.new()
+		    options.coordinate_zone_id = 9  # Tokyo
+		    var meshes = city_model.extract_meshes(options)
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="load">
+			<return type="bool" />
+			<param index="0" name="gml_path" type="String" />
+			<description>
+				Load a CityGML file from the specified path. Returns [code]true[/code] if loading was successful.
+			</description>
+		</method>
+		<method name="is_loaded" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if a CityGML file has been successfully loaded.
+			</description>
+		</method>
+		<method name="get_gml_path" qualifiers="const">
+			<return type="String" />
+			<description>
+				Returns the path of the currently loaded GML file.
+			</description>
+		</method>
+		<method name="extract_meshes">
+			<return type="PLATEAUMeshData[]" />
+			<param index="0" name="options" type="PLATEAUMeshExtractOptions" />
+			<description>
+				Extract meshes from the loaded CityGML using the specified options. Returns an array of [PLATEAUMeshData] objects.
+			</description>
+		</method>
+		<method name="get_center_point" qualifiers="const">
+			<return type="Vector3" />
+			<param index="0" name="coordinate_zone_id" type="int" />
+			<description>
+				Get the center point of the city model in the specified coordinate zone.
+			</description>
+		</method>
+		<method name="get_city_object_attributes" qualifiers="const">
+			<return type="Dictionary" />
+			<param index="0" name="gml_id" type="String" />
+			<description>
+				Get attributes of a CityObject by its GML ID. Returns an empty Dictionary if not found.
+			</description>
+		</method>
+		<method name="get_city_object_type" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="gml_id" type="String" />
+			<description>
+				Get the CityObject type by GML ID. Returns a [enum PLATEAUCityObjectType] value.
+			</description>
+		</method>
+	</methods>
+</class>

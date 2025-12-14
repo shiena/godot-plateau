@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUImporter" inherits="Node3D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Node for importing PLATEAU CityGML data.
+	</brief_description>
+	<description>
+		PLATEAUImporter is a Node3D that loads CityGML files from PLATEAU dataset and creates 3D mesh instances as child nodes. It supports both editor-time and runtime import.
+		[codeblock]
+		var importer = PLATEAUImporter.new()
+		importer.gml_path = "path/to/file.gml"
+		importer.generate_collision = true
+		if importer.import_gml():
+		    add_child(importer)
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="import_gml">
+			<return type="bool" />
+			<description>
+				Import the CityGML file specified by [member gml_path] and create scene hierarchy. Returns [code]true[/code] on success.
+			</description>
+		</method>
+		<method name="import_from_path">
+			<return type="bool" />
+			<param index="0" name="gml_path" type="String" />
+			<description>
+				Import a CityGML file from the specified path and create scene hierarchy. Returns [code]true[/code] on success.
+			</description>
+		</method>
+		<method name="import_to_scene">
+			<return type="Node3D" />
+			<param index="0" name="mesh_data_array" type="PLATEAUMeshData[]" />
+			<param index="1" name="root_name" type="String" />
+			<description>
+				Create a Node3D hierarchy from pre-extracted mesh data. Returns the root node containing all mesh instances.
+			</description>
+		</method>
+		<method name="clear_meshes">
+			<return type="void" />
+			<description>
+				Remove all imported mesh children.
+			</description>
+		</method>
+		<method name="is_imported" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if import was successful.
+			</description>
+		</method>
+		<method name="get_city_model" qualifiers="const">
+			<return type="PLATEAUCityModel" />
+			<description>
+				Get the underlying city model for advanced usage.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="gml_path" type="String" setter="set_gml_path" getter="get_gml_path" default="&quot;&quot;">
+			Path to the CityGML (.gml) file to import.
+		</member>
+		<member name="extract_options" type="PLATEAUMeshExtractOptions" setter="set_extract_options" getter="get_extract_options">
+			Options for mesh extraction including LOD range, granularity, and texture settings.
+		</member>
+		<member name="geo_reference" type="PLATEAUGeoReference" setter="set_geo_reference" getter="get_geo_reference">
+			Geographic reference for coordinate conversion.
+		</member>
+		<member name="generate_collision" type="bool" setter="set_generate_collision" getter="get_generate_collision" default="false">
+			If [code]true[/code], collision shapes will be generated for imported meshes.
+		</member>
+	</members>
+</class>

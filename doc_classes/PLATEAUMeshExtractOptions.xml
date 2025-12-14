@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUMeshExtractOptions" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Options for mesh extraction from CityGML.
+	</brief_description>
+	<description>
+		PLATEAUMeshExtractOptions configures how meshes are extracted from CityGML files, including LOD range, mesh granularity, coordinate system, and texture handling.
+	</description>
+	<tutorials>
+	</tutorials>
+	<members>
+		<member name="reference_point" type="Vector3" setter="set_reference_point" getter="get_reference_point" default="Vector3(0, 0, 0)">
+			The origin point for local coordinates.
+		</member>
+		<member name="coordinate_system" type="int" setter="set_coordinate_system" getter="get_coordinate_system" default="3">
+			Coordinate system (0=ENU, 1=WUN, 2=ESU, 3=EUN). Default is EUN for Godot.
+		</member>
+		<member name="mesh_granularity" type="int" setter="set_mesh_granularity" getter="get_mesh_granularity" default="1">
+			Mesh granularity level:
+			- 0: Per atomic feature (finest, each building part separate)
+			- 1: Per primary feature (each building/road as whole)
+			- 2: Per city model area (entire GML file merged)
+		</member>
+		<member name="min_lod" type="int" setter="set_min_lod" getter="get_min_lod" default="0">
+			Minimum LOD level to extract (0-4).
+		</member>
+		<member name="max_lod" type="int" setter="set_max_lod" getter="get_max_lod" default="4">
+			Maximum LOD level to extract (0-4).
+		</member>
+		<member name="export_appearance" type="bool" setter="set_export_appearance" getter="get_export_appearance" default="true">
+			Whether to export textures and materials.
+		</member>
+		<member name="grid_count_of_side" type="int" setter="set_grid_count_of_side" getter="get_grid_count_of_side" default="1">
+			Grid subdivision count per side.
+		</member>
+		<member name="unit_scale" type="float" setter="set_unit_scale" getter="get_unit_scale" default="1.0">
+			Scale factor for coordinate conversion.
+		</member>
+		<member name="coordinate_zone_id" type="int" setter="set_coordinate_zone_id" getter="get_coordinate_zone_id" default="9">
+			Japanese coordinate zone ID (1-19). Default is 9 (Tokyo region).
+		</member>
+		<member name="enable_texture_packing" type="bool" setter="set_enable_texture_packing" getter="get_enable_texture_packing" default="false">
+			Whether to pack textures into a single atlas.
+		</member>
+		<member name="texture_packing_resolution" type="int" setter="set_texture_packing_resolution" getter="get_texture_packing_resolution" default="4096">
+			Resolution of texture atlas when packing is enabled.
+		</member>
+		<member name="highest_lod_only" type="bool" setter="set_highest_lod_only" getter="get_highest_lod_only" default="false">
+			If true, only extract the highest available LOD for each feature.
+		</member>
+	</members>
+</class>

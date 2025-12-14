@@ -1,0 +1,6 @@
+[gd_resource type="SystemFont" format=3]
+
+[resource]
+font_names = PackedStringArray("Yu Gothic UI", "Meiryo", "MS Gothic", "Noto Sans CJK JP")
+antialiasing = 1
+generate_mipmaps = true
