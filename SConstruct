@@ -240,6 +240,27 @@ platform = env["platform"]
 target = env["target"]
 arch = env.get("arch", "")
 
+# macOS: Set deployment target to 15.0 for ARM64 PAC compatibility with macOS 26+
+# This fixes pointer authentication crashes on macOS Tahoe (26.x) beta
+if platform == "macos" and env.get("macos_deployment_target", "default") == "default":
+    env["macos_deployment_target"] = "15.0"
+    env.Append(CCFLAGS=["-mmacosx-version-min=15.0"])
+    env.Append(LINKFLAGS=["-mmacosx-version-min=15.0"])
+
+# iOS: Set minimum version to 13.0 to match libplateau's CMAKE_OSX_DEPLOYMENT_TARGET
+if platform == "ios" and env.get("ios_min_version", "12.0") == "12.0":
+    env["ios_min_version"] = "13.0"
+    # Note: godot-cpp/tools/ios.py already added -miphoneos-version-min with old value,
+    # so we need to replace it
+    env["CCFLAGS"] = [f for f in env["CCFLAGS"] if "-miphoneos-version-min" not in str(f) and "-mios-simulator-version-min" not in str(f)]
+    env["LINKFLAGS"] = [f for f in env["LINKFLAGS"] if "-miphoneos-version-min" not in str(f) and "-mios-simulator-version-min" not in str(f)]
+    if env.get("ios_simulator", False):
+        env.Append(CCFLAGS=["-mios-simulator-version-min=13.0"])
+        env.Append(LINKFLAGS=["-mios-simulator-version-min=13.0"])
+    else:
+        env.Append(CCFLAGS=["-miphoneos-version-min=13.0"])
+        env.Append(LINKFLAGS=["-miphoneos-version-min=13.0"])
+
 # Ensure libplateau exists
 if not LIBPLATEAU_ROOT.exists():
     print_error("""libplateau directory is missing. Please initialize the submodule:
@@ -278,6 +299,20 @@ if not skip_libplateau_build:
         build_libplateau,
     )
     libplateau_build_node = libplateau_build[0]
+
+    # Declare 3rdparty libraries as side effects for Android/iOS
+    # This tells SCons that CMake build also produces these files
+    if platform in ("android", "ios"):
+        libplateau_3rdparty = libplateau_build_dir / "3rdparty"
+        thirdparty_libs = [
+            str(libplateau_3rdparty / "libcitygml" / "lib" / "libcitygml.a"),
+            str(libplateau_3rdparty / "openmesh" / "src" / "OpenMesh" / "Core" / "libOpenMeshCore.a"),
+            str(libplateau_3rdparty / "openmesh" / "src" / "OpenMesh" / "Tools" / "libOpenMeshTools.a"),
+            str(libplateau_3rdparty / "hmm" / "src" / "libhmm.a"),
+            str(libplateau_3rdparty / "glTF-SDK" / "glTF-SDK" / "GLTFSDK" / "libGLTFSDK.a"),
+        ]
+        for lib in thirdparty_libs:
+            env.SideEffect(lib, libplateau_build_node)
 else:
     libplateau_build_node = None
     if not libplateau_lib_path.exists():
@@ -376,6 +411,9 @@ library = env.SharedLibrary(
 # Depend on libplateau build if we're building it
 if libplateau_build_node:
     env.Depends(library, libplateau_build_node)
+    # Also make sources depend on configure step to ensure generated headers exist
+    # (citygml_api.h is generated during cmake configure)
+    env.Depends(sources, libplateau_configure_node)
 
 # Copy to demo project addons folder
 copy_addons = env.Install(addons_dir, library)
