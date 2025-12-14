@@ -14,8 +14,8 @@ extends Node3D
 
 # Server URLs are retrieved from PLATEAUDatasetSource static methods
 # (same values as libplateau's src/network/client.cpp)
-# Note: API token is NOT exposed to GDScript for security reasons.
-# Use build_auth_headers() which handles token internally.
+# Note: For production API, you need to obtain a token from PLATEAU website.
+# Mock server does not require authentication.
 var PRODUCTION_SERVER: String
 var MOCK_SERVER: String
 
@@ -182,13 +182,10 @@ func _get_server_url() -> String:
 
 
 func _get_auth_headers() -> PackedStringArray:
-	# Build auth headers using C++ helper (token is handled internally for security)
-	# - custom_token: User-entered token (empty = use default internally)
-	# - use_default_token: true for production server, false for mock
-	return PLATEAUDatasetSource.build_auth_headers(
-		token_edit.text.strip_edges(),
-		not mock_check.button_pressed
-	)
+	# Build auth headers using C++ helper
+	# - token: User-entered Bearer token (empty for no auth, e.g. mock server)
+	# For production API access, obtain a token from PLATEAU website
+	return PLATEAUDatasetSource.build_auth_headers(token_edit.text.strip_edges())
 
 
 func _on_fetch_server_pressed() -> void:

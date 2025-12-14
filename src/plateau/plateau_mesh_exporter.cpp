@@ -119,9 +119,17 @@ std::shared_ptr<PlateauModel> PLATEAUMeshExporter::create_model_from_mesh_data(
 
         auto node = PlateauNode(mesh_data->get_name().utf8().get_data());
 
-        // Set transform
+        // Set transform (position, rotation, scale)
         Transform3D t = mesh_data->get_transform();
         node.setLocalPosition(TVec3d(t.origin.x, t.origin.y, t.origin.z));
+
+        // Extract rotation and scale from basis
+        godot::Quaternion godot_quat = t.basis.get_rotation_quaternion();
+        Vector3 godot_scale = t.basis.get_scale();
+
+        node.setLocalRotation(plateau::polygonMesh::Quaternion(
+            godot_quat.x, godot_quat.y, godot_quat.z, godot_quat.w));
+        node.setLocalScale(TVec3d(godot_scale.x, godot_scale.y, godot_scale.z));
 
         // Add mesh
         add_mesh_data_to_node(node, mesh_data);

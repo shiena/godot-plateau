@@ -378,9 +378,9 @@ Ref<PLATEAUMeshData> PLATEAUCityModel::convert_node(const plateau::polygonMesh::
         const citygml::CityObject* city_obj = city_model_->getCityObjectById(node_name);
 
         // If not found directly, try looking in the CityObjectList
-        if (city_obj == nullptr && !city_object_list.getAllKeys()->empty()) {
+        auto keys = city_object_list.getAllKeys();
+        if (city_obj == nullptr && keys != nullptr && !keys->empty()) {
             // Get first GML ID from the mesh's city object list
-            auto keys = city_object_list.getAllKeys();
             if (!keys->empty()) {
                 std::string gml_id;
                 if (city_object_list.tryGetPrimaryGmlID((*keys)[0].primary_index, gml_id)) {
@@ -403,9 +403,20 @@ Ref<PLATEAUMeshData> PLATEAUCityModel::convert_node(const plateau::polygonMesh::
         }
     }
 
-    // Set local transform
+    // Set local transform (position, rotation, scale)
     TVec3d pos = node.getLocalPosition();
+    TVec3d scale = node.getLocalScale();
+    plateau::polygonMesh::Quaternion rot = node.getLocalRotation();
+
+    // Create Godot Quaternion from libplateau Quaternion (both use xyzw order)
+    godot::Quaternion godot_quat(rot.getX(), rot.getY(), rot.getZ(), rot.getW());
+
+    // Create basis from quaternion, then apply scale
+    Basis basis(godot_quat);
+    basis.scale_local(Vector3(scale.x, scale.y, scale.z));
+
     Transform3D transform;
+    transform.basis = basis;
     transform.origin = Vector3(pos.x, pos.y, pos.z);
     mesh_data->set_transform(transform);
 
@@ -829,6 +840,9 @@ void PLATEAUCityModel::_bind_methods() {
     ClassDB::bind_method(D_METHOD("extract_meshes_async", "options"), &PLATEAUCityModel::extract_meshes_async);
     ClassDB::bind_method(D_METHOD("is_processing"), &PLATEAUCityModel::is_processing);
 
+    // Internal method for deferred call from worker thread (not for GDScript use)
+    ClassDB::bind_method(D_METHOD("_finalize_meshes_on_main_thread"), &PLATEAUCityModel::_finalize_meshes_on_main_thread);
+
     // Signals for async completion
     ADD_SIGNAL(MethodInfo("load_completed", PropertyInfo(Variant::BOOL, "success")));
     ADD_SIGNAL(MethodInfo("extract_completed", PropertyInfo(Variant::ARRAY, "meshes")));
@@ -884,18 +898,55 @@ void PLATEAUCityModel::extract_meshes_async(const Ref<PLATEAUMeshExtractOptions>
     pending_options_ = options;
 
     // Use WorkerThreadPool to run extraction in background
+    // Stage 1: Extract libplateau Model only (thread-safe)
     WorkerThreadPool::get_singleton()->add_task(
-        callable_mp(this, &PLATEAUCityModel::_extract_thread_func)
+        callable_mp(this, &PLATEAUCityModel::_extract_model_thread_func)
     );
 }
 
-void PLATEAUCityModel::_extract_thread_func() {
-    TypedArray<PLATEAUMeshData> result = extract_meshes(pending_options_);
-    is_processing_.store(false);
-    pending_options_.unref();
+void PLATEAUCityModel::_extract_model_thread_func() {
+    // Stage 1: Extract libplateau Model only (worker thread - thread-safe)
+    // This does NOT create any Godot objects (ArrayMesh, Material, etc.)
+    try {
+        if (pending_options_.is_valid() && city_model_ != nullptr) {
+            plateau::polygonMesh::MeshExtractOptions native_options = pending_options_->get_native();
+            pending_model_ = plateau::polygonMesh::MeshExtractor::extract(*city_model_, native_options);
+        }
+    } catch (const std::exception &e) {
+        UtilityFunctions::printerr("Exception extracting model: ", String(e.what()));
+        pending_model_.reset();
+    }
 
-    // Emit signal on main thread via call_deferred
-    call_deferred("emit_signal", "extract_completed", result);
+    // Stage 2: Finalize on main thread (create Godot resources)
+    call_deferred("_finalize_meshes_on_main_thread");
+}
+
+void PLATEAUCityModel::_finalize_meshes_on_main_thread() {
+    // Stage 2: Create Godot resources (main thread only!)
+    // This creates ArrayMesh, StandardMaterial3D, ImageTexture, etc.
+    TypedArray<PLATEAUMeshData> result;
+
+    if (pending_model_) {
+        String base_path = gml_path_.get_base_dir();
+
+        for (size_t i = 0; i < pending_model_->getRootNodeCount(); i++) {
+            const PlateauNode &node = pending_model_->getRootNodeAt(i);
+            Ref<PLATEAUMeshData> mesh_data = convert_node(node, base_path);
+            if (mesh_data.is_valid()) {
+                result.push_back(mesh_data);
+            }
+        }
+
+        UtilityFunctions::print("Extracted ", result.size(), " root nodes (async)");
+    }
+
+    // Cleanup
+    pending_model_.reset();
+    pending_options_.unref();
+    is_processing_.store(false);
+
+    // Emit signal
+    emit_signal("extract_completed", result);
 }
 
 bool PLATEAUCityModel::is_processing() const {

@@ -178,10 +178,12 @@ private:
     std::atomic<bool> is_processing_{false};
     String pending_gml_path_;
     Ref<PLATEAUMeshExtractOptions> pending_options_;
+    std::shared_ptr<plateau::polygonMesh::Model> pending_model_;
 
     // Async worker functions (called from WorkerThreadPool)
     void _load_thread_func();
-    void _extract_thread_func();
+    void _extract_model_thread_func();  // Stage 1: Extract libplateau Model (worker thread)
+    void _finalize_meshes_on_main_thread();  // Stage 2: Create Godot resources (main thread)
 
     // Texture cache to avoid reloading same textures
     HashMap<String, Ref<ImageTexture>> texture_cache_;

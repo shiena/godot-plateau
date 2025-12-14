@@ -38,20 +38,17 @@
 		</method>
 		<method name="build_auth_headers" qualifiers="static">
 			<return type="PackedStringArray" />
-			<param index="0" name="custom_token" type="String" />
-			<param index="1" name="use_default_token" type="bool" />
+			<param index="0" name="token" type="String" />
 			<description>
 				Build authentication headers for PLATEAU API requests.
-				[param custom_token]: User-provided token (used if not empty).
-				[param use_default_token]: If [code]true[/code] and custom_token is empty, uses built-in default token.
-				Returns array with Content-Type and Authorization headers.
+				[param token]: Bearer token for authentication (empty for no auth).
+				Returns array with Content-Type and optionally Authorization headers.
+				For production API access, obtain a token from PLATEAU website.
 				[codeblock]
-				# For production server (uses default token if custom is empty)
-				var headers = PLATEAUDatasetSource.build_auth_headers("", true)
-				# For mock server (no auth)
-				var headers = PLATEAUDatasetSource.build_auth_headers("", false)
-				# With custom token
-				var headers = PLATEAUDatasetSource.build_auth_headers("my-token", false)
+				# For mock server (no auth needed)
+				var headers = PLATEAUDatasetSource.build_auth_headers("")
+				# With user token for production server
+				var headers = PLATEAUDatasetSource.build_auth_headers("my-token")
 				[/codeblock]
 			</description>
 		</method>

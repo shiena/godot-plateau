@@ -233,13 +233,9 @@ PackedStringArray PLATEAUDatasetSource::build_auth_headers(const String &custom_
     PackedStringArray headers;
     headers.push_back("Content-Type: application/json");
 
-    String token;
-    if (!custom_token.is_empty()) {
-        // Use user-provided custom token
-        token = custom_token;
-    } else if (use_default_token) {
-        // Use built-in default token (not exposed to GDScript)
-        // Same value as libplateau's getDefaultApiToken() in src/network/client.cpp
+    String token = custom_token;
+    if (token.is_empty() && use_default_token) {
+        // Same as libplateau's getDefaultApiToken() in src/network/client.cpp
         token = "secret-56c66bcac0ab4724b86fc48309fe517a";
     }
 
@@ -357,7 +353,7 @@ void PLATEAUDatasetSource::_bind_methods() {
     ClassDB::bind_static_method("PLATEAUDatasetSource", D_METHOD("create_local", "local_path"), &PLATEAUDatasetSource::create_local);
     ClassDB::bind_static_method("PLATEAUDatasetSource", D_METHOD("get_default_server_url"), &PLATEAUDatasetSource::get_default_server_url);
     ClassDB::bind_static_method("PLATEAUDatasetSource", D_METHOD("get_mock_server_url"), &PLATEAUDatasetSource::get_mock_server_url);
-    ClassDB::bind_static_method("PLATEAUDatasetSource", D_METHOD("build_auth_headers", "custom_token", "use_default_token"), &PLATEAUDatasetSource::build_auth_headers);
+    ClassDB::bind_static_method("PLATEAUDatasetSource", D_METHOD("build_auth_headers", "custom_token", "use_default_token"), &PLATEAUDatasetSource::build_auth_headers, DEFVAL(""), DEFVAL(true));
 
     ClassDB::bind_method(D_METHOD("is_valid"), &PLATEAUDatasetSource::is_valid);
     ClassDB::bind_method(D_METHOD("get_available_packages"), &PLATEAUDatasetSource::get_available_packages);

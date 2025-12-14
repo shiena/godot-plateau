@@ -243,6 +243,13 @@ void PLATEAUImporter::create_collision_for_mesh(MeshInstance3D *mesh_instance) {
 
     static_body->add_child(collision_shape);
     mesh_instance->add_child(static_body);
+
+    // Set owner for scene serialization (nodes without owner are lost when saving)
+    Node *owner = mesh_instance->get_owner();
+    if (owner != nullptr) {
+        static_body->set_owner(owner);
+        collision_shape->set_owner(owner);
+    }
 }
 
 void PLATEAUImporter::_bind_methods() {
