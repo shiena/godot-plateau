@@ -183,9 +183,16 @@ func _get_server_url() -> String:
 
 func _get_auth_headers() -> PackedStringArray:
 	# Build auth headers using C++ helper
-	# - token: User-entered Bearer token (empty for no auth, e.g. mock server)
-	# For production API access, obtain a token from PLATEAU website
-	return PLATEAUDatasetSource.build_auth_headers(token_edit.text.strip_edges())
+	# - custom_token: User-entered Bearer token (empty to use default for production server)
+	# - use_default_token: Use built-in token when connecting to default production server
+	var token = token_edit.text.strip_edges()
+	var use_default = _is_default_server() and token.is_empty()
+	return PLATEAUDatasetSource.build_auth_headers(token, use_default)
+
+
+func _is_default_server() -> bool:
+	var url = server_url_edit.text.strip_edges()
+	return url == PLATEAUDatasetSource.get_default_server_url()
 
 
 func _on_fetch_server_pressed() -> void:
