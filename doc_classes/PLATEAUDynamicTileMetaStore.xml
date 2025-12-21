@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUDynamicTileMetaStore" inherits="Resource" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Container for tile metadata.
+	</brief_description>
+	<description>
+		PLATEAUDynamicTileMetaStore contains all tile metadata for a dynamic tile set. Can be serialized to/from JSON.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="add_tile_meta_info">
+			<return type="void" />
+			<param index="0" name="info" type="PLATEAUDynamicTileMetaInfo" />
+			<description>
+				Add a tile metadata entry.
+			</description>
+		</method>
+		<method name="get_tile_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Get the number of tiles.
+			</description>
+		</method>
+		<method name="get_tile_meta_info" qualifiers="const">
+			<return type="PLATEAUDynamicTileMetaInfo" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Get tile metadata at index.
+			</description>
+		</method>
+		<method name="from_json" qualifiers="static">
+			<return type="PLATEAUDynamicTileMetaStore" />
+			<param index="0" name="json" type="Dictionary" />
+			<description>
+				Create from JSON data.
+			</description>
+		</method>
+		<method name="to_json" qualifiers="const">
+			<return type="Dictionary" />
+			<description>
+				Export to JSON dictionary.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="tile_meta_infos" type="PLATEAUDynamicTileMetaInfo[]" setter="set_tile_meta_infos" getter="get_tile_meta_infos" default="[]">
+			Array of tile metadata.
+		</member>
+		<member name="reference_point" type="Vector3" setter="set_reference_point" getter="get_reference_point" default="Vector3(0, 0, 0)">
+			Reference point for coordinate calculations.
+		</member>
+	</members>
+</class>

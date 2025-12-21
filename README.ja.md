@@ -13,6 +13,9 @@ Godot Engine 4.x 向けの PLATEAU SDK GDExtension です。国土交通省が�
 - スムーズシェーディング（法線自動生成）
 - 属性情報アクセス（GML ID、CityObjectType、属性）
 - UV座標によるRaycastベースのCityObject識別
+- カメラ距離に基づく動的タイル読み込み
+- 道路ネットワークデータ構造（車線、交差点、歩道）
+- 日本語表示名付きCityObjectType階層
 
 ## 主要クラス
 
@@ -80,6 +83,95 @@ var height = mesh_data.get_attribute("bldg:measuredHeight")
 
 # RaycastヒットのUV座標からGML IDを取得（CityObject識別用）
 var gml_id_from_hit = mesh_data.get_gml_id_from_uv(hit_uv)
+```
+
+### PLATEAUCityModelScene (Node3D)
+PLATEAUシティモデルのルートノード。GeoReferenceとインポートしたGMLトランスフォームを管理。
+
+```gdscript
+var scene = PLATEAUCityModelScene.new()
+scene.geo_reference = geo_ref
+add_child(scene)
+scene.import_gml("path/to/file.gml", import_options)
+
+# 原点の緯度経度を取得
+print("Origin: ", scene.latitude, ", ", scene.longitude)
+
+# 全GMLトランスフォームを取得
+for gml_transform in scene.get_gml_transforms():
+    print(gml_transform.name)
+```
+
+### PLATEAUFilterCondition (Resource)
+タイプ、LOD、パッケージによるCityObjectのフィルター条件。
+
+```gdscript
+var filter = PLATEAUFilterCondition.new()
+filter.city_object_types = COT_Building | COT_Road
+filter.min_lod = 1
+filter.max_lod = 2
+
+if filter.matches(mesh_data):
+    # このメッシュを処理
+    pass
+```
+
+### PLATEAUCityObjectTypeHierarchy (RefCounted)
+日本語表示名付きのCityObjectType階層。
+
+```gdscript
+var hierarchy = PLATEAUCityObjectTypeHierarchy.new()
+
+# 日本語の表示名を取得
+var name = PLATEAUCityObjectTypeHierarchy.get_type_display_name(COT_Building)
+# "建築物" を返す
+
+# タイプからパッケージへ変換
+var package = PLATEAUCityObjectTypeHierarchy.type_to_package(COT_RoofSurface)
+# PACKAGE_BUILDING を返す
+```
+
+### PLATEAUDynamicTileManager (Node3D)
+カメラ距離に基づく動的タイルローディングマネージャー。タイルを自動的にロード/アンロード。
+
+```gdscript
+var manager = PLATEAUDynamicTileManager.new()
+add_child(manager)
+
+# ズームレベルごとのロード距離を設定 (min_distance, max_distance)
+manager.set_load_distance(11, Vector2(-10000, 500))   # 高詳細、近距離
+manager.set_load_distance(10, Vector2(500, 1500))    # 中詳細
+manager.set_load_distance(9, Vector2(1500, 10000))   # 低詳細、遠距離
+
+# メタデータストアで初期化
+manager.initialize(meta_store)
+manager.tile_base_path = "res://tiles/"
+manager.camera = $Camera3D
+manager.auto_update = true
+
+# シグナル
+manager.tile_loaded.connect(_on_tile_loaded)
+manager.tile_unloaded.connect(_on_tile_unloaded)
+```
+
+### PLATEAURnModel (RefCounted)
+道路ネットワークデータのルートコンテナ。道路、交差点、歩道を含む。
+
+```gdscript
+var model = PLATEAURnModel.new()
+
+# 道路と交差点を追加
+var road = PLATEAURnRoad.new()
+model.add_road(road)
+
+var intersection = PLATEAURnIntersection.new()
+model.add_intersection(intersection)
+
+# メッシュデータから構築（道路パッケージ）
+var model2 = PLATEAURnModel.create_from_mesh_data(road_mesh_data_array)
+
+# 可視化メッシュを生成
+var mesh = model.generate_mesh()
 ```
 
 ## サンプル
@@ -241,10 +333,15 @@ godot-plateau/
 ├── src/
 │   ├── register_types.cpp/h
 │   └── plateau/
-│       ├── plateau_city_model.cpp/h      # CityModel, MeshDataクラス
-│       ├── plateau_geo_reference.cpp/h   # 座標変換
-│       ├── plateau_importer.cpp/h        # シーン構築
-│       └── plateau_mesh_extract_options.cpp/h
+│       ├── plateau_city_model.cpp/h           # CityModel, MeshDataクラス
+│       ├── plateau_geo_reference.cpp/h        # 座標変換
+│       ├── plateau_importer.cpp/h             # シーン構築
+│       ├── plateau_mesh_extract_options.cpp/h
+│       ├── plateau_city_model_scene.cpp/h     # CityModelScene, FilterCondition
+│       ├── plateau_city_object_type.cpp/h     # タイプ階層
+│       ├── plateau_dynamic_tile.cpp/h         # 動的タイル読み込み
+│       └── plateau_road_network.cpp/h         # 道路ネットワークデータ
+├── doc_classes/        # APIドキュメントXMLファイル
 ├── demo/
 │   └── bin/
 │       └── godot-plateau.gdextension

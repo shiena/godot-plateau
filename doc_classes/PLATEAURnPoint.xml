@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAURnPoint" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		3D point in road network.
+	</brief_description>
+	<description>
+		PLATEAURnPoint represents a single 3D point in the road network.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="create" qualifiers="static">
+			<return type="PLATEAURnPoint" />
+			<param index="0" name="pos" type="Vector3" />
+			<description>
+				Create a point at the specified position.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="position" type="Vector3" setter="set_position" getter="get_position" default="Vector3(0, 0, 0)">
+			3D position.
+		</member>
+	</members>
+</class>

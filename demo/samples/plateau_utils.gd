@@ -201,7 +201,7 @@ static func create_mesh_instances_async(
 
 		# Report progress and yield to main thread
 		if progress_callback.is_valid():
-			var percent := int((batch_end * 100) / total) if total > 0 else 100
+			var percent := int((batch_end * 100.0) / total) if total > 0 else 100
 			progress_callback.call(percent, batch_end, total)
 
 		# Yield to prevent UI freeze

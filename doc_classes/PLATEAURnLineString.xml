@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAURnLineString" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Sequence of points forming a line.
+	</brief_description>
+	<description>
+		PLATEAURnLineString represents a sequence of 3D points forming a continuous line, used for road edges, lane boundaries, etc.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="add_point">
+			<return type="void" />
+			<param index="0" name="point" type="Vector3" />
+			<description>
+				Add a point to the line.
+			</description>
+		</method>
+		<method name="add_point_or_skip">
+			<return type="void" />
+			<param index="0" name="point" type="Vector3" />
+			<param index="1" name="epsilon" type="float" default="0.001" />
+			<description>
+				Add a point only if it's not too close to the last point.
+			</description>
+		</method>
+		<method name="get_point_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Get the number of points.
+			</description>
+		</method>
+		<method name="get_point" qualifiers="const">
+			<return type="Vector3" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Get point at index.
+			</description>
+		</method>
+		<method name="calc_length" qualifiers="const">
+			<return type="float" />
+			<description>
+				Calculate total length of the line.
+			</description>
+		</method>
+		<method name="get_lerp_point" qualifiers="const">
+			<return type="Vector3" />
+			<param index="0" name="t" type="float" />
+			<description>
+				Get interpolated point at t (0.0 to 1.0).
+			</description>
+		</method>
+		<method name="get_edge_normal" qualifiers="const">
+			<return type="Vector3" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Get edge normal at index.
+			</description>
+		</method>
+		<method name="refined" qualifiers="const">
+			<return type="PLATEAURnLineString" />
+			<param index="0" name="interval" type="float" />
+			<description>
+				Create refined line with specified interval.
+			</description>
+		</method>
+		<method name="split_at_index" qualifiers="const">
+			<return type="void" />
+			<param index="0" name="index" type="int" />
+			<param index="1" name="front" type="PLATEAURnLineString" />
+			<param index="2" name="back" type="PLATEAURnLineString" />
+			<description>
+				Split line at index into front and back parts.
+			</description>
+		</method>
+		<method name="clone" qualifiers="const">
+			<return type="PLATEAURnLineString" />
+			<description>
+				Create a copy of this line.
+			</description>
+		</method>
+		<method name="reverse">
+			<return type="void" />
+			<description>
+				Reverse the point order.
+			</description>
+		</method>
+		<method name="create" qualifiers="static">
+			<return type="PLATEAURnLineString" />
+			<param index="0" name="points" type="PackedVector3Array" />
+			<description>
+				Create a line from points array.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="points" type="PackedVector3Array" setter="set_points" getter="get_points">
+			Array of 3D points.
+		</member>
+	</members>
+</class>

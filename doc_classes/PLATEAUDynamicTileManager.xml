@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUDynamicTileManager" inherits="Node3D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Dynamic tile loading manager.
+	</brief_description>
+	<description>
+		PLATEAUDynamicTileManager manages automatic loading/unloading of tiles based on camera position. Equivalent to Unity's PLATEAUTileManager.
+		[codeblock]
+		var manager = PLATEAUDynamicTileManager.new()
+		add_child(manager)
+
+		# Set load distances per zoom level
+		manager.set_load_distance(11, Vector2(-10000, 500))   # High detail, close range
+		manager.set_load_distance(10, Vector2(500, 1500))    # Medium detail, medium range
+		manager.set_load_distance(9, Vector2(1500, 10000))   # Low detail, far range
+
+		# Initialize with metadata store
+		manager.initialize(meta_store)
+		manager.tile_base_path = "res://tiles/"
+
+		# Set camera (auto-updated if null, uses current camera)
+		manager.camera = $Camera3D
+
+		# Enable auto-update (called every frame)
+		manager.auto_update = true
+
+		# Signals
+		manager.tile_loaded.connect(_on_tile_loaded)
+		manager.tile_unloaded.connect(_on_tile_unloaded)
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="initialize">
+			<return type="void" />
+			<param index="0" name="meta_store" type="PLATEAUDynamicTileMetaStore" />
+			<description>
+				Initialize with metadata store.
+			</description>
+		</method>
+		<method name="update_by_camera_position">
+			<return type="void" />
+			<param index="0" name="position" type="Vector3" />
+			<description>
+				Update tiles based on camera position.
+			</description>
+		</method>
+		<method name="force_load_tiles">
+			<return type="void" />
+			<param index="0" name="addresses" type="PackedStringArray" />
+			<description>
+				Force load specific tiles by address.
+			</description>
+		</method>
+		<method name="cancel_load">
+			<return type="void" />
+			<description>
+				Cancel current load operation.
+			</description>
+		</method>
+		<method name="get_tiles" qualifiers="const">
+			<return type="PLATEAUDynamicTile[]" />
+			<description>
+				Get all tiles.
+			</description>
+		</method>
+		<method name="get_tiles_by_zoom_level" qualifiers="const">
+			<return type="PLATEAUDynamicTile[]" />
+			<param index="0" name="zoom_level" type="int" />
+			<description>
+				Get tiles filtered by zoom level.
+			</description>
+		</method>
+		<method name="get_loaded_tiles" qualifiers="const">
+			<return type="PLATEAUDynamicTile[]" />
+			<description>
+				Get all currently loaded tiles.
+			</description>
+		</method>
+		<method name="set_load_distance">
+			<return type="void" />
+			<param index="0" name="zoom_level" type="int" />
+			<param index="1" name="range" type="Vector2" />
+			<description>
+				Set load distance range for a zoom level. range.x = min distance, range.y = max distance.
+			</description>
+		</method>
+		<method name="get_load_distance" qualifiers="const">
+			<return type="Vector2" />
+			<param index="0" name="zoom_level" type="int" />
+			<description>
+				Get load distance range for a zoom level.
+			</description>
+		</method>
+		<method name="check_camera_position_changed" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="position" type="Vector3" />
+			<param index="1" name="threshold" type="float" default="1.0" />
+			<description>
+				Check if camera position has changed significantly.
+			</description>
+		</method>
+		<method name="get_last_camera_position" qualifiers="const">
+			<return type="Vector3" />
+			<description>
+				Get last processed camera position.
+			</description>
+		</method>
+		<method name="cleanup">
+			<return type="void" />
+			<description>
+				Cleanup all tiles.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="state" type="int" setter="" getter="get_state" enum="PLATEAUDynamicTileManager.ManagerState" default="0">
+			Current manager state.
+		</member>
+		<member name="camera" type="Camera3D" setter="set_camera" getter="get_camera">
+			Camera to track for distance calculations.
+		</member>
+		<member name="auto_update" type="bool" setter="set_auto_update" getter="get_auto_update" default="false">
+			Enable automatic update every frame.
+		</member>
+		<member name="ignore_y" type="bool" setter="set_ignore_y" getter="get_ignore_y" default="true">
+			Ignore Y axis for distance calculation.
+		</member>
+		<member name="load_distances" type="Dictionary" setter="set_load_distances" getter="get_load_distances">
+			Load distances per zoom level (key: zoom level, value: Vector2(min, max)).
+		</member>
+		<member name="tile_base_path" type="String" setter="set_tile_base_path" getter="get_tile_base_path" default="&quot;&quot;">
+			Base path for tile resources.
+		</member>
+		<member name="force_high_resolution_addresses" type="PackedStringArray" setter="set_force_high_resolution_addresses" getter="get_force_high_resolution_addresses">
+			Addresses to force load at high resolution.
+		</member>
+	</members>
+	<signals>
+		<signal name="tile_loaded">
+			<param index="0" name="tile" type="PLATEAUDynamicTile" />
+			<description>
+				Emitted when a tile finishes loading.
+			</description>
+		</signal>
+		<signal name="tile_unloaded">
+			<param index="0" name="tile" type="PLATEAUDynamicTile" />
+			<description>
+				Emitted when a tile is unloaded.
+			</description>
+		</signal>
+		<signal name="load_started">
+			<description>
+				Emitted when loading starts.
+			</description>
+		</signal>
+		<signal name="load_finished">
+			<description>
+				Emitted when loading finishes.
+			</description>
+		</signal>
+	</signals>
+	<constants>
+		<constant name="STATE_NONE" value="0" enum="ManagerState">
+			Initial state.
+		</constant>
+		<constant name="STATE_INITIALIZING" value="1" enum="ManagerState">
+			Initializing.
+		</constant>
+		<constant name="STATE_OPERATING" value="2" enum="ManagerState">
+			Operating normally.
+		</constant>
+		<constant name="STATE_CLEANING_UP" value="3" enum="ManagerState">
+			Cleaning up.
+		</constant>
+	</constants>
+</class>

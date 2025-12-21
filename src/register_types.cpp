@@ -21,6 +21,13 @@
 #include "plateau/plateau_dataset_source.h"
 #include "plateau/plateau_granularity_converter.h"
 #include "plateau/plateau_mesh_exporter.h"
+
+// New API classes
+#include "plateau/plateau_city_model_scene.h"
+#include "plateau/plateau_city_object_type.h"
+#include "plateau/plateau_dynamic_tile.h"
+#include "plateau/plateau_road_network.h"
+
 // Terrain/HeightMap classes not available on mobile (depend on libpng-based height_map_generator)
 #ifndef PLATEAU_MOBILE_PLATFORM
 #include "plateau/plateau_terrain.h"
@@ -60,6 +67,33 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(PLATEAUVectorTile);
 	GDREGISTER_CLASS(PLATEAUVectorTileDownloader);
 #endif
+
+	// New API: City Model Scene and Filter
+	GDREGISTER_CLASS(PLATEAUFilterCondition);
+	GDREGISTER_CLASS(PLATEAUCityModelScene);
+
+	// New API: City Object Type Hierarchy
+	GDREGISTER_CLASS(PLATEAUCityObjectTypeNode);
+	GDREGISTER_CLASS(PLATEAUCityObjectTypeHierarchy);
+
+	// New API: Dynamic Tile
+	GDREGISTER_CLASS(PLATEAUDynamicTile);
+	GDREGISTER_CLASS(PLATEAUDynamicTileMetaInfo);
+	GDREGISTER_CLASS(PLATEAUDynamicTileMetaStore);
+	GDREGISTER_CLASS(PLATEAUDynamicTileManager);
+
+	// New API: Road Network
+	GDREGISTER_CLASS(PLATEAURnPoint);
+	GDREGISTER_CLASS(PLATEAURnLineString);
+	GDREGISTER_CLASS(PLATEAURnWay);
+	GDREGISTER_CLASS(PLATEAURnTrack);
+	GDREGISTER_CLASS(PLATEAURnIntersectionEdge);
+	GDREGISTER_CLASS(PLATEAURnLane);
+	GDREGISTER_CLASS(PLATEAURnSideWalk);
+	GDREGISTER_CLASS(PLATEAURnRoadBase);
+	GDREGISTER_CLASS(PLATEAURnRoad);
+	GDREGISTER_CLASS(PLATEAURnIntersection);
+	GDREGISTER_CLASS(PLATEAURnModel);
 }
 
 void uninitialize_gdextension_types(ModuleInitializationLevel p_level) {

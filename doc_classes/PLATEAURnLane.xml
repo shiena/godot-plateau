@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAURnLane" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Single lane in a road.
+	</brief_description>
+	<description>
+		PLATEAURnLane represents a single traffic lane with left and right boundaries, connections to adjacent lanes, and attributes like turn type.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="is_valid_way" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if lane has valid ways.
+			</description>
+		</method>
+		<method name="has_both_border" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if lane has both prev and next borders.
+			</description>
+		</method>
+		<method name="is_both_connected_lane" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if connected on both ends.
+			</description>
+		</method>
+		<method name="is_empty_lane" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if lane is empty.
+			</description>
+		</method>
+		<method name="is_median_lane" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if this is a median lane.
+			</description>
+		</method>
+		<method name="calc_width" qualifiers="const">
+			<return type="float" />
+			<description>
+				Calculate average width.
+			</description>
+		</method>
+		<method name="calc_min_width" qualifiers="const">
+			<return type="float" />
+			<description>
+				Calculate minimum width.
+			</description>
+		</method>
+		<method name="create_center_way" qualifiers="const">
+			<return type="PLATEAURnWay" />
+			<description>
+				Create a way along the lane center.
+			</description>
+		</method>
+		<method name="get_prev_lanes" qualifiers="const">
+			<return type="PLATEAURnLane[]" />
+			<description>
+				Get lanes connected at the start.
+			</description>
+		</method>
+		<method name="get_next_lanes" qualifiers="const">
+			<return type="PLATEAURnLane[]" />
+			<description>
+				Get lanes connected at the end.
+			</description>
+		</method>
+		<method name="reverse">
+			<return type="void" />
+			<description>
+				Reverse lane direction.
+			</description>
+		</method>
+		<method name="split" qualifiers="const">
+			<return type="PLATEAURnLane[]" />
+			<param index="0" name="split_num" type="int" />
+			<description>
+				Split into multiple lanes.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="parent_road" type="PLATEAURnRoad" setter="set_parent_road" getter="get_parent_road">
+			Parent road containing this lane.
+		</member>
+		<member name="left_way" type="PLATEAURnWay" setter="set_left_way" getter="get_left_way">
+			Left boundary way.
+		</member>
+		<member name="right_way" type="PLATEAURnWay" setter="set_right_way" getter="get_right_way">
+			Right boundary way.
+		</member>
+		<member name="prev_border" type="PLATEAURnWay" setter="set_prev_border" getter="get_prev_border">
+			Border at the start.
+		</member>
+		<member name="next_border" type="PLATEAURnWay" setter="set_next_border" getter="get_next_border">
+			Border at the end.
+		</member>
+		<member name="is_reversed" type="bool" setter="set_is_reversed" getter="get_is_reversed" default="false">
+			Whether lane direction is reversed from road direction.
+		</member>
+		<member name="attributes" type="int" setter="set_attributes" getter="get_attributes" default="0">
+			Lane attributes (bitmask of PLATEAURnLaneAttribute).
+		</member>
+	</members>
+</class>

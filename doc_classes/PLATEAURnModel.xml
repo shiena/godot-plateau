@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAURnModel" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Root container for road network.
+	</brief_description>
+	<description>
+		PLATEAURnModel is the root container for a complete road network, containing roads, intersections, and standalone sidewalks.
+		[codeblock]
+		var model = PLATEAURnModel.new()
+
+		# Add roads and intersections
+		var road = PLATEAURnRoad.new()
+		model.add_road(road)
+
+		var intersection = PLATEAURnIntersection.new()
+		model.add_intersection(intersection)
+
+		# Build from mesh data
+		var model2 = PLATEAURnModel.create_from_mesh_data(road_mesh_data_array)
+
+		# Generate mesh
+		var mesh = model.generate_mesh()
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="add_road">
+			<return type="void" />
+			<param index="0" name="road" type="PLATEAURnRoad" />
+			<description>
+				Add a road.
+			</description>
+		</method>
+		<method name="remove_road">
+			<return type="void" />
+			<param index="0" name="road" type="PLATEAURnRoad" />
+			<description>
+				Remove a road.
+			</description>
+		</method>
+		<method name="get_roads" qualifiers="const">
+			<return type="PLATEAURnRoad[]" />
+			<description>
+				Get all roads.
+			</description>
+		</method>
+		<method name="get_road_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Get road count.
+			</description>
+		</method>
+		<method name="add_intersection">
+			<return type="void" />
+			<param index="0" name="intersection" type="PLATEAURnIntersection" />
+			<description>
+				Add an intersection.
+			</description>
+		</method>
+		<method name="remove_intersection">
+			<return type="void" />
+			<param index="0" name="intersection" type="PLATEAURnIntersection" />
+			<description>
+				Remove an intersection.
+			</description>
+		</method>
+		<method name="get_intersections" qualifiers="const">
+			<return type="PLATEAURnIntersection[]" />
+			<description>
+				Get all intersections.
+			</description>
+		</method>
+		<method name="get_intersection_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Get intersection count.
+			</description>
+		</method>
+		<method name="add_sidewalk">
+			<return type="void" />
+			<param index="0" name="sidewalk" type="PLATEAURnSideWalk" />
+			<description>
+				Add a standalone sidewalk.
+			</description>
+		</method>
+		<method name="get_sidewalks" qualifiers="const">
+			<return type="PLATEAURnSideWalk[]" />
+			<description>
+				Get standalone sidewalks.
+			</description>
+		</method>
+		<method name="collect_all_lanes" qualifiers="const">
+			<return type="PLATEAURnLane[]" />
+			<description>
+				Collect all lanes from all roads.
+			</description>
+		</method>
+		<method name="collect_all_ways" qualifiers="const">
+			<return type="PLATEAURnWay[]" />
+			<description>
+				Collect all ways.
+			</description>
+		</method>
+		<method name="collect_all_edges" qualifiers="const">
+			<return type="PLATEAURnIntersectionEdge[]" />
+			<description>
+				Collect all intersection edges.
+			</description>
+		</method>
+		<method name="convert_road_to_intersection">
+			<return type="PLATEAURnIntersection" />
+			<param index="0" name="road" type="PLATEAURnRoad" />
+			<param index="1" name="build_tracks" type="bool" default="true" />
+			<description>
+				Convert a road to an intersection.
+			</description>
+		</method>
+		<method name="convert_intersection_to_road">
+			<return type="PLATEAURnRoad" />
+			<param index="0" name="intersection" type="PLATEAURnIntersection" />
+			<description>
+				Convert an intersection to a road.
+			</description>
+		</method>
+		<method name="merge_road_groups">
+			<return type="void" />
+			<description>
+				Merge connected road groups.
+			</description>
+		</method>
+		<method name="split_lanes_by_width">
+			<return type="void" />
+			<param index="0" name="width" type="float" />
+			<param index="1" name="rebuild_tracks" type="bool" default="true" />
+			<description>
+				Split lanes wider than specified width.
+			</description>
+		</method>
+		<method name="check" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Validate the road network.
+			</description>
+		</method>
+		<method name="create_from_mesh_data" qualifiers="static">
+			<return type="PLATEAURnModel" />
+			<param index="0" name="mesh_data_array" type="PLATEAUMeshData[]" />
+			<description>
+				Create road network from road package mesh data.
+			</description>
+		</method>
+		<method name="generate_mesh" qualifiers="const">
+			<return type="ArrayMesh" />
+			<description>
+				Generate mesh representation of the road network.
+			</description>
+		</method>
+		<method name="serialize" qualifiers="const">
+			<return type="Dictionary" />
+			<description>
+				Serialize to dictionary for saving.
+			</description>
+		</method>
+		<method name="deserialize" qualifiers="static">
+			<return type="PLATEAURnModel" />
+			<param index="0" name="data" type="Dictionary" />
+			<description>
+				Deserialize from dictionary.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="factory_version" type="String" setter="set_factory_version" getter="get_factory_version" default="&quot;&quot;">
+			Factory version string.
+		</member>
+	</members>
+</class>

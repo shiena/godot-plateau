@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAURnIntersection" inherits="PLATEAURnRoadBase" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Intersection node.
+	</brief_description>
+	<description>
+		PLATEAURnIntersection represents a road intersection with edges connecting to roads and tracks for turning movements.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="add_edge">
+			<return type="void" />
+			<param index="0" name="edge" type="PLATEAURnIntersectionEdge" />
+			<description>
+				Add an edge.
+			</description>
+		</method>
+		<method name="remove_edge">
+			<return type="void" />
+			<param index="0" name="edge" type="PLATEAURnIntersectionEdge" />
+			<description>
+				Remove an edge.
+			</description>
+		</method>
+		<method name="get_edges" qualifiers="const">
+			<return type="PLATEAURnIntersectionEdge[]" />
+			<description>
+				Get all edges.
+			</description>
+		</method>
+		<method name="get_borders" qualifiers="const">
+			<return type="PLATEAURnIntersectionEdge[]" />
+			<description>
+				Get border edges only.
+			</description>
+		</method>
+		<method name="add_track">
+			<return type="void" />
+			<param index="0" name="track" type="PLATEAURnTrack" />
+			<description>
+				Add a track.
+			</description>
+		</method>
+		<method name="remove_track">
+			<return type="void" />
+			<param index="0" name="track" type="PLATEAURnTrack" />
+			<description>
+				Remove a track.
+			</description>
+		</method>
+		<method name="get_tracks" qualifiers="const">
+			<return type="PLATEAURnTrack[]" />
+			<description>
+				Get all tracks.
+			</description>
+		</method>
+		<method name="find_track" qualifiers="const">
+			<return type="PLATEAURnTrack" />
+			<param index="0" name="from" type="PLATEAURnWay" />
+			<param index="1" name="to" type="PLATEAURnWay" />
+			<description>
+				Find track between two borders.
+			</description>
+		</method>
+		<method name="build_tracks">
+			<return type="void" />
+			<description>
+				Build all tracks automatically.
+			</description>
+		</method>
+		<method name="is_empty_intersection" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if intersection is empty.
+			</description>
+		</method>
+		<method name="align">
+			<return type="void" />
+			<description>
+				Align edges clockwise.
+			</description>
+		</method>
+		<method name="is_inside_2d" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="pos" type="Vector3" />
+			<description>
+				Check if point is inside (XZ plane).
+			</description>
+		</method>
+		<method name="get_center" qualifiers="const">
+			<return type="Vector3" />
+			<description>
+				Get center point.
+			</description>
+		</method>
+	</methods>
+</class>

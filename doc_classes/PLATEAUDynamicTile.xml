@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUDynamicTile" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Single tile data for dynamic loading.
+	</brief_description>
+	<description>
+		PLATEAUDynamicTile represents a single tile that can be loaded/unloaded based on camera distance. Managed by [PLATEAUDynamicTileManager].
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_loaded_instance" qualifiers="const">
+			<return type="Node3D" />
+			<description>
+				Get the loaded instance (null if not loaded).
+			</description>
+		</method>
+		<method name="add_child_tile">
+			<return type="void" />
+			<param index="0" name="child" type="PLATEAUDynamicTile" />
+			<description>
+				Add a child tile (higher zoom level).
+			</description>
+		</method>
+		<method name="get_child_tiles" qualifiers="const">
+			<return type="PLATEAUDynamicTile[]" />
+			<description>
+				Get child tiles.
+			</description>
+		</method>
+		<method name="get_child_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Get number of child tiles.
+			</description>
+		</method>
+		<method name="has_all_children_unloaded" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if all child tiles are unloaded.
+			</description>
+		</method>
+		<method name="has_any_children_loaded" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if any child tiles are loaded.
+			</description>
+		</method>
+		<method name="calculate_distance" qualifiers="const">
+			<return type="float" />
+			<param index="0" name="camera_pos" type="Vector3" />
+			<param index="1" name="ignore_y" type="bool" default="true" />
+			<description>
+				Calculate distance from camera position.
+			</description>
+		</method>
+		<method name="is_within_range" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="distance" type="float" />
+			<param index="1" name="load_distances" type="Dictionary" />
+			<description>
+				Check if tile is within load range for its zoom level.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="address" type="String" setter="set_address" getter="get_address" default="&quot;&quot;">
+			Tile address (unique identifier / resource path).
+		</member>
+		<member name="zoom_level" type="int" setter="set_zoom_level" getter="get_zoom_level" default="0">
+			Zoom level (higher = more detail).
+		</member>
+		<member name="extent" type="AABB" setter="set_extent" getter="get_extent">
+			3D extent (bounding box).
+		</member>
+		<member name="group_name" type="String" setter="set_group_name" getter="get_group_name" default="&quot;&quot;">
+			Group name (package category).
+		</member>
+		<member name="load_state" type="int" setter="" getter="get_load_state" enum="PLATEAUDynamicTile.LoadState" default="0">
+			Current load state.
+		</member>
+		<member name="distance_from_camera" type="float" setter="" getter="get_distance_from_camera" default="0.0">
+			Distance from camera (updated by manager).
+		</member>
+		<member name="parent_tile" type="PLATEAUDynamicTile" setter="set_parent_tile" getter="get_parent_tile">
+			Parent tile (lower zoom level).
+		</member>
+	</members>
+	<constants>
+		<constant name="LOAD_STATE_NONE" value="0" enum="LoadState">
+			Initial state.
+		</constant>
+		<constant name="LOAD_STATE_LOADING" value="1" enum="LoadState">
+			Currently loading.
+		</constant>
+		<constant name="LOAD_STATE_LOADED" value="2" enum="LoadState">
+			Successfully loaded.
+		</constant>
+		<constant name="LOAD_STATE_UNLOADING" value="3" enum="LoadState">
+			Currently unloading.
+		</constant>
+		<constant name="LOAD_STATE_UNLOADED" value="4" enum="LoadState">
+			Unloaded.
+		</constant>
+		<constant name="LOAD_STATE_ERROR" value="5" enum="LoadState">
+			Load error occurred.
+		</constant>
+	</constants>
+</class>

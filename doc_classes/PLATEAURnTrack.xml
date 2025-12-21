@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAURnTrack" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Track through intersection (bezier curve).
+	</brief_description>
+	<description>
+		PLATEAURnTrack represents a path through an intersection, connecting entry and exit borders with a bezier curve.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="build_spline">
+			<return type="void" />
+			<description>
+				Build spline from borders.
+			</description>
+		</method>
+		<method name="get_point" qualifiers="const">
+			<return type="Vector3" />
+			<param index="0" name="t" type="float" />
+			<description>
+				Get point on track at t (0.0 to 1.0).
+			</description>
+		</method>
+		<method name="get_tangent" qualifiers="const">
+			<return type="Vector3" />
+			<param index="0" name="t" type="float" />
+			<description>
+				Get tangent at t.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="from_border" type="PLATEAURnWay" setter="set_from_border" getter="get_from_border">
+			Entry border way.
+		</member>
+		<member name="to_border" type="PLATEAURnWay" setter="set_to_border" getter="get_to_border">
+			Exit border way.
+		</member>
+		<member name="spline" type="Curve3D" setter="set_spline" getter="get_spline">
+			Bezier spline curve.
+		</member>
+		<member name="turn_type" type="int" setter="set_turn_type" getter="get_turn_type" enum="PLATEAURnTurnType" default="3">
+			Turn type.
+		</member>
+	</members>
+</class>

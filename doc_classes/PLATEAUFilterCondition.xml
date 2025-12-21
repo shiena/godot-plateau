@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUFilterCondition" inherits="Resource" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Filter condition for city objects by type and LOD.
+	</brief_description>
+	<description>
+		PLATEAUFilterCondition is used to filter which city objects to display or process based on CityObjectType bitmask, LOD range, and package type.
+		[codeblock]
+		var filter = PLATEAUFilterCondition.new()
+		filter.city_object_types = COT_Building | COT_Road
+		filter.min_lod = 1
+		filter.max_lod = 2
+
+		if filter.matches(mesh_data):
+		    # Process this mesh
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="matches" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="mesh_data" type="PLATEAUMeshData" />
+			<description>
+				Check if a mesh data matches this filter condition.
+			</description>
+		</method>
+		<method name="matches_type" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="city_object_type" type="int" />
+			<description>
+				Check if a city object type matches the filter.
+			</description>
+		</method>
+		<method name="matches_lod" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="lod" type="int" />
+			<description>
+				Check if LOD is in the filter range.
+			</description>
+		</method>
+		<method name="create_all" qualifiers="static">
+			<return type="PLATEAUFilterCondition" />
+			<description>
+				Create a filter that matches all types.
+			</description>
+		</method>
+		<method name="create_buildings" qualifiers="static">
+			<return type="PLATEAUFilterCondition" />
+			<description>
+				Create a filter for buildings only.
+			</description>
+		</method>
+		<method name="create_terrain" qualifiers="static">
+			<return type="PLATEAUFilterCondition" />
+			<description>
+				Create a filter for terrain only.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="city_object_types" type="int" setter="set_city_object_types" getter="get_city_object_types" default="0">
+			Bitmask of PLATEAUCityObjectType values to filter.
+		</member>
+		<member name="min_lod" type="int" setter="set_min_lod" getter="get_min_lod" default="0">
+			Minimum LOD level (inclusive).
+		</member>
+		<member name="max_lod" type="int" setter="set_max_lod" getter="get_max_lod" default="4">
+			Maximum LOD level (inclusive).
+		</member>
+		<member name="packages" type="int" setter="set_packages" getter="get_packages" default="0">
+			Bitmask of PLATEAUCityModelPackage values to filter.
+		</member>
+	</members>
+</class>

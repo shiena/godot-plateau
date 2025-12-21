@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUCityObjectTypeNode" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Node in the city object type hierarchy tree.
+	</brief_description>
+	<description>
+		PLATEAUCityObjectTypeNode represents a category or specific type in the CityGML type hierarchy.
+		For example, the Building category contains RoofSurface, WallSurface, GroundSurface, etc.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="add_child">
+			<return type="void" />
+			<param index="0" name="child" type="PLATEAUCityObjectTypeNode" />
+			<description>
+				Add a child node to this node.
+			</description>
+		</method>
+		<method name="get_children" qualifiers="const">
+			<return type="PLATEAUCityObjectTypeNode[]" />
+			<description>
+				Get all child nodes.
+			</description>
+		</method>
+		<method name="get_child_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Get the number of child nodes.
+			</description>
+		</method>
+		<method name="get_child" qualifiers="const">
+			<return type="PLATEAUCityObjectTypeNode" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Get child node at index.
+			</description>
+		</method>
+		<method name="is_leaf" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if this is a leaf node (actual type, not a category).
+			</description>
+		</method>
+		<method name="contains_type" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="type" type="int" />
+			<description>
+				Check if this node or any descendant matches the given type.
+			</description>
+		</method>
+		<method name="get_all_types" qualifiers="const">
+			<return type="PackedInt64Array" />
+			<description>
+				Get all types in this subtree (including this node if it's a type).
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="name" type="String" setter="set_name" getter="get_name" default="&quot;&quot;">
+			Node name (category or type name).
+		</member>
+		<member name="display_name" type="String" setter="set_display_name" getter="get_display_name" default="&quot;&quot;">
+			Display name (localized/human-readable, Japanese).
+		</member>
+		<member name="type" type="int" setter="set_type" getter="get_type" default="0">
+			City object type (0 for category nodes, actual PLATEAUCityObjectType value for leaf nodes).
+		</member>
+		<member name="package" type="int" setter="set_package" getter="get_package" default="0">
+			Package type this node belongs to (PLATEAUCityModelPackage value).
+		</member>
+		<member name="parent" type="PLATEAUCityObjectTypeNode" setter="set_parent" getter="get_parent">
+			Parent node (null for root).
+		</member>
+	</members>
+</class>

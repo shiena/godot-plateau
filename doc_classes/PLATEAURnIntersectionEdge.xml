@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAURnIntersectionEdge" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Edge of intersection.
+	</brief_description>
+	<description>
+		PLATEAURnIntersectionEdge represents an edge of an intersection, which may connect to a road or be a boundary.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="is_border" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if this is a border edge.
+			</description>
+		</method>
+		<method name="is_valid" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if edge is valid.
+			</description>
+		</method>
+		<method name="is_median_border" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if this is a median border.
+			</description>
+		</method>
+		<method name="get_flow_type" qualifiers="const">
+			<return type="int" enum="PLATEAURnFlowType" />
+			<description>
+				Get flow type (inbound/outbound/both).
+			</description>
+		</method>
+		<method name="calc_center" qualifiers="const">
+			<return type="Vector3" />
+			<description>
+				Calculate center point of the edge.
+			</description>
+		</method>
+		<method name="get_connected_lanes" qualifiers="const">
+			<return type="PLATEAURnLane[]" />
+			<description>
+				Get lanes connected to this edge.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="border" type="PLATEAURnWay" setter="set_border" getter="get_border">
+			Border way.
+		</member>
+		<member name="road" type="PLATEAURnRoad" setter="set_road" getter="get_road">
+			Connected road (null if border only).
+		</member>
+	</members>
+</class>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAURnSideWalk" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Sidewalk adjacent to road.
+	</brief_description>
+	<description>
+		PLATEAURnSideWalk represents a pedestrian sidewalk with inside (road-side) and outside boundaries.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="is_valid" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if sidewalk is valid.
+			</description>
+		</method>
+		<method name="is_all_way_valid" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if all ways are valid.
+			</description>
+		</method>
+		<method name="align">
+			<return type="void" />
+			<description>
+				Align way directions to edge ways.
+			</description>
+		</method>
+		<method name="reverse">
+			<return type="void" />
+			<description>
+				Reverse start/end.
+			</description>
+		</method>
+		<method name="try_merge_neighbor" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="other" type="PLATEAURnSideWalk" />
+			<description>
+				Try to merge with neighbor sidewalk.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="outside_way" type="PLATEAURnWay" setter="set_outside_way" getter="get_outside_way">
+			Outside boundary (away from road).
+		</member>
+		<member name="inside_way" type="PLATEAURnWay" setter="set_inside_way" getter="get_inside_way">
+			Inside boundary (road-side).
+		</member>
+		<member name="start_edge_way" type="PLATEAURnWay" setter="set_start_edge_way" getter="get_start_edge_way">
+			Start edge way.
+		</member>
+		<member name="end_edge_way" type="PLATEAURnWay" setter="set_end_edge_way" getter="get_end_edge_way">
+			End edge way.
+		</member>
+		<member name="lane_type" type="int" setter="set_lane_type" getter="get_lane_type" enum="PLATEAURnSideWalkLaneType" default="0">
+			Lane type (left/right/undefined).
+		</member>
+	</members>
+</class>

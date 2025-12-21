@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAURnRoad" inherits="PLATEAURnRoadBase" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Road segment with lanes.
+	</brief_description>
+	<description>
+		PLATEAURnRoad represents a road segment containing lanes, median, and sidewalks, connected to other roads or intersections.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="add_main_lane">
+			<return type="void" />
+			<param index="0" name="lane" type="PLATEAURnLane" />
+			<description>
+				Add a main lane.
+			</description>
+		</method>
+		<method name="remove_main_lane">
+			<return type="void" />
+			<param index="0" name="lane" type="PLATEAURnLane" />
+			<description>
+				Remove a main lane.
+			</description>
+		</method>
+		<method name="get_main_lanes" qualifiers="const">
+			<return type="PLATEAURnLane[]" />
+			<description>
+				Get all main lanes.
+			</description>
+		</method>
+		<method name="get_main_lane_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Get main lane count.
+			</description>
+		</method>
+		<method name="get_median_width" qualifiers="const">
+			<return type="float" />
+			<description>
+				Get median width.
+			</description>
+		</method>
+		<method name="add_sidewalk">
+			<return type="void" />
+			<param index="0" name="sidewalk" type="PLATEAURnSideWalk" />
+			<description>
+				Add a sidewalk.
+			</description>
+		</method>
+		<method name="get_sidewalks" qualifiers="const">
+			<return type="PLATEAURnSideWalk[]" />
+			<description>
+				Get all sidewalks.
+			</description>
+		</method>
+		<method name="get_left_lanes" qualifiers="const">
+			<return type="PLATEAURnLane[]" />
+			<description>
+				Get left-side lanes.
+			</description>
+		</method>
+		<method name="get_right_lanes" qualifiers="const">
+			<return type="PLATEAURnLane[]" />
+			<description>
+				Get right-side lanes.
+			</description>
+		</method>
+		<method name="get_left_lane_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Get left-side lane count.
+			</description>
+		</method>
+		<method name="get_right_lane_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Get right-side lane count.
+			</description>
+		</method>
+		<method name="is_valid" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if road is valid.
+			</description>
+		</method>
+		<method name="is_all_both_connected_lane" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if all lanes are connected on both ends.
+			</description>
+		</method>
+		<method name="is_all_lane_valid" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if all lanes are valid.
+			</description>
+		</method>
+		<method name="has_both_lane" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if road has lanes in both directions.
+			</description>
+		</method>
+		<method name="is_empty_road" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Check if road is empty.
+			</description>
+		</method>
+		<method name="get_merged_side_way" qualifiers="const">
+			<return type="PLATEAURnWay" />
+			<param index="0" name="left" type="bool" />
+			<description>
+				Get merged side boundary way.
+			</description>
+		</method>
+		<method name="reverse">
+			<return type="void" />
+			<description>
+				Reverse prev/next and all lanes.
+			</description>
+		</method>
+		<method name="align_lane_borders">
+			<return type="void" />
+			<description>
+				Align lane border directions.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="prev" type="PLATEAURnRoadBase" setter="set_prev" getter="get_prev">
+			Previous connection (road or intersection).
+		</member>
+		<member name="next" type="PLATEAURnRoadBase" setter="set_next" getter="get_next">
+			Next connection (road or intersection).
+		</member>
+		<member name="median_lane" type="PLATEAURnLane" setter="set_median_lane" getter="get_median_lane">
+			Median lane (center divider).
+		</member>
+	</members>
+</class>

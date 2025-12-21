@@ -15,6 +15,9 @@ A GDExtension for Godot Engine 4.x that enables loading 3D city models (CityGML)
 - Smooth shading with auto-generated normals
 - Attribute information access (GML ID, CityObjectType, attributes)
 - Raycast-based CityObject identification via UV coordinates
+- Dynamic tile loading based on camera distance
+- Road network data structures (lanes, intersections, sidewalks)
+- CityObjectType hierarchy with Japanese display names
 
 ## Classes
 
@@ -82,6 +85,95 @@ options.min_lod = 0
 options.max_lod = 3
 options.mesh_granularity = 1  # 0=atomic, 1=primary, 2=area
 options.export_appearance = true
+```
+
+### PLATEAUCityModelScene (Node3D)
+Root node for imported PLATEAU city model scenes. Manages GeoReference and imported GML transforms.
+
+```gdscript
+var scene = PLATEAUCityModelScene.new()
+scene.geo_reference = geo_ref
+add_child(scene)
+scene.import_gml("path/to/file.gml", import_options)
+
+# Get latitude/longitude of origin
+print("Origin: ", scene.latitude, ", ", scene.longitude)
+
+# Get all GML transforms
+for gml_transform in scene.get_gml_transforms():
+    print(gml_transform.name)
+```
+
+### PLATEAUFilterCondition (Resource)
+Filter condition for city objects by type, LOD, and package.
+
+```gdscript
+var filter = PLATEAUFilterCondition.new()
+filter.city_object_types = COT_Building | COT_Road
+filter.min_lod = 1
+filter.max_lod = 2
+
+if filter.matches(mesh_data):
+    # Process this mesh
+    pass
+```
+
+### PLATEAUCityObjectTypeHierarchy (RefCounted)
+Static hierarchy of city object types with Japanese display names.
+
+```gdscript
+var hierarchy = PLATEAUCityObjectTypeHierarchy.new()
+
+# Get type display name in Japanese
+var name = PLATEAUCityObjectTypeHierarchy.get_type_display_name(COT_Building)
+# Returns "建築物"
+
+# Convert type to package
+var package = PLATEAUCityObjectTypeHierarchy.type_to_package(COT_RoofSurface)
+# Returns PACKAGE_BUILDING
+```
+
+### PLATEAUDynamicTileManager (Node3D)
+Dynamic tile loading manager based on camera distance. Automatically loads/unloads tiles.
+
+```gdscript
+var manager = PLATEAUDynamicTileManager.new()
+add_child(manager)
+
+# Set load distances per zoom level (min_distance, max_distance)
+manager.set_load_distance(11, Vector2(-10000, 500))   # High detail, close range
+manager.set_load_distance(10, Vector2(500, 1500))    # Medium detail
+manager.set_load_distance(9, Vector2(1500, 10000))   # Low detail, far range
+
+# Initialize with metadata store
+manager.initialize(meta_store)
+manager.tile_base_path = "res://tiles/"
+manager.camera = $Camera3D
+manager.auto_update = true
+
+# Signals
+manager.tile_loaded.connect(_on_tile_loaded)
+manager.tile_unloaded.connect(_on_tile_unloaded)
+```
+
+### PLATEAURnModel (RefCounted)
+Root container for road network data including roads, intersections, and sidewalks.
+
+```gdscript
+var model = PLATEAURnModel.new()
+
+# Add roads and intersections
+var road = PLATEAURnRoad.new()
+model.add_road(road)
+
+var intersection = PLATEAURnIntersection.new()
+model.add_intersection(intersection)
+
+# Build from mesh data (road package)
+var model2 = PLATEAURnModel.create_from_mesh_data(road_mesh_data_array)
+
+# Generate visualization mesh
+var mesh = model.generate_mesh()
 ```
 
 ## Samples
@@ -243,10 +335,15 @@ godot-plateau/
 ├── src/
 │   ├── register_types.cpp/h
 │   └── plateau/
-│       ├── plateau_city_model.cpp/h      # CityModel, MeshData classes
-│       ├── plateau_geo_reference.cpp/h   # Coordinate conversion
-│       ├── plateau_importer.cpp/h        # Scene builder
-│       └── plateau_mesh_extract_options.cpp/h
+│       ├── plateau_city_model.cpp/h           # CityModel, MeshData classes
+│       ├── plateau_geo_reference.cpp/h        # Coordinate conversion
+│       ├── plateau_importer.cpp/h             # Scene builder
+│       ├── plateau_mesh_extract_options.cpp/h
+│       ├── plateau_city_model_scene.cpp/h     # CityModelScene, FilterCondition
+│       ├── plateau_city_object_type.cpp/h     # Type hierarchy
+│       ├── plateau_dynamic_tile.cpp/h         # Dynamic tile loading
+│       └── plateau_road_network.cpp/h         # Road network data
+├── doc_classes/        # API documentation XML files
 ├── demo/
 │   └── bin/
 │       └── godot-plateau.gdextension

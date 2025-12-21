@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUCityObjectTypeHierarchy" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Static hierarchy of city object types.
+	</brief_description>
+	<description>
+		PLATEAUCityObjectTypeHierarchy provides a tree structure for organizing city object types based on CityGML specification and PLATEAU extensions.
+		[codeblock]
+		var hierarchy = PLATEAUCityObjectTypeHierarchy.new()
+		var root = hierarchy.get_root()
+
+		# Get building category
+		var building_node = hierarchy.get_node_by_type(COT_Building)
+
+		# Get node by package
+		var relief_node = hierarchy.get_node_by_package(PACKAGE_RELIEF)
+
+		# Convert type to package
+		var package = PLATEAUCityObjectTypeHierarchy.type_to_package(COT_RoofSurface)
+		# Returns PACKAGE_BUILDING
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_root" qualifiers="const">
+			<return type="PLATEAUCityObjectTypeNode" />
+			<description>
+				Get root node of the hierarchy.
+			</description>
+		</method>
+		<method name="get_node_by_type" qualifiers="const">
+			<return type="PLATEAUCityObjectTypeNode" />
+			<param index="0" name="type" type="int" />
+			<description>
+				Get node by city object type (PLATEAUCityObjectType value).
+			</description>
+		</method>
+		<method name="get_node_by_package" qualifiers="const">
+			<return type="PLATEAUCityObjectTypeNode" />
+			<param index="0" name="package" type="int" />
+			<description>
+				Get node by package type (PLATEAUCityModelPackage value).
+			</description>
+		</method>
+		<method name="get_all_types" qualifiers="const">
+			<return type="PLATEAUCityObjectTypeNode[]" />
+			<description>
+				Get all leaf nodes (actual types).
+			</description>
+		</method>
+		<method name="get_all_categories" qualifiers="const">
+			<return type="PLATEAUCityObjectTypeNode[]" />
+			<description>
+				Get all category nodes.
+			</description>
+		</method>
+		<method name="type_to_package" qualifiers="static">
+			<return type="int" />
+			<param index="0" name="type" type="int" />
+			<description>
+				Convert city object type to package (PLATEAUCityModelPackage value).
+			</description>
+		</method>
+		<method name="get_type_name" qualifiers="static">
+			<return type="String" />
+			<param index="0" name="type" type="int" />
+			<description>
+				Get type name as string (e.g., "Building", "RoofSurface").
+			</description>
+		</method>
+		<method name="get_type_display_name" qualifiers="static">
+			<return type="String" />
+			<param index="0" name="type" type="int" />
+			<description>
+				Get type display name in Japanese.
+			</description>
+		</method>
+		<method name="get_package_name" qualifiers="static">
+			<return type="String" />
+			<param index="0" name="package" type="int" />
+			<description>
+				Get package name as string.
+			</description>
+		</method>
+		<method name="get_package_display_name" qualifiers="static">
+			<return type="String" />
+			<param index="0" name="package" type="int" />
+			<description>
+				Get package display name in Japanese.
+			</description>
+		</method>
+		<method name="type_belongs_to_package" qualifiers="static">
+			<return type="bool" />
+			<param index="0" name="type" type="int" />
+			<param index="1" name="package" type="int" />
+			<description>
+				Check if type belongs to package.
+			</description>
+		</method>
+		<method name="get_types_for_package" qualifiers="static">
+			<return type="int" />
+			<param index="0" name="package" type="int" />
+			<description>
+				Get all types for a package as a bitmask.
+			</description>
+		</method>
+	</methods>
+</class>

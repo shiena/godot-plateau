@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUDynamicTileMetaInfo" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Metadata for a single tile.
+	</brief_description>
+	<description>
+		PLATEAUDynamicTileMetaInfo contains metadata about a single tile including its address, extent, zoom level, and LOD.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+	</methods>
+	<members>
+		<member name="address" type="String" setter="set_address" getter="get_address" default="&quot;&quot;">
+			Tile address (resource path).
+		</member>
+		<member name="extent" type="AABB" setter="set_extent" getter="get_extent">
+			3D bounding box.
+		</member>
+		<member name="zoom_level" type="int" setter="set_zoom_level" getter="get_zoom_level" default="0">
+			Zoom level.
+		</member>
+		<member name="group_name" type="String" setter="set_group_name" getter="get_group_name" default="&quot;&quot;">
+			Group name (package category).
+		</member>
+		<member name="lod" type="int" setter="set_lod" getter="get_lod" default="0">
+			LOD level.
+		</member>
+	</members>
+</class>

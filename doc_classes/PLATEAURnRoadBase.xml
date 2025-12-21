@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAURnRoadBase" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Base class for road and intersection.
+	</brief_description>
+	<description>
+		PLATEAURnRoadBase is the abstract base class for [PLATEAURnRoad] and [PLATEAURnIntersection].
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="is_road" qualifiers="virtual const">
+			<return type="bool" />
+			<description>
+				Check if this is a road.
+			</description>
+		</method>
+		<method name="is_intersection" qualifiers="virtual const">
+			<return type="bool" />
+			<description>
+				Check if this is an intersection.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="id" type="int" setter="set_id" getter="get_id" default="0">
+			Unique identifier.
+		</member>
+	</members>
+</class>

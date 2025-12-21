@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUCityModelScene" inherits="Node3D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Root node for imported PLATEAU city model scenes.
+	</brief_description>
+	<description>
+		PLATEAUCityModelScene serves as the root node for PLATEAU city model imports. It manages GeoReference, imported GML transforms, and provides methods to query and manipulate city objects.
+		Equivalent to Unity's PLATEAUInstancedCityModel.
+		[codeblock]
+		var scene = PLATEAUCityModelScene.new()
+		scene.geo_reference = geo_ref
+		add_child(scene)
+		scene.import_gml("path/to/file.gml", import_options)
+
+		# Get latitude/longitude of origin
+		print("Origin: ", scene.latitude, ", ", scene.longitude)
+
+		# Get all GML transforms
+		for gml_transform in scene.get_gml_transforms():
+		    print(gml_transform.name)
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="import_gml">
+			<return type="Node3D" />
+			<param index="0" name="gml_path" type="String" />
+			<param index="1" name="options" type="PLATEAUMeshExtractOptions" />
+			<description>
+				Import a GML file and add as child node. Returns the created transform node, or null on failure.
+			</description>
+		</method>
+		<method name="import_gml_async">
+			<return type="void" />
+			<param index="0" name="gml_path" type="String" />
+			<param index="1" name="options" type="PLATEAUMeshExtractOptions" />
+			<description>
+				Async version of import_gml. Emits "gml_imported" signal when done.
+			</description>
+		</method>
+		<method name="get_gml_transforms" qualifiers="const">
+			<return type="Node3D[]" />
+			<description>
+				Get all GML Transform nodes (children that represent imported GML files).
+			</description>
+		</method>
+		<method name="get_gml_transform" qualifiers="const">
+			<return type="Node3D" />
+			<param index="0" name="gml_path" type="String" />
+			<description>
+				Get Transform for a specific GML file path.
+			</description>
+		</method>
+		<method name="get_lods" qualifiers="const">
+			<return type="PackedInt32Array" />
+			<param index="0" name="gml_transform" type="Node3D" />
+			<description>
+				Get available LODs for a GML transform.
+			</description>
+		</method>
+		<method name="get_lod_transforms" qualifiers="const">
+			<return type="Node3D[]" />
+			<param index="0" name="gml_transform" type="Node3D" />
+			<description>
+				Get LOD transform nodes for a GML transform.
+			</description>
+		</method>
+		<method name="get_city_objects" qualifiers="const">
+			<return type="Node3D[]" />
+			<param index="0" name="gml_transform" type="Node3D" />
+			<param index="1" name="lod" type="int" />
+			<description>
+				Get all CityObject nodes for a GML transform at specified LOD.
+			</description>
+		</method>
+		<method name="get_package" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="mesh_data" type="PLATEAUMeshData" />
+			<description>
+				Get package type for a mesh data. Returns a PLATEAUCityModelPackage value.
+			</description>
+		</method>
+		<method name="get_all_mesh_instances" qualifiers="const">
+			<return type="MeshInstance3D[]" />
+			<description>
+				Get all mesh instances with PLATEAUMeshData in this scene.
+			</description>
+		</method>
+		<method name="find_mesh_data_by_gml_id" qualifiers="const">
+			<return type="PLATEAUMeshData" />
+			<param index="0" name="gml_id" type="String" />
+			<description>
+				Find mesh data by GML ID.
+			</description>
+		</method>
+		<method name="copy_from">
+			<return type="void" />
+			<param index="0" name="other" type="PLATEAUCityModelScene" />
+			<description>
+				Copy geo reference from another scene.
+			</description>
+		</method>
+		<method name="reload_gml">
+			<return type="bool" />
+			<param index="0" name="gml_transform" type="Node3D" />
+			<description>
+				Reload GML for a transform (re-import with same options).
+			</description>
+		</method>
+		<method name="remove_gml">
+			<return type="void" />
+			<param index="0" name="gml_transform" type="Node3D" />
+			<description>
+				Remove GML transform and its children.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="geo_reference" type="PLATEAUGeoReference" setter="set_geo_reference" getter="get_geo_reference">
+			The geo reference for coordinate conversion.
+		</member>
+		<member name="latitude" type="float" setter="" getter="get_latitude">
+			Origin latitude (read-only, derived from geo_reference).
+		</member>
+		<member name="longitude" type="float" setter="" getter="get_longitude">
+			Origin longitude (read-only, derived from geo_reference).
+		</member>
+		<member name="filter_condition" type="PLATEAUFilterCondition" setter="set_filter_condition" getter="get_filter_condition">
+			Filter condition for UI display.
+		</member>
+	</members>
+	<signals>
+		<signal name="gml_imported">
+			<param index="0" name="gml_path" type="String" />
+			<param index="1" name="transform" type="Node3D" />
+			<description>
+				Emitted when async GML import completes.
+			</description>
+		</signal>
+	</signals>
+</class>
