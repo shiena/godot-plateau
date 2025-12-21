@@ -1,7 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://g0fj6otj8fts"]
+[gd_scene load_steps=6 format=3 uid="uid://plateau_sample_api"]
 
-[ext_resource type="Script" uid="uid://0ukn1ln4cvt3" path="res://samples/api_sample.gd" id="1_script"]
-[ext_resource type="SystemFont" path="res://fonts/japanese_font.tres" id="2_font"]
+[ext_resource type="Script" path="res://samples/api_sample.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://japanese_font" path="res://fonts/japanese_font.tres" id="2_font"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 
@@ -36,214 +36,154 @@ offset_right = 600.0
 offset_bottom = 40.0
 text = "Meshes: 0 | Vertices: 0 | Triangles: 0"
 
-[node name="DatasetPanel" type="Panel" parent="UI"]
+[node name="ImportPanel" type="Panel" parent="UI"]
 offset_left = 10.0
 offset_top = 50.0
-offset_right = 280.0
-offset_bottom = 400.0
+offset_right = 250.0
+offset_bottom = 240.0
 
-[node name="Title" type="Label" parent="UI/DatasetPanel"]
-layout_mode = 0
+[node name="Title" type="Label" parent="UI/ImportPanel"]
 offset_left = 10.0
 offset_top = 5.0
-offset_right = 260.0
+offset_right = 230.0
 offset_bottom = 25.0
-text = "Dataset Source"
+text = "Import Settings"
 horizontal_alignment = 1
 
-[node name="SelectFolderButton" type="Button" parent="UI/DatasetPanel"]
-layout_mode = 0
+[node name="ImportButton" type="Button" parent="UI/ImportPanel"]
 offset_left = 10.0
 offset_top = 30.0
-offset_right = 260.0
+offset_right = 230.0
 offset_bottom = 60.0
-text = "Select Dataset Folder..."
+text = "Import GML..."
 
-[node name="PackagesLabel" type="Label" parent="UI/DatasetPanel"]
-layout_mode = 0
+[node name="GranularityLabel" type="Label" parent="UI/ImportPanel"]
 offset_left = 10.0
-offset_top = 68.0
-offset_right = 260.0
-offset_bottom = 88.0
-text = "Available Packages:"
-
-[node name="PackageScroll" type="ScrollContainer" parent="UI/DatasetPanel"]
-layout_mode = 0
-offset_left = 10.0
-offset_top = 90.0
-offset_right = 260.0
-offset_bottom = 190.0
-
-[node name="PackageContainer" type="VBoxContainer" parent="UI/DatasetPanel/PackageScroll"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="GranularityLabel" type="Label" parent="UI/DatasetPanel"]
-layout_mode = 0
-offset_left = 10.0
-offset_top = 200.0
+offset_top = 70.0
 offset_right = 90.0
-offset_bottom = 220.0
+offset_bottom = 90.0
 text = "Granularity:"
 
-[node name="GranularityOption" type="OptionButton" parent="UI/DatasetPanel"]
-layout_mode = 0
+[node name="GranularityOption" type="OptionButton" parent="UI/ImportPanel"]
 offset_left = 95.0
-offset_top = 198.0
-offset_right = 260.0
-offset_bottom = 222.0
+offset_top = 68.0
+offset_right = 230.0
+offset_bottom = 92.0
 
-[node name="LODLabel" type="Label" parent="UI/DatasetPanel"]
-layout_mode = 0
+[node name="LODLabel" type="Label" parent="UI/ImportPanel"]
 offset_left = 10.0
-offset_top = 230.0
+offset_top = 100.0
 offset_right = 90.0
-offset_bottom = 250.0
+offset_bottom = 120.0
 text = "LOD Range:"
 
-[node name="MinLODSpin" type="SpinBox" parent="UI/DatasetPanel"]
-layout_mode = 0
+[node name="MinLODSpin" type="SpinBox" parent="UI/ImportPanel"]
 offset_left = 95.0
-offset_top = 228.0
+offset_top = 98.0
 offset_right = 155.0
-offset_bottom = 252.0
+offset_bottom = 122.0
+min_value = 0.0
 max_value = 4.0
 value = 1.0
 
-[node name="LODDash" type="Label" parent="UI/DatasetPanel"]
-layout_mode = 0
+[node name="LODDash" type="Label" parent="UI/ImportPanel"]
 offset_left = 158.0
-offset_top = 230.0
+offset_top = 100.0
 offset_right = 178.0
-offset_bottom = 250.0
+offset_bottom = 120.0
 text = " - "
 
-[node name="MaxLODSpin" type="SpinBox" parent="UI/DatasetPanel"]
-layout_mode = 0
+[node name="MaxLODSpin" type="SpinBox" parent="UI/ImportPanel"]
 offset_left = 175.0
-offset_top = 228.0
+offset_top = 98.0
 offset_right = 230.0
-offset_bottom = 252.0
+offset_bottom = 122.0
+min_value = 0.0
 max_value = 4.0
 value = 2.0
 
-[node name="TextureCheck" type="CheckBox" parent="UI/DatasetPanel"]
-layout_mode = 0
+[node name="TextureCheck" type="CheckBox" parent="UI/ImportPanel"]
 offset_left = 10.0
-offset_top = 260.0
-offset_right = 260.0
-offset_bottom = 285.0
+offset_top = 130.0
+offset_right = 230.0
+offset_bottom = 155.0
 button_pressed = true
 text = "Load Textures"
 
-[node name="ZoneLabel" type="Label" parent="UI/DatasetPanel"]
-layout_mode = 0
-offset_left = 10.0
-offset_top = 290.0
-offset_right = 90.0
-offset_bottom = 310.0
-text = "Zone ID:"
-
-[node name="ZoneSpin" type="SpinBox" parent="UI/DatasetPanel"]
-layout_mode = 0
-offset_left = 95.0
-offset_top = 288.0
-offset_right = 155.0
-offset_bottom = 312.0
-min_value = 1.0
-max_value = 19.0
-value = 9.0
-
-[node name="ImportButton" type="Button" parent="UI/DatasetPanel"]
-layout_mode = 0
-offset_left = 10.0
-offset_top = 320.0
-offset_right = 260.0
-offset_bottom = 350.0
-disabled = true
-text = "Import Selected Packages"
-
 [node name="ExportPanel" type="Panel" parent="UI"]
 offset_left = 10.0
-offset_top = 410.0
-offset_right = 280.0
-offset_bottom = 540.0
+offset_top = 250.0
+offset_right = 250.0
+offset_bottom = 380.0
 
 [node name="Title" type="Label" parent="UI/ExportPanel"]
-layout_mode = 0
 offset_left = 10.0
 offset_top = 5.0
-offset_right = 260.0
+offset_right = 230.0
 offset_bottom = 25.0
 text = "Export"
 horizontal_alignment = 1
 
 [node name="ExportGLTFButton" type="Button" parent="UI/ExportPanel"]
-layout_mode = 0
 offset_left = 10.0
 offset_top = 35.0
-offset_right = 260.0
+offset_right = 230.0
 offset_bottom = 60.0
 text = "Export as glTF..."
 
 [node name="ExportGLBButton" type="Button" parent="UI/ExportPanel"]
-layout_mode = 0
 offset_left = 10.0
 offset_top = 65.0
-offset_right = 260.0
+offset_right = 230.0
 offset_bottom = 90.0
 text = "Export as GLB..."
 
 [node name="ExportOBJButton" type="Button" parent="UI/ExportPanel"]
-layout_mode = 0
 offset_left = 10.0
 offset_top = 95.0
-offset_right = 260.0
+offset_right = 230.0
 offset_bottom = 120.0
 text = "Export as OBJ..."
 
 [node name="ConvertPanel" type="Panel" parent="UI"]
 offset_left = 10.0
-offset_top = 550.0
-offset_right = 280.0
-offset_bottom = 680.0
+offset_top = 390.0
+offset_right = 250.0
+offset_bottom = 520.0
 
 [node name="Title" type="Label" parent="UI/ConvertPanel"]
-layout_mode = 0
 offset_left = 10.0
 offset_top = 5.0
-offset_right = 260.0
+offset_right = 230.0
 offset_bottom = 25.0
 text = "Granularity Conversion"
 horizontal_alignment = 1
 
 [node name="ConvertAtomicButton" type="Button" parent="UI/ConvertPanel"]
-layout_mode = 0
 offset_left = 10.0
 offset_top = 35.0
-offset_right = 260.0
+offset_right = 230.0
 offset_bottom = 60.0
 text = "Convert to Atomic"
 
 [node name="ConvertPrimaryButton" type="Button" parent="UI/ConvertPanel"]
-layout_mode = 0
 offset_left = 10.0
 offset_top = 65.0
-offset_right = 260.0
+offset_right = 230.0
 offset_bottom = 90.0
 text = "Convert to Primary"
 
 [node name="ConvertAreaButton" type="Button" parent="UI/ConvertPanel"]
-layout_mode = 0
 offset_left = 10.0
 offset_top = 95.0
-offset_right = 260.0
+offset_right = 230.0
 offset_bottom = 120.0
 text = "Convert to Area"
 
 [node name="LogPanel" type="Panel" parent="UI"]
-anchors_preset = 11
+anchors_preset = 3
 anchor_left = 1.0
+anchor_top = 0.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -420.0
@@ -253,7 +193,6 @@ offset_bottom = -10.0
 grow_horizontal = 0
 
 [node name="Title" type="Label" parent="UI/LogPanel"]
-layout_mode = 0
 offset_left = 10.0
 offset_top = 5.0
 offset_right = 390.0
@@ -263,12 +202,13 @@ horizontal_alignment = 1
 
 [node name="ScrollContainer" type="ScrollContainer" parent="UI/LogPanel"]
 layout_mode = 0
-anchor_right = 1.0
-anchor_bottom = 1.0
 offset_left = 10.0
 offset_top = 30.0
 offset_right = 400.0
 offset_bottom = -10.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 
 [node name="LogLabel" type="RichTextLabel" parent="UI/LogPanel/ScrollContainer"]
 custom_minimum_size = Vector2(380, 0)
