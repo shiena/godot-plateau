@@ -20,6 +20,8 @@ var pending_gml_files: Array = []
 var current_gml_index: int = 0
 var bounds_min: Vector3 = Vector3.INF
 var bounds_max: Vector3 = -Vector3.INF
+var all_gml_files: Array = []  # All GML files for selected packages
+var mesh_code_to_files: Dictionary = {}  # mesh_code -> [PLATEAUGmlFileInfo]
 
 @onready var camera: Camera3D = $Camera3D
 @onready var log_label: RichTextLabel = $UI/LogPanel/ScrollContainer/LogLabel
@@ -116,18 +118,82 @@ func _update_package_checkboxes(packages: int) -> void:
 			var checkbox = CheckBox.new()
 			checkbox.text = info["display"] + " - " + info["name"]
 			checkbox.set_meta("package_flag", info["flag"])
-			checkbox.toggled.connect(func(_pressed): _update_import_button_state())
+			checkbox.toggled.connect(func(_pressed): _on_package_selection_changed())
 			# Default: select Building if available
 			if info["flag"] == PLATEAUDatasetSource.PACKAGE_BUILDING:
 				checkbox.button_pressed = true
 			package_container.add_child(checkbox)
+
+	# Update mesh codes for initial selection
+	_on_package_selection_changed()
 
 
 func _clear_package_list() -> void:
 	var package_container = $UI/DatasetPanel/PackageScroll/PackageContainer
 	for child in package_container.get_children():
 		child.queue_free()
+	_clear_mesh_code_list()
 	_update_import_button_state()
+
+
+func _on_package_selection_changed() -> void:
+	# Get GML files for selected packages and update mesh code list
+	var selected_packages = _get_selected_packages()
+	if selected_packages == 0 or dataset_source == null or not dataset_source.is_valid():
+		_clear_mesh_code_list()
+		_update_import_button_state()
+		return
+
+	all_gml_files = Array(dataset_source.get_gml_files(selected_packages))
+	mesh_code_to_files.clear()
+
+	# Group files by mesh code
+	for file_info in all_gml_files:
+		var code = file_info.get_mesh_code()
+		if code.is_empty():
+			code = "(no code)"
+		if not mesh_code_to_files.has(code):
+			mesh_code_to_files[code] = []
+		mesh_code_to_files[code].append(file_info)
+
+	_update_mesh_code_checkboxes()
+	_update_import_button_state()
+
+
+func _update_mesh_code_checkboxes() -> void:
+	var mesh_code_container = $UI/DatasetPanel/MeshCodeScroll/MeshCodeContainer
+	# Clear existing checkboxes
+	for child in mesh_code_container.get_children():
+		child.queue_free()
+
+	# Sort mesh codes
+	var codes = mesh_code_to_files.keys()
+	codes.sort()
+
+	for code in codes:
+		var file_count = mesh_code_to_files[code].size()
+		var checkbox = CheckBox.new()
+		checkbox.text = "%s (%d files)" % [code, file_count]
+		checkbox.set_meta("mesh_code", code)
+		checkbox.toggled.connect(func(_pressed): _update_import_button_state())
+		mesh_code_container.add_child(checkbox)
+
+
+func _clear_mesh_code_list() -> void:
+	var mesh_code_container = $UI/DatasetPanel/MeshCodeScroll/MeshCodeContainer
+	for child in mesh_code_container.get_children():
+		child.queue_free()
+	all_gml_files.clear()
+	mesh_code_to_files.clear()
+
+
+func _get_selected_mesh_codes() -> PackedStringArray:
+	var selected: PackedStringArray = []
+	var mesh_code_container = $UI/DatasetPanel/MeshCodeScroll/MeshCodeContainer
+	for child in mesh_code_container.get_children():
+		if child is CheckBox and child.button_pressed:
+			selected.append(child.get_meta("mesh_code", ""))
+	return selected
 
 
 func _get_selected_packages() -> int:
@@ -142,8 +208,9 @@ func _get_selected_packages() -> int:
 func _update_import_button_state() -> void:
 	var import_button = $UI/DatasetPanel/ImportButton as Button
 	var has_dataset = dataset_source != null and dataset_source.is_valid()
-	var has_selection = _get_selected_packages() > 0
-	import_button.disabled = not (has_dataset and has_selection)
+	var has_packages = _get_selected_packages() > 0
+	var has_mesh_codes = _get_selected_mesh_codes().size() > 0
+	import_button.disabled = not (has_dataset and has_packages and has_mesh_codes)
 
 
 func _on_import_pressed() -> void:
@@ -160,24 +227,26 @@ func _on_import_pressed() -> void:
 		_log("[color=yellow]No packages selected.[/color]")
 		return
 
-	_log("--- Import Start ---")
-	_log("Selected packages: " + _format_packages(selected_packages))
-
-	# Get GML files for selected packages
-	var gml_files = dataset_source.get_gml_files(selected_packages)
-	_log("GML files found: " + str(gml_files.size()))
-
-	if gml_files.is_empty():
-		_log("[color=yellow]No GML files found for selected packages.[/color]")
+	var selected_mesh_codes = _get_selected_mesh_codes()
+	if selected_mesh_codes.is_empty():
+		_log("[color=yellow]No mesh codes selected.[/color]")
 		return
 
-	# List mesh codes
-	var mesh_codes: Dictionary = {}
-	for file_info in gml_files:
-		var code = file_info.get_mesh_code()
-		if not code.is_empty():
-			mesh_codes[code] = true
-	_log("Mesh codes: " + str(mesh_codes.keys()))
+	_log("--- Import Start ---")
+	_log("Selected packages: " + _format_packages(selected_packages))
+	_log("Selected mesh codes: " + ", ".join(selected_mesh_codes))
+
+	# Filter GML files by selected mesh codes
+	var gml_files: Array = []
+	for code in selected_mesh_codes:
+		if mesh_code_to_files.has(code):
+			gml_files.append_array(mesh_code_to_files[code])
+
+	_log("GML files to import: " + str(gml_files.size()))
+
+	if gml_files.is_empty():
+		_log("[color=yellow]No GML files found for selected mesh codes.[/color]")
+		return
 
 	# Clear previous
 	_clear_meshes()

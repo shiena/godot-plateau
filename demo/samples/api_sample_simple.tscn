@@ -1,6 +1,6 @@
 [gd_scene load_steps=6 format=3 uid="uid://plateau_sample_api"]
 
-[ext_resource type="Script" path="res://samples/api_sample.gd" id="1_script"]
+[ext_resource type="Script" path="res://samples/api_sample_simple.gd" id="1_script"]
 [ext_resource type="FontFile" uid="uid://japanese_font" path="res://fonts/japanese_font.tres" id="2_font"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
