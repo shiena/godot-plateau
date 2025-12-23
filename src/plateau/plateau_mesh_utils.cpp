@@ -245,11 +245,15 @@ Ref<PLATEAUMeshData> create_mesh_data_from_node(const PlateauNode &node) {
             godot_vertices.set(j, Vector3(v.x, v.y, v.z));
         }
 
-        // Convert indices
+        // Convert indices with winding order inversion
+        // libplateau outputs CW winding, but Godot expects CCW for front faces
         PackedInt32Array godot_indices;
         godot_indices.resize(indices.size());
-        for (size_t j = 0; j < indices.size(); j++) {
-            godot_indices.set(j, indices[j]);
+        for (size_t j = 0; j < indices.size(); j += 3) {
+            // Swap first and third vertex of each triangle to invert winding
+            godot_indices.set(j, indices[j + 2]);
+            godot_indices.set(j + 1, indices[j + 1]);
+            godot_indices.set(j + 2, indices[j]);
         }
 
         // Calculate normals using shared utility

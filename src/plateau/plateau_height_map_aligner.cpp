@@ -460,10 +460,15 @@ void PLATEAUHeightMapAligner::update_single_mesh_from_node(
         godot_vertices.set(j, Vector3(v.x, v.y, v.z));
     }
 
+    // Convert indices with winding order inversion
+    // libplateau outputs CW winding, but Godot expects CCW for front faces
     PackedInt32Array godot_indices;
     godot_indices.resize(native_indices.size());
-    for (size_t j = 0; j < native_indices.size(); j++) {
-        godot_indices.set(j, native_indices[j]);
+    for (size_t j = 0; j < native_indices.size(); j += 3) {
+        // Swap first and third vertex of each triangle to invert winding
+        godot_indices.set(j, native_indices[j + 2]);
+        godot_indices.set(j + 1, native_indices[j + 1]);
+        godot_indices.set(j + 2, native_indices[j]);
     }
 
     // Recompute normals

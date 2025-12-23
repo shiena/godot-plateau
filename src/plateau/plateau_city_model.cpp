@@ -174,6 +174,30 @@ String PLATEAUMeshData::get_gml_id_from_uv(const Vector2 &uv) const {
     return String();
 }
 
+// Texture path methods for export
+void PLATEAUMeshData::set_texture_paths(const PackedStringArray &paths) {
+    texture_paths_ = paths;
+}
+
+PackedStringArray PLATEAUMeshData::get_texture_paths() const {
+    return texture_paths_;
+}
+
+void PLATEAUMeshData::add_texture_path(const String &path) {
+    texture_paths_.push_back(path);
+}
+
+String PLATEAUMeshData::get_texture_path(int surface_index) const {
+    if (surface_index >= 0 && surface_index < texture_paths_.size()) {
+        return texture_paths_[surface_index];
+    }
+    return String();
+}
+
+int PLATEAUMeshData::get_texture_path_count() const {
+    return texture_paths_.size();
+}
+
 void PLATEAUMeshData::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_name", "name"), &PLATEAUMeshData::set_name);
     ClassDB::bind_method(D_METHOD("get_name"), &PLATEAUMeshData::get_name);
@@ -209,6 +233,14 @@ void PLATEAUMeshData::_bind_methods() {
     ClassDB::bind_method(D_METHOD("has_city_object_info"), &PLATEAUMeshData::has_city_object_info);
     ClassDB::bind_method(D_METHOD("get_city_object_type_name"), &PLATEAUMeshData::get_city_object_type_name);
     ClassDB::bind_method(D_METHOD("get_gml_id_from_uv", "uv"), &PLATEAUMeshData::get_gml_id_from_uv);
+
+    // Texture path methods for export
+    ClassDB::bind_method(D_METHOD("set_texture_paths", "paths"), &PLATEAUMeshData::set_texture_paths);
+    ClassDB::bind_method(D_METHOD("get_texture_paths"), &PLATEAUMeshData::get_texture_paths);
+    ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "texture_paths"), "set_texture_paths", "get_texture_paths");
+    ClassDB::bind_method(D_METHOD("add_texture_path", "path"), &PLATEAUMeshData::add_texture_path);
+    ClassDB::bind_method(D_METHOD("get_texture_path", "surface_index"), &PLATEAUMeshData::get_texture_path);
+    ClassDB::bind_method(D_METHOD("get_texture_path_count"), &PLATEAUMeshData::get_texture_path_count);
 
     // CityObjectType enum constants
     BIND_CONSTANT(COT_GenericCityObject);
@@ -364,11 +396,13 @@ Ref<PLATEAUMeshData> PLATEAUCityModel::convert_node(const plateau::polygonMesh::
     // Convert mesh if present
     const PlateauMesh *mesh = node.getMesh();
     PlateauCityObjectList city_object_list;
+    PackedStringArray texture_paths;
     if (mesh != nullptr && mesh->hasVertices()) {
-        Ref<ArrayMesh> godot_mesh = convert_mesh(*mesh, base_texture_path, city_object_list);
+        Ref<ArrayMesh> godot_mesh = convert_mesh(*mesh, base_texture_path, city_object_list, texture_paths);
         if (godot_mesh.is_valid()) {
             mesh_data->set_mesh(godot_mesh);
             mesh_data->set_city_object_list(city_object_list);
+            mesh_data->set_texture_paths(texture_paths);
         }
     }
 
@@ -507,7 +541,7 @@ Ref<ImageTexture> PLATEAUCityModel::load_texture_cached(const String &texture_pa
     return texture;
 }
 
-Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &mesh, const String &base_texture_path, PlateauCityObjectList &out_city_object_list) {
+Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &mesh, const String &base_texture_path, PlateauCityObjectList &out_city_object_list, PackedStringArray &out_texture_paths) {
     Ref<ArrayMesh> array_mesh;
     array_mesh.instantiate();
 
@@ -519,6 +553,9 @@ Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &
 
     // Copy CityObjectList for attribute lookup
     out_city_object_list = mesh.getCityObjectList();
+
+    // Clear output texture paths
+    out_texture_paths.clear();
 
     if (vertices.empty() || indices.empty()) {
         return array_mesh;
@@ -549,14 +586,18 @@ Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &
         godot_uv4.set(i, Vector2(uv.x, uv.y));
     }
 
-    // Convert all indices for normal calculation
+    // Convert all indices with winding order inversion for correct normals
+    // libplateau outputs CW winding, but Godot expects CCW for front faces
     PackedInt32Array all_indices;
     all_indices.resize(indices.size());
-    for (size_t i = 0; i < indices.size(); i++) {
-        all_indices.set(i, indices[i]);
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        // Swap first and third vertex of each triangle to invert winding
+        all_indices.set(i, indices[i + 2]);
+        all_indices.set(i + 1, indices[i + 1]);
+        all_indices.set(i + 2, indices[i]);
     }
 
-    // Compute normals
+    // Compute normals from winding-inverted indices
     PackedVector3Array godot_normals = compute_normals(godot_vertices, all_indices);
 
     // Process each submesh with compact per-surface arrays to avoid memory bloat
@@ -619,11 +660,16 @@ Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &
         }
 
         // Build remapped indices for this submesh (0-based for compact arrays)
+        // Invert winding order (swap indices 0 and 2 of each triangle) to fix normal direction
+        // libplateau outputs CW winding, but Godot expects CCW for front faces
         size_t index_count = end_index - start_index + 1;
         PackedInt32Array submesh_indices;
         submesh_indices.resize(index_count);
-        for (size_t i = start_index; i <= end_index; i++) {
-            submesh_indices.set(i - start_index, global_to_compact[indices[i]]);
+        for (size_t i = start_index; i <= end_index; i += 3) {
+            // Swap first and third vertex of each triangle to invert winding
+            submesh_indices.set(i - start_index, global_to_compact[indices[i + 2]]);
+            submesh_indices.set(i - start_index + 1, global_to_compact[indices[i + 1]]);
+            submesh_indices.set(i - start_index + 2, global_to_compact[indices[i]]);
         }
 
         // Create surface arrays with compact data (only referenced vertices)
@@ -644,6 +690,10 @@ Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &
 
         // Add surface
         array_mesh->add_surface_from_arrays(godot::Mesh::PRIMITIVE_TRIANGLES, arrays);
+
+        // Collect texture path for this submesh (for export)
+        std::string texture_path_str = sub_mesh.getTexturePath();
+        out_texture_paths.push_back(String::utf8(texture_path_str.c_str()));
 
         // Create and set material
         Ref<StandardMaterial3D> material = create_material(sub_mesh, base_texture_path);
@@ -676,6 +726,11 @@ Ref<StandardMaterial3D> PLATEAUCityModel::create_material(const plateau::polygon
         if (texture.is_valid()) {
             material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, texture);
             has_texture = true;
+            // Debug: log successful texture load
+            // UtilityFunctions::print("Loaded texture: ", texture_path);
+        } else {
+            // Debug: log failed texture load
+            UtilityFunctions::print("Failed to load texture: ", texture_path);
         }
     }
 

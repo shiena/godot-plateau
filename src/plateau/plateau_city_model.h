@@ -116,6 +116,13 @@ public:
     // Get GML ID from UV4 coordinates (for raycast hit lookup)
     String get_gml_id_from_uv(const Vector2 &uv) const;
 
+    // Texture paths for each surface (for export)
+    void set_texture_paths(const PackedStringArray &paths);
+    PackedStringArray get_texture_paths() const;
+    void add_texture_path(const String &path);
+    String get_texture_path(int surface_index) const;
+    int get_texture_path_count() const;
+
 protected:
     static void _bind_methods();
 
@@ -130,6 +137,9 @@ private:
     int64_t city_object_type_;
     Dictionary attributes_;
     plateau::polygonMesh::CityObjectList city_object_list_;
+
+    // Texture paths for each surface (for export)
+    PackedStringArray texture_paths_;
 };
 
 // Main class for loading CityGML and extracting meshes
@@ -190,7 +200,7 @@ private:
 
     // Helper methods for mesh conversion
     Ref<PLATEAUMeshData> convert_node(const plateau::polygonMesh::Node &node, const String &base_texture_path);
-    Ref<ArrayMesh> convert_mesh(const plateau::polygonMesh::Mesh &mesh, const String &base_texture_path, plateau::polygonMesh::CityObjectList &out_city_object_list);
+    Ref<ArrayMesh> convert_mesh(const plateau::polygonMesh::Mesh &mesh, const String &base_texture_path, plateau::polygonMesh::CityObjectList &out_city_object_list, PackedStringArray &out_texture_paths);
     Ref<StandardMaterial3D> create_material(const plateau::polygonMesh::SubMesh &sub_mesh, const String &base_texture_path);
 
     // Compute flat normals for mesh

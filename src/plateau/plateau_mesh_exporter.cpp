@@ -149,16 +149,26 @@ void PLATEAUMeshExporter::add_mesh_data_to_node(
     }
 
     Ref<ArrayMesh> godot_mesh = mesh_data->get_mesh();
+    PackedStringArray texture_paths = mesh_data->get_texture_paths();
 
     if (godot_mesh.is_valid() && godot_mesh->get_surface_count() > 0) {
         PlateauMesh native_mesh;
         int surface_count = godot_mesh->get_surface_count();
 
         // Collect all vertices, indices, and UVs from all surfaces
+        // Track index ranges for each surface to create separate submeshes
         std::vector<TVec3d> all_vertices;
         std::vector<unsigned int> all_indices;
         std::vector<TVec2f> all_uvs;
         unsigned int vertex_offset = 0;
+
+        // Store submesh info: (start_index, end_index, texture_path)
+        struct SubMeshInfo {
+            size_t start_index;
+            size_t end_index;
+            std::string texture_path;
+        };
+        std::vector<SubMeshInfo> submesh_infos;
 
         for (int surf_idx = 0; surf_idx < surface_count; surf_idx++) {
             Array arrays = godot_mesh->surface_get_arrays(surf_idx);
@@ -186,6 +196,9 @@ void PLATEAUMeshExporter::add_mesh_data_to_node(
                 continue;
             }
 
+            // Record submesh start index
+            size_t submesh_start = all_indices.size();
+
             // Add vertices
             for (int j = 0; j < vertices.size(); j++) {
                 Vector3 v = vertices[j];
@@ -212,6 +225,14 @@ void PLATEAUMeshExporter::add_mesh_data_to_node(
                 }
             }
 
+            // Record submesh end index and texture path
+            size_t submesh_end = all_indices.size() - 1;
+            std::string tex_path = "";
+            if (surf_idx < texture_paths.size()) {
+                tex_path = texture_paths[surf_idx].utf8().get_data();
+            }
+            submesh_infos.push_back({submesh_start, submesh_end, tex_path});
+
             vertex_offset += static_cast<unsigned int>(vertices.size());
         }
 
@@ -219,7 +240,11 @@ void PLATEAUMeshExporter::add_mesh_data_to_node(
         if (!all_vertices.empty() && !all_indices.empty() && all_indices.size() % 3 == 0) {
             native_mesh.addVerticesList(all_vertices);
             native_mesh.addIndicesList(all_indices, 0, false);
-            native_mesh.addSubMesh("", nullptr, 0, all_indices.size() - 1, -1);
+
+            // Add each submesh with its texture path
+            for (const auto &info : submesh_infos) {
+                native_mesh.addSubMesh(info.texture_path, nullptr, info.start_index, info.end_index, -1);
+            }
 
             if (!all_uvs.empty() && all_uvs.size() == all_vertices.size()) {
                 native_mesh.setUV1(std::move(all_uvs));

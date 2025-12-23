@@ -221,11 +221,15 @@ Ref<ArrayMesh> PLATEAUHeightMapData::generate_mesh() const {
             godot_vertices.set(i, Vector3(v.x, v.y, v.z));
         }
 
-        // Convert indices
+        // Convert indices with winding order inversion
+        // libplateau outputs CW winding, but Godot expects CCW for front faces
         PackedInt32Array godot_indices;
         godot_indices.resize(indices.size());
-        for (size_t i = 0; i < indices.size(); i++) {
-            godot_indices.set(i, indices[i]);
+        for (size_t i = 0; i < indices.size(); i += 3) {
+            // Swap first and third vertex of each triangle to invert winding
+            godot_indices.set(i, indices[i + 2]);
+            godot_indices.set(i + 1, indices[i + 1]);
+            godot_indices.set(i + 2, indices[i]);
         }
 
         // Convert UVs
