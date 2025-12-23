@@ -662,16 +662,17 @@ Ref<StandardMaterial3D> PLATEAUCityModel::create_material(const plateau::polygon
     // Set default material properties
     material->set_cull_mode(StandardMaterial3D::CULL_BACK);
 
-    // Get texture path
+    // Get texture path (libplateau returns absolute path)
     std::string texture_path_str = sub_mesh.getTexturePath();
     bool has_texture = false;
 
     if (!texture_path_str.empty()) {
-        // Construct full texture path
-        String full_path = base_texture_path.path_join(String::utf8(texture_path_str.c_str()));
+        // libplateau already converts relative paths to absolute paths in mesh_factory.cpp
+        // So we use the path directly
+        String texture_path = String::utf8(texture_path_str.c_str());
 
         // Try to load texture with caching
-        Ref<ImageTexture> texture = const_cast<PLATEAUCityModel*>(this)->load_texture_cached(full_path);
+        Ref<ImageTexture> texture = const_cast<PLATEAUCityModel*>(this)->load_texture_cached(texture_path);
         if (texture.is_valid()) {
             material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, texture);
             has_texture = true;
