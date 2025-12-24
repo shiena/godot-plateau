@@ -16,7 +16,7 @@ PLATEAUMeshExtractOptions::PLATEAUMeshExtractOptions()
       coordinate_zone_id_(9),
       enable_texture_packing_(false),
       texture_packing_resolution_(2048),
-      highest_lod_only_(false) {
+      highest_lod_only_(false) {  // Default false: extract all LODs in range (Unity SDK compatible)
 }
 
 PLATEAUMeshExtractOptions::~PLATEAUMeshExtractOptions() {

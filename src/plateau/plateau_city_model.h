@@ -199,9 +199,9 @@ private:
     HashMap<String, Ref<ImageTexture>> texture_cache_;
 
     // Helper methods for mesh conversion
-    Ref<PLATEAUMeshData> convert_node(const plateau::polygonMesh::Node &node, const String &base_texture_path);
-    Ref<ArrayMesh> convert_mesh(const plateau::polygonMesh::Mesh &mesh, const String &base_texture_path, plateau::polygonMesh::CityObjectList &out_city_object_list, PackedStringArray &out_texture_paths);
-    Ref<StandardMaterial3D> create_material(const plateau::polygonMesh::SubMesh &sub_mesh, const String &base_texture_path);
+    Ref<PLATEAUMeshData> convert_node(const plateau::polygonMesh::Node &node);
+    Ref<ArrayMesh> convert_mesh(const plateau::polygonMesh::Mesh &mesh, plateau::polygonMesh::CityObjectList &out_city_object_list, PackedStringArray &out_texture_paths);
+    Ref<StandardMaterial3D> create_material(const plateau::polygonMesh::SubMesh &sub_mesh);
 
     // Compute flat normals for mesh
     static PackedVector3Array compute_normals(const PackedVector3Array &vertices, const PackedInt32Array &indices);

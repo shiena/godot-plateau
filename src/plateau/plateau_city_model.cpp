@@ -3,11 +3,37 @@
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
+#include <citygml/citygmllogger.h>
 #include <cmath>
 #include <unordered_set>
 #include <unordered_map>
 
 using namespace godot;
+
+// Simple CityGML logger that forwards to Godot's output
+class GodotCityGMLLogger : public citygml::CityGMLLogger {
+public:
+    GodotCityGMLLogger(LOGLEVEL level = LOGLEVEL::LL_WARNING) : CityGMLLogger(level) {}
+
+    void log(LOGLEVEL level, const std::string& message, const char* file, int line) const override {
+        String godot_msg = String::utf8(message.c_str());
+        switch (level) {
+            case LOGLEVEL::LL_ERROR:
+                UtilityFunctions::printerr("[CityGML ERROR] ", godot_msg);
+                break;
+            case LOGLEVEL::LL_WARNING:
+                UtilityFunctions::print("[CityGML WARN] ", godot_msg);
+                break;
+            case LOGLEVEL::LL_INFO:
+                UtilityFunctions::print("[CityGML INFO] ", godot_msg);
+                break;
+            case LOGLEVEL::LL_DEBUG:
+            case LOGLEVEL::LL_TRACE:
+                UtilityFunctions::print("[CityGML DEBUG] ", godot_msg);
+                break;
+        }
+    }
+};
 
 // Type aliases to avoid name collision with godot::Node and godot::Mesh
 using PlateauNode = plateau::polygonMesh::Node;
@@ -290,8 +316,11 @@ bool PLATEAUCityModel::load(const String &gml_path) {
     params.keepVertices = true;
     params.ignoreGeometries = false;
 
+    // Create logger for CityGML parser warnings
+    auto logger = std::make_shared<GodotCityGMLLogger>(citygml::CityGMLLogger::LOGLEVEL::LL_WARNING);
+
     try {
-        city_model_ = citygml::load(path, params);
+        city_model_ = citygml::load(path, params, logger);
         if (city_model_ == nullptr) {
             UtilityFunctions::printerr("Failed to load CityGML file: ", gml_path);
             is_loaded_ = false;
@@ -300,6 +329,7 @@ bool PLATEAUCityModel::load(const String &gml_path) {
 
         gml_path_ = gml_path;
         is_loaded_ = true;
+
         UtilityFunctions::print("Successfully loaded CityGML: ", gml_path);
         return true;
     } catch (const std::exception &e) {
@@ -346,13 +376,10 @@ TypedArray<PLATEAUMeshData> PLATEAUCityModel::extract_meshes(const Ref<PLATEAUMe
             return result;
         }
 
-        // Get base texture path (directory of GML file)
-        String base_path = gml_path_.get_base_dir();
-
         // Convert each root node
         for (size_t i = 0; i < model->getRootNodeCount(); i++) {
             const PlateauNode &node = model->getRootNodeAt(i);
-            Ref<PLATEAUMeshData> mesh_data = convert_node(node, base_path);
+            Ref<PLATEAUMeshData> mesh_data = convert_node(node);
             if (mesh_data.is_valid()) {
                 result.push_back(mesh_data);
             }
@@ -385,7 +412,7 @@ Vector3 PLATEAUCityModel::get_center_point(int coordinate_zone_id) const {
     return Vector3(center.x, center.y, center.z);
 }
 
-Ref<PLATEAUMeshData> PLATEAUCityModel::convert_node(const plateau::polygonMesh::Node &node, const String &base_texture_path) {
+Ref<PLATEAUMeshData> PLATEAUCityModel::convert_node(const plateau::polygonMesh::Node &node) {
     Ref<PLATEAUMeshData> mesh_data;
     mesh_data.instantiate();
 
@@ -398,7 +425,7 @@ Ref<PLATEAUMeshData> PLATEAUCityModel::convert_node(const plateau::polygonMesh::
     PlateauCityObjectList city_object_list;
     PackedStringArray texture_paths;
     if (mesh != nullptr && mesh->hasVertices()) {
-        Ref<ArrayMesh> godot_mesh = convert_mesh(*mesh, base_texture_path, city_object_list, texture_paths);
+        Ref<ArrayMesh> godot_mesh = convert_mesh(*mesh, city_object_list, texture_paths);
         if (godot_mesh.is_valid()) {
             mesh_data->set_mesh(godot_mesh);
             mesh_data->set_city_object_list(city_object_list);
@@ -457,7 +484,7 @@ Ref<PLATEAUMeshData> PLATEAUCityModel::convert_node(const plateau::polygonMesh::
     // Convert children recursively
     for (size_t i = 0; i < node.getChildCount(); i++) {
         const PlateauNode &child = node.getChildAt(i);
-        Ref<PLATEAUMeshData> child_data = convert_node(child, base_texture_path);
+        Ref<PLATEAUMeshData> child_data = convert_node(child);
         if (child_data.is_valid()) {
             mesh_data->add_child(child_data);
         }
@@ -541,7 +568,7 @@ Ref<ImageTexture> PLATEAUCityModel::load_texture_cached(const String &texture_pa
     return texture;
 }
 
-Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &mesh, const String &base_texture_path, PlateauCityObjectList &out_city_object_list, PackedStringArray &out_texture_paths) {
+Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &mesh, PlateauCityObjectList &out_city_object_list, PackedStringArray &out_texture_paths) {
     Ref<ArrayMesh> array_mesh;
     array_mesh.instantiate();
 
@@ -692,11 +719,12 @@ Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &
         array_mesh->add_surface_from_arrays(godot::Mesh::PRIMITIVE_TRIANGLES, arrays);
 
         // Collect texture path for this submesh (for export)
+        // Keep original path format for libplateau export compatibility
         std::string texture_path_str = sub_mesh.getTexturePath();
         out_texture_paths.push_back(String::utf8(texture_path_str.c_str()));
 
         // Create and set material
-        Ref<StandardMaterial3D> material = create_material(sub_mesh, base_texture_path);
+        Ref<StandardMaterial3D> material = create_material(sub_mesh);
         if (material.is_valid()) {
             array_mesh->surface_set_material(array_mesh->get_surface_count() - 1, material);
         }
@@ -705,7 +733,7 @@ Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &
     return array_mesh;
 }
 
-Ref<StandardMaterial3D> PLATEAUCityModel::create_material(const plateau::polygonMesh::SubMesh &sub_mesh, const String &base_texture_path) {
+Ref<StandardMaterial3D> PLATEAUCityModel::create_material(const plateau::polygonMesh::SubMesh &sub_mesh) {
     Ref<StandardMaterial3D> material;
     material.instantiate();
 
@@ -718,20 +746,20 @@ Ref<StandardMaterial3D> PLATEAUCityModel::create_material(const plateau::polygon
 
     if (!texture_path_str.empty()) {
         // libplateau already converts relative paths to absolute paths in mesh_factory.cpp
-        // So we use the path directly
+        // Convert to Godot path format (use forward slashes, simplify path)
         String texture_path = String::utf8(texture_path_str.c_str());
+        // Normalize path separators (Windows uses backslashes)
+        texture_path = texture_path.replace("\\", "/");
+        // Simplify path (resolve .. and .)
+        texture_path = texture_path.simplify_path();
 
         // Try to load texture with caching
         Ref<ImageTexture> texture = const_cast<PLATEAUCityModel*>(this)->load_texture_cached(texture_path);
         if (texture.is_valid()) {
             material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, texture);
             has_texture = true;
-            // Debug: log successful texture load
-            // UtilityFunctions::print("Loaded texture: ", texture_path);
-        } else {
-            // Debug: log failed texture load
-            UtilityFunctions::print("Failed to load texture: ", texture_path);
         }
+        // Note: load_texture_cached already logs failures
     }
 
     // Get material properties from libplateau if available
@@ -983,11 +1011,9 @@ void PLATEAUCityModel::_finalize_meshes_on_main_thread() {
     TypedArray<PLATEAUMeshData> result;
 
     if (pending_model_) {
-        String base_path = gml_path_.get_base_dir();
-
         for (size_t i = 0; i < pending_model_->getRootNodeCount(); i++) {
             const PlateauNode &node = pending_model_->getRootNodeAt(i);
-            Ref<PLATEAUMeshData> mesh_data = convert_node(node, base_path);
+            Ref<PLATEAUMeshData> mesh_data = convert_node(node);
             if (mesh_data.is_valid()) {
                 result.push_back(mesh_data);
             }

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUGmlFile" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		GML file information and utilities for PLATEAU datasets.
+	</brief_description>
+	<description>
+		PLATEAUGmlFile provides access to GML file metadata including grid code, EPSG code, feature type, and dataset root path. It can also search for referenced texture and codelist files within the GML.
+		[codeblock]
+		var gml = PLATEAUGmlFile.create("C:/path/to/udx/bldg/53394601_bldg_6697_op.gml")
+		if gml.is_valid():
+		    print("Grid code: ", gml.get_grid_code())        # 53394601
+		    print("Feature type: ", gml.get_feature_type())  # bldg
+		    print("EPSG: ", gml.get_epsg())                  # 6697
+		    print("Dataset root: ", gml.get_dataset_root_path())
+
+		    # Get texture paths referenced in GML
+		    var textures = gml.search_image_paths()
+		    for tex_path in textures:
+		        print("Texture: ", tex_path)
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="create" qualifiers="static">
+			<return type="PLATEAUGmlFile" />
+			<param index="0" name="path" type="String" />
+			<description>
+				Create a PLATEAUGmlFile from a GML file path.
+			</description>
+		</method>
+		<method name="get_path" qualifiers="const">
+			<return type="String" />
+			<description>
+				Returns the full path to the GML file.
+			</description>
+		</method>
+		<method name="get_grid_code" qualifiers="const">
+			<return type="String" />
+			<description>
+				Returns the grid code (mesh code) extracted from the filename.
+				For example, "53394601" from "53394601_bldg_6697_op.gml".
+			</description>
+		</method>
+		<method name="get_epsg" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the EPSG code extracted from the filename.
+				For example, 6697 from "53394601_bldg_6697_op.gml".
+				Returns 6697 (default for Japan) if not available.
+			</description>
+		</method>
+		<method name="get_feature_type" qualifiers="const">
+			<return type="String" />
+			<description>
+				Returns the feature type extracted from the filename.
+				For example, "bldg" from "53394601_bldg_6697_op.gml".
+				Common types: bldg (building), dem (relief), tran (road), frn (furniture), veg (vegetation).
+			</description>
+		</method>
+		<method name="get_package_type" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the package type as a [enum PLATEAUCityModelPackage] value.
+			</description>
+		</method>
+		<method name="get_appearance_directory_path" qualifiers="const">
+			<return type="String" />
+			<description>
+				Returns the path to the appearance directory where textures are stored.
+				For example, "C:/path/to/udx/bldg/53394601_bldg_6697_appearance".
+			</description>
+		</method>
+		<method name="get_dataset_root_path" qualifiers="const">
+			<return type="String" />
+			<description>
+				Returns the dataset root path (parent of /udx/ directory).
+				For example, "C:/path/to/13103_minato-ku_pref_2023_citygml_2_op" from a GML path like "C:/path/to/13103_minato-ku_pref_2023_citygml_2_op/udx/bldg/53394601_bldg_6697_op.gml".
+			</description>
+		</method>
+		<method name="get_max_lod">
+			<return type="int" />
+			<description>
+				Returns the maximum LOD level available in this GML file.
+				[b]Note:[/b] This searches the GML file content and may be slow for large files.
+			</description>
+		</method>
+		<method name="is_valid" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the GML file information is valid (grid code could be parsed from filename).
+			</description>
+		</method>
+		<method name="search_image_paths" qualifiers="const">
+			<return type="PackedStringArray" />
+			<description>
+				Searches the GML file for all referenced texture image paths.
+				Returns relative paths from the GML file directory.
+				[b]Note:[/b] This searches the GML file content and may be slow for large files.
+			</description>
+		</method>
+		<method name="search_codelist_paths" qualifiers="const">
+			<return type="PackedStringArray" />
+			<description>
+				Searches the GML file for all referenced codelist paths.
+				Returns relative paths from the GML file directory.
+				[b]Note:[/b] This searches the GML file content and may be slow for large files.
+			</description>
+		</method>
+		<method name="get_grid_extent" qualifiers="const">
+			<return type="Dictionary" />
+			<description>
+				Returns the geographic extent (bounding box) of the grid code.
+				The dictionary contains keys: min_lat, max_lat, min_lon, max_lon.
+				Returns an empty dictionary if the grid code is invalid.
+			</description>
+		</method>
+	</methods>
+</class>
