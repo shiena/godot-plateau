@@ -126,6 +126,7 @@ func _import_gml(path: String) -> void:
 	pending_options.max_lod = 2
 	pending_options.mesh_granularity = 1  # Primary feature
 	pending_options.export_appearance = true
+	pending_options.highest_lod_only = true
 
 	# Start async load
 	_show_loading("Loading CityGML...")

@@ -101,6 +101,7 @@ func _load_terrain(path: String) -> void:
 	pending_terrain_options.max_lod = 2
 	pending_terrain_options.mesh_granularity = 2  # Area (merged terrain)
 	pending_terrain_options.export_appearance = false
+	pending_terrain_options.highest_lod_only = true
 
 	# Start async load
 	_show_loading("Loading terrain CityGML...")
@@ -302,6 +303,7 @@ func _load_buildings(path: String) -> void:
 	pending_building_options.max_lod = 2
 	pending_building_options.mesh_granularity = 1  # Primary (per building)
 	pending_building_options.export_appearance = true
+	pending_building_options.highest_lod_only = true
 
 	# Start async load
 	_show_loading("Loading building CityGML...")

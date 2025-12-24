@@ -261,6 +261,7 @@ func _on_import_pressed() -> void:
 	pending_options.max_lod = $UI/DatasetPanel/MaxLODSpin.value
 	pending_options.mesh_granularity = granularity
 	pending_options.export_appearance = $UI/DatasetPanel/TextureCheck.button_pressed
+	pending_options.highest_lod_only = true
 
 	_log("Options: LOD " + str(pending_options.min_lod) + "-" + str(pending_options.max_lod) +
 		 ", Granularity: " + str(granularity) +
@@ -298,6 +299,23 @@ func _import_next_gml() -> void:
 
 	_show_loading("Loading GML " + progress_text + "...")
 	_log("Loading: " + path.get_file() + " " + progress_text)
+
+	# Show GML file metadata using PLATEAUGmlFile (like Unity)
+	var gml_file = PLATEAUGmlFile.create(path)
+	if gml_file.is_valid():
+		_log("  Grid Code: " + gml_file.get_grid_code() + ", Type: " + gml_file.get_feature_type())
+		var textures = gml_file.search_image_paths()
+		if textures.size() > 0:
+			var appearance_dir = gml_file.get_appearance_directory_path()
+			_log("  Loading textures in " + appearance_dir)
+			# Show texture filenames (up to 3 for compact display)
+			var texture_names: PackedStringArray = []
+			for i in range(mini(3, textures.size())):
+				texture_names.append(textures[i].get_file())
+			var names_str = ", ".join(texture_names)
+			if textures.size() > 3:
+				names_str += ", ..."
+			_log("  Loaded " + str(textures.size()) + " textures: " + names_str)
 
 	city_model.load_async(path)
 

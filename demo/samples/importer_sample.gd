@@ -97,6 +97,29 @@ func _import_gml(path: String) -> void:
 	_log("--- Import with PLATEAUImporter ---")
 	_log("File: " + path.get_file())
 
+	# Use PLATEAUGmlFile to get metadata
+	var gml_file = PLATEAUGmlFile.create(path)
+	if gml_file.is_valid():
+		_log("[color=cyan]GML File Info:[/color]")
+		_log("  Grid Code: " + gml_file.get_grid_code())
+		_log("  Feature Type: " + gml_file.get_feature_type())
+		_log("  EPSG: " + str(gml_file.get_epsg()))
+		_log("  Dataset Root: " + gml_file.get_dataset_root_path())
+
+		# Search for textures in GML (like Unity)
+		var texture_paths = gml_file.search_image_paths()
+		if texture_paths.size() > 0:
+			var appearance_dir = gml_file.get_appearance_directory_path()
+			_log("[color=cyan]Loading textures in " + appearance_dir + "[/color]")
+			# Show texture filenames (up to 5)
+			var texture_names: PackedStringArray = []
+			for i in range(mini(5, texture_paths.size())):
+				texture_names.append(texture_paths[i].get_file())
+			var names_str = ", ".join(texture_names)
+			if texture_paths.size() > 5:
+				names_str += ", ..."
+			_log("  Loaded " + str(texture_paths.size()) + " textures: " + names_str)
+
 	# Clear previous import
 	importer.clear_meshes()
 
@@ -107,8 +130,9 @@ func _import_gml(path: String) -> void:
 	pending_options.max_lod = int(max_lod_spin.value)
 	pending_options.mesh_granularity = granularity_option.get_selected_id()
 	pending_options.export_appearance = texture_check.button_pressed
+	pending_options.highest_lod_only = true
 
-	_log("Options:")
+	_log("[color=cyan]Import Options:[/color]")
 	_log("  Zone: " + str(pending_options.coordinate_zone_id))
 	_log("  LOD: " + str(pending_options.min_lod) + "-" + str(pending_options.max_lod))
 	_log("  Granularity: " + granularity_option.get_item_text(granularity_option.selected))
