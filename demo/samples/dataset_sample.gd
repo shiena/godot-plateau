@@ -59,7 +59,8 @@ var selected_dataset_id: String = ""
 @onready var marker: MeshInstance3D = $Marker
 
 var dataset_groups: Array = []
-var mesh_instances: Array[MeshInstance3D] = []
+var city_model_root: PLATEAUInstancedCityModel
+var mesh_instances: Array[MeshInstance3D] = []  # Cached mesh instances for texture application
 var pending_request_type: String = ""
 var download_url: String = ""
 var download_dest: String = ""
@@ -508,25 +509,45 @@ func _on_load_gml_pressed() -> void:
 	_log("Reference point: " + str(center_point))
 
 	var root_mesh_data = city_model.extract_meshes(options)
-	var mesh_data_array = PLATEAUUtils.flatten_mesh_data(Array(root_mesh_data))
 
-	_log("Extracted " + str(mesh_data_array.size()) + " meshes")
+	# Create GeoReference for coordinate conversion
+	geo_reference = PLATEAUGeoReference.new()
+	geo_reference.zone_id = options.coordinate_zone_id
+	geo_reference.reference_point = center_point
 
-	# Create mesh instances
-	var result = PLATEAUUtils.create_mesh_instances(mesh_data_array, mesh_container)
-	mesh_instances = result["instances"]
+	# Use PLATEAUUtils to import to city model
+	var result = PLATEAUUtils.import_to_city_model(
+		Array(root_mesh_data),
+		mesh_container,
+		path.get_file().get_basename(),
+		geo_reference,
+		options,
+		path
+	)
+
+	city_model_root = result["city_model_root"]
+	var flat_mesh_data: Array = result["flat_mesh_data"]
+
+	_log("Extracted " + str(flat_mesh_data.size()) + " meshes")
+
+	# Cache mesh instances for texture application (get from city model root)
+	mesh_instances.clear()
+	if city_model_root != null:
+		_collect_mesh_instances(city_model_root, mesh_instances)
 
 	# Save bounds for texture download
 	mesh_bounds_min = result["bounds_min"]
 	mesh_bounds_max = result["bounds_max"]
 
-	# Create GeoReference for coordinate conversion with the same reference point
-	geo_reference = PLATEAUGeoReference.new()
-	geo_reference.zone_id = options.coordinate_zone_id
-	geo_reference.reference_point = center_point
-
 	# Position camera to view all meshes
-	PLATEAUUtils.fit_camera_to_bounds(camera, result["bounds_min"], result["bounds_max"])
+	PLATEAUUtils.fit_camera_to_bounds(camera, mesh_bounds_min, mesh_bounds_max)
+
+	# Display PLATEAUInstancedCityModel info
+	if city_model_root != null:
+		_log("[color=cyan]PLATEAUInstancedCityModel Info:[/color]")
+		_log("  Zone ID: " + str(city_model_root.zone_id))
+		_log("  Latitude: %.6f" % city_model_root.get_latitude())
+		_log("  Longitude: %.6f" % city_model_root.get_longitude())
 
 	_log("[color=green]Loaded! Meshes: " + str(mesh_instances.size()) + "[/color]")
 
@@ -540,6 +561,14 @@ func _on_load_gml_pressed() -> void:
 	# Enable texture download button
 	apply_texture_button.disabled = true
 	combined_texture = null
+
+
+## Recursively collect all MeshInstance3D nodes under a parent
+func _collect_mesh_instances(parent: Node, instances: Array[MeshInstance3D]) -> void:
+	for child in parent.get_children():
+		if child is MeshInstance3D:
+			instances.append(child)
+		_collect_mesh_instances(child, instances)
 
 
 func _on_download_pressed() -> void:
@@ -641,7 +670,10 @@ func _log(message: String) -> void:
 
 
 func _clear_meshes() -> void:
-	PLATEAUUtils.clear_mesh_instances(mesh_instances)
+	if city_model_root != null and is_instance_valid(city_model_root):
+		city_model_root.queue_free()
+		city_model_root = null
+	mesh_instances.clear()
 
 
 # --- Texture Download Functions ---

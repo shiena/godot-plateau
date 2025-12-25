@@ -17,7 +17,10 @@ extends Node3D
 
 var importer: PLATEAUImporter
 var city_model: PLATEAUCityModel
+var city_model_root: PLATEAUInstancedCityModel
 var pending_options: PLATEAUMeshExtractOptions
+var pending_geo_reference: PLATEAUGeoReference
+var pending_gml_path: String = ""
 var import_start_time: int = 0
 
 @onready var camera: Camera3D = $Camera3D
@@ -144,9 +147,12 @@ func _import_gml(path: String) -> void:
 	importer.generate_collision = collision_check.button_pressed
 
 	# Configure geo reference
-	var geo_ref = PLATEAUGeoReference.new()
-	geo_ref.zone_id = int(zone_spin.value)
-	importer.geo_reference = geo_ref
+	pending_geo_reference = PLATEAUGeoReference.new()
+	pending_geo_reference.zone_id = int(zone_spin.value)
+	importer.geo_reference = pending_geo_reference
+
+	# Store GML path for import_to_scene
+	pending_gml_path = path
 
 	# Start async import
 	import_start_time = Time.get_ticks_msec()
@@ -161,6 +167,12 @@ func _on_load_completed(success: bool) -> void:
 		return
 
 	_log("GML load completed")
+
+	# Update geo reference with center point
+	var center = city_model.get_center_point(pending_geo_reference.zone_id)
+	pending_geo_reference.reference_point = center
+	pending_options.reference_point = center
+
 	_update_loading("Extracting meshes...")
 	city_model.extract_meshes_async(pending_options)
 
@@ -173,11 +185,31 @@ func _on_extract_completed(root_mesh_data: Array) -> void:
 		return
 
 	_update_loading("Building scene hierarchy...")
-	await _build_scene_async(root_mesh_data)
+
+	# Use PLATEAUUtils to import to city model
+	var result = PLATEAUUtils.import_to_city_model(
+		root_mesh_data,
+		importer,
+		pending_gml_path.get_file().get_basename(),
+		pending_geo_reference,
+		pending_options,
+		pending_gml_path
+	)
+
+	city_model_root = result["city_model_root"]
 
 	var elapsed = Time.get_ticks_msec() - import_start_time
 	_hide_loading()
 	_log("[color=green]Import successful! (" + str(elapsed) + " ms)[/color]")
+
+	# Display PLATEAUInstancedCityModel info
+	if city_model_root != null:
+		_log("[color=cyan]PLATEAUInstancedCityModel Info:[/color]")
+		_log("  Zone ID: " + str(city_model_root.zone_id))
+		_log("  Latitude: %.6f" % city_model_root.get_latitude())
+		_log("  Longitude: %.6f" % city_model_root.get_longitude())
+		_log("  Reference Point: " + str(city_model_root.reference_point))
+		_log("  LOD Range: " + str(city_model_root.min_lod) + "-" + str(city_model_root.max_lod))
 
 	# Count imported nodes
 	var mesh_count = _count_mesh_instances(importer)
@@ -294,6 +326,7 @@ func _create_collision_for_mesh(mesh_instance: MeshInstance3D) -> void:
 func _on_clear_pressed() -> void:
 	_log("--- Clear ---")
 	importer.clear_meshes()
+	city_model_root = null
 	_log("All meshes cleared")
 	_update_stats()
 

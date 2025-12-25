@@ -14,8 +14,9 @@ var dataset_source: PLATEAUDatasetSource
 var dataset_path: String = ""
 var city_model: PLATEAUCityModel
 var current_mesh_data: Array = []
-var imported_root: Node3D = null
+var imported_root: Node3D = null  # Container for all PLATEAUInstancedCityModel nodes
 var pending_options: PLATEAUMeshExtractOptions
+var pending_geo_reference: PLATEAUGeoReference
 var pending_gml_files: Array = []
 var current_gml_index: int = 0
 var bounds_min: Vector3 = Vector3.INF
@@ -254,14 +255,19 @@ func _on_import_pressed() -> void:
 	# Setup extraction options
 	var granularity_option = $UI/DatasetPanel/GranularityOption as OptionButton
 	var granularity = granularity_option.get_selected_id()
+	var current_zone_id = int($UI/DatasetPanel/ZoneSpin.value)
 
 	pending_options = PLATEAUMeshExtractOptions.new()
-	pending_options.coordinate_zone_id = int($UI/DatasetPanel/ZoneSpin.value)
+	pending_options.coordinate_zone_id = current_zone_id
 	pending_options.min_lod = $UI/DatasetPanel/MinLODSpin.value
 	pending_options.max_lod = $UI/DatasetPanel/MaxLODSpin.value
 	pending_options.mesh_granularity = granularity
 	pending_options.export_appearance = $UI/DatasetPanel/TextureCheck.button_pressed
 	pending_options.highest_lod_only = true
+
+	# Create GeoReference for import
+	pending_geo_reference = PLATEAUGeoReference.new()
+	pending_geo_reference.zone_id = current_zone_id
 
 	_log("Options: LOD " + str(pending_options.min_lod) + "-" + str(pending_options.max_lod) +
 		 ", Granularity: " + str(granularity) +
@@ -328,57 +334,53 @@ func _on_load_completed(success: bool) -> void:
 		_import_next_gml()
 		return
 
+	# Update geo reference with center point
+	var center = city_model.get_center_point(pending_geo_reference.zone_id)
+	pending_geo_reference.reference_point = center
+	pending_options.reference_point = center
+
 	var progress_text = "(%d/%d)" % [current_gml_index + 1, pending_gml_files.size()]
 	_update_loading("Extracting meshes " + progress_text + "...")
 	city_model.extract_meshes_async(pending_options)
 
 
 func _on_extract_completed(root_mesh_data: Array) -> void:
-	# Flatten hierarchy to get actual meshes
-	var flat_meshes = PLATEAUUtils.flatten_mesh_data(root_mesh_data)
-	var gml_name = pending_gml_files[current_gml_index].get_path().get_file()
+	var gml_path = pending_gml_files[current_gml_index].get_path()
+	var gml_name = gml_path.get_file()
+
+	# Create mesh instances incrementally (with batching to prevent blocking)
+	var progress_text = "(%d/%d)" % [current_gml_index + 1, pending_gml_files.size()]
+	_update_loading("Creating scene " + progress_text + "...")
+
+	# Use PLATEAUUtils to import to city model
+	var result = PLATEAUUtils.import_to_city_model(
+		root_mesh_data,
+		imported_root,
+		gml_name.get_basename(),
+		pending_geo_reference,
+		pending_options,
+		gml_path
+	)
+
+	var city_model_node: PLATEAUInstancedCityModel = result["city_model_root"]
+	var flat_meshes: Array = result["flat_mesh_data"]
+
 	_log("Extracted " + str(flat_meshes.size()) + " meshes from " + gml_name)
 
 	# Add to current mesh data for export/conversion
 	current_mesh_data.append_array(flat_meshes)
 
-	# Create mesh instances incrementally (with batching to prevent blocking)
-	var progress_text = "(%d/%d)" % [current_gml_index + 1, pending_gml_files.size()]
-	_update_loading("Creating meshes " + progress_text + "...")
+	# Update bounds
+	if result["bounds_min"] != Vector3.INF:
+		bounds_min = bounds_min.min(result["bounds_min"])
+		bounds_max = bounds_max.max(result["bounds_max"])
 
-	# Create a container node for this GML file
-	var gml_container = Node3D.new()
-	gml_container.name = gml_name.get_basename()
-	imported_root.add_child(gml_container)
-
-	# Batch processing to prevent UI freeze
-	var batch_size = 50
-	var total = flat_meshes.size()
-	for i in range(0, total, batch_size):
-		var batch_end = mini(i + batch_size, total)
-		for j in range(i, batch_end):
-			var mesh_data = flat_meshes[j]
-			var mesh = mesh_data.get_mesh()
-			if mesh == null or mesh.get_surface_count() == 0:
-				continue
-
-			var mesh_instance = MeshInstance3D.new()
-			mesh_instance.mesh = mesh
-			mesh_instance.transform = mesh_data.get_transform()
-			mesh_instance.name = mesh_data.get_name()
-			gml_container.add_child(mesh_instance)
-
-			# Update bounds
-			var aabb = mesh.get_aabb()
-			var tx = mesh_data.get_transform()
-			bounds_min = bounds_min.min(tx * aabb.position)
-			bounds_max = bounds_max.max(tx * aabb.end)
-
-		# Yield to allow UI updates
-		if total > batch_size:
-			var percent = int((batch_end * 100.0) / total) if total > 0 else 100
-			_update_loading("Creating meshes " + progress_text + ": %d%%" % percent)
-			await get_tree().process_frame
+	# Log PLATEAUInstancedCityModel info for first file
+	if city_model_node != null and current_gml_index == 0:
+		_log("[color=cyan]PLATEAUInstancedCityModel Info:[/color]")
+		_log("  Zone ID: " + str(city_model_node.zone_id))
+		_log("  Latitude: %.6f" % city_model_node.get_latitude())
+		_log("  Longitude: %.6f" % city_model_node.get_longitude())
 
 	# Move to next GML file
 	current_gml_index += 1
@@ -501,8 +503,8 @@ func _convert_granularity(target_granularity: int) -> void:
 	for md in current_mesh_data:
 		typed_array.append(md)
 
-	var current = PLATEAUGranularityConverter.detect_granularity(typed_array)
-	_log("Current granularity (detected): " + granularity_names[current])
+	var current_granularity = PLATEAUGranularityConverter.detect_granularity(typed_array)
+	_log("Current granularity (detected): " + granularity_names[current_granularity])
 
 	var start_time = Time.get_ticks_msec()
 	var converted = converter.convert(typed_array, target_granularity)
@@ -516,45 +518,29 @@ func _convert_granularity(target_granularity: int) -> void:
 	_clear_meshes()
 	current_mesh_data = Array(converted)
 
-	# Create root node
+	# Update options with new granularity
+	if pending_options != null:
+		pending_options.mesh_granularity = target_granularity
+
+	# Create root container
 	var root_name = "Converted_" + granularity_names[target_granularity]
 	imported_root = Node3D.new()
 	imported_root.name = root_name
 	add_child(imported_root)
 
-	# Reset bounds
-	bounds_min = Vector3.INF
-	bounds_max = -Vector3.INF
+	# Use PLATEAUUtils to import to city model
+	_update_loading("Creating scene hierarchy...")
+	var result = PLATEAUUtils.import_to_city_model(
+		Array(converted),
+		imported_root,
+		root_name,
+		pending_geo_reference,
+		pending_options,
+		""
+	)
 
-	# Batch processing to prevent UI freeze
-	_update_loading("Creating mesh instances...")
-	var batch_size = 50
-	var total = converted.size()
-	for i in range(0, total, batch_size):
-		var batch_end = mini(i + batch_size, total)
-		for j in range(i, batch_end):
-			var mesh_data = converted[j]
-			var mesh = mesh_data.get_mesh()
-			if mesh == null or mesh.get_surface_count() == 0:
-				continue
-
-			var mesh_instance = MeshInstance3D.new()
-			mesh_instance.mesh = mesh
-			mesh_instance.transform = mesh_data.get_transform()
-			mesh_instance.name = mesh_data.get_name()
-			imported_root.add_child(mesh_instance)
-
-			# Update bounds
-			var aabb = mesh.get_aabb()
-			var tx = mesh_data.get_transform()
-			bounds_min = bounds_min.min(tx * aabb.position)
-			bounds_max = bounds_max.max(tx * aabb.end)
-
-		# Yield to allow UI updates
-		if total > batch_size:
-			var percent = int((batch_end * 100.0) / total) if total > 0 else 100
-			_update_loading("Creating instances: %d%%" % percent)
-			await get_tree().process_frame
+	bounds_min = result["bounds_min"]
+	bounds_max = result["bounds_max"]
 
 	# Fit camera
 	if bounds_min != Vector3.INF and bounds_max != -Vector3.INF:

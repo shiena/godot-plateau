@@ -16,9 +16,11 @@ extends Node3D
 @export var zone_id: int = 9  ## Japan Plane Rectangular CS (1-19)
 
 var city_model: PLATEAUCityModel
+var importer: PLATEAUImporter
+var city_model_root: PLATEAUInstancedCityModel
 var current_mesh_data: Array = []
-var mesh_instances: Array[MeshInstance3D] = []
 var pending_options: PLATEAUMeshExtractOptions
+var pending_geo_reference: PLATEAUGeoReference
 
 @onready var camera: Camera3D = $Camera3D
 @onready var log_label: RichTextLabel = $UI/LogPanel/ScrollContainer/LogLabel
@@ -54,6 +56,9 @@ func _ready() -> void:
 	city_model = PLATEAUCityModel.new()
 	city_model.load_completed.connect(_on_load_completed)
 	city_model.extract_completed.connect(_on_extract_completed)
+
+	# Setup importer
+	importer = PLATEAUImporter.new()
 
 	_log("PLATEAU SDK API Sample ready.")
 	_log("Click 'Import GML' to load a CityGML file.")
@@ -131,6 +136,10 @@ func _import_gml(path: String) -> void:
 	pending_options.export_appearance = $UI/ImportPanel/TextureCheck.button_pressed
 	pending_options.highest_lod_only = true
 
+	# Create GeoReference for import
+	pending_geo_reference = PLATEAUGeoReference.new()
+	pending_geo_reference.zone_id = zone_id
+
 	_log("Options: LOD " + str(pending_options.min_lod) + "-" + str(pending_options.max_lod) +
 		 ", Granularity: " + str(granularity) +
 		 ", Textures: " + str(pending_options.export_appearance))
@@ -148,6 +157,11 @@ func _on_load_completed(success: bool) -> void:
 
 	_log("Load completed successfully")
 
+	# Update geo reference with center point
+	var center = city_model.get_center_point(zone_id)
+	pending_geo_reference.reference_point = center
+	pending_options.reference_point = center
+
 	# Start async mesh extraction
 	_update_loading("Extracting meshes...")
 	city_model.extract_meshes_async(pending_options)
@@ -157,27 +171,58 @@ func _on_extract_completed(root_mesh_data: Array) -> void:
 	_log("Extract completed")
 	_log("Root nodes extracted: " + str(root_mesh_data.size()))
 
-	# Flatten hierarchy to get actual meshes (children of LOD nodes)
-	current_mesh_data = PLATEAUUtils.flatten_mesh_data(root_mesh_data)
-	_log("Meshes after flatten: " + str(current_mesh_data.size()))
-
-	if current_mesh_data.is_empty():
+	if root_mesh_data.is_empty():
 		_hide_loading()
 		_log("[color=yellow]WARNING: No meshes extracted[/color]")
 		return
 
-	# Create visual representation (async with progress)
-	_update_loading("Creating mesh instances...")
-	var result = await PLATEAUUtils.create_mesh_instances_async(
-		current_mesh_data,
-		self,
-		50,
-		func(percent, current, total):
-			_update_loading("Creating instances: %d/%d (%d%%)" % [current, total, percent])
+	# Convert to TypedArray for import_to_scene
+	var typed_mesh_data: Array[PLATEAUMeshData] = []
+	for md in root_mesh_data:
+		typed_mesh_data.append(md)
+
+	# Use PLATEAUImporter to create PLATEAUInstancedCityModel hierarchy
+	_update_loading("Creating scene hierarchy...")
+	city_model_root = importer.import_to_scene(
+		typed_mesh_data,
+		gml_path.get_file().get_basename(),
+		pending_geo_reference,
+		pending_options,
+		gml_path
 	)
 
-	mesh_instances = result["instances"]
-	PLATEAUUtils.fit_camera_to_bounds(camera, result["bounds_min"], result["bounds_max"])
+	if city_model_root == null:
+		_hide_loading()
+		_log("[color=red]ERROR: Failed to create scene[/color]")
+		return
+
+	add_child(city_model_root)
+
+	# Flatten hierarchy for stats and export
+	current_mesh_data = PLATEAUUtils.flatten_mesh_data(root_mesh_data)
+	_log("Total meshes: " + str(current_mesh_data.size()))
+
+	# Display PLATEAUInstancedCityModel info
+	_log("[color=cyan]PLATEAUInstancedCityModel Info:[/color]")
+	_log("  Zone ID: " + str(city_model_root.zone_id))
+	_log("  Latitude: %.6f" % city_model_root.get_latitude())
+	_log("  Longitude: %.6f" % city_model_root.get_longitude())
+	_log("  Reference Point: " + str(city_model_root.reference_point))
+	_log("  LOD Range: " + str(city_model_root.min_lod) + "-" + str(city_model_root.max_lod))
+
+	# Fit camera to bounds
+	var bounds_min := Vector3.INF
+	var bounds_max := -Vector3.INF
+	for mesh_data in current_mesh_data:
+		var mesh = mesh_data.get_mesh()
+		if mesh != null and mesh.get_surface_count() > 0:
+			var aabb = mesh.get_aabb()
+			var mesh_transform = mesh_data.get_transform()
+			var global_aabb = mesh_transform * aabb
+			bounds_min = bounds_min.min(global_aabb.position)
+			bounds_max = bounds_max.max(global_aabb.position + global_aabb.size)
+
+	PLATEAUUtils.fit_camera_to_bounds(camera, bounds_min, bounds_max)
 
 	_hide_loading()
 	_update_stats()
@@ -198,7 +243,9 @@ func _hide_loading() -> void:
 
 
 func _clear_meshes() -> void:
-	PLATEAUUtils.clear_mesh_instances(mesh_instances)
+	if city_model_root != null and is_instance_valid(city_model_root):
+		city_model_root.queue_free()
+		city_model_root = null
 	current_mesh_data.clear()
 
 
@@ -259,8 +306,8 @@ func _convert_granularity(target_granularity: int) -> void:
 	for md in current_mesh_data:
 		typed_array.append(md)
 
-	var current = PLATEAUGranularityConverter.detect_granularity(typed_array)
-	_log("Current granularity (detected): " + granularity_names[current])
+	var current_granularity = PLATEAUGranularityConverter.detect_granularity(typed_array)
+	_log("Current granularity (detected): " + granularity_names[current_granularity])
 
 	var start_time = Time.get_ticks_msec()
 	var converted = converter.convert(typed_array, target_granularity)
@@ -274,18 +321,36 @@ func _convert_granularity(target_granularity: int) -> void:
 	_clear_meshes()
 	current_mesh_data = Array(converted)
 
-	# Use async for mesh instance creation
-	_show_loading("Creating mesh instances...")
-	var result = await PLATEAUUtils.create_mesh_instances_async(
-		current_mesh_data,
-		self,
-		50,
-		func(percent, _current, _total):
-			_update_loading("Creating instances: %d%%" % percent)
+	# Update options with new granularity
+	if pending_options != null:
+		pending_options.mesh_granularity = target_granularity
+
+	# Create new city model root using import_to_scene
+	_show_loading("Creating scene hierarchy...")
+	city_model_root = importer.import_to_scene(
+		converted,
+		gml_path.get_file().get_basename() + "_converted",
+		pending_geo_reference,
+		pending_options,
+		gml_path
 	)
 
-	mesh_instances = result["instances"]
-	PLATEAUUtils.fit_camera_to_bounds(camera, result["bounds_min"], result["bounds_max"])
+	if city_model_root != null:
+		add_child(city_model_root)
+
+		# Fit camera to bounds
+		var bounds_min := Vector3.INF
+		var bounds_max := -Vector3.INF
+		for mesh_data in current_mesh_data:
+			var mesh = mesh_data.get_mesh()
+			if mesh != null and mesh.get_surface_count() > 0:
+				var aabb = mesh.get_aabb()
+				var mesh_transform = mesh_data.get_transform()
+				var global_aabb = mesh_transform * aabb
+				bounds_min = bounds_min.min(global_aabb.position)
+				bounds_max = bounds_max.max(global_aabb.position + global_aabb.size)
+
+		PLATEAUUtils.fit_camera_to_bounds(camera, bounds_min, bounds_max)
 
 	_hide_loading()
 	_update_stats()

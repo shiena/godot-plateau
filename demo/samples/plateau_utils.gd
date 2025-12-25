@@ -294,3 +294,110 @@ static func get_available_lods(root: Node3D) -> Array[int]:
 
 	lods.sort()
 	return lods
+
+
+## Calculate AABB bounds from mesh data array
+## @param mesh_data_array: Array of PLATEAUMeshData
+## @return: Dictionary with "bounds_min", "bounds_max"
+static func calculate_bounds(mesh_data_array: Array) -> Dictionary:
+	var bounds_min := Vector3.INF
+	var bounds_max := -Vector3.INF
+
+	for mesh_data in mesh_data_array:
+		var mesh = mesh_data.get_mesh()
+		if mesh == null or mesh.get_surface_count() == 0:
+			continue
+
+		var aabb: AABB = mesh.get_aabb()
+		var transform: Transform3D = mesh_data.get_transform()
+		var global_aabb: AABB = transform * aabb
+		bounds_min = bounds_min.min(global_aabb.position)
+		bounds_max = bounds_max.max(global_aabb.position + global_aabb.size)
+
+	return {
+		"bounds_min": bounds_min,
+		"bounds_max": bounds_max
+	}
+
+
+## Import mesh data to scene as PLATEAUInstancedCityModel
+## @param mesh_data_array: Array of PLATEAUMeshData (root level, with hierarchy)
+## @param parent: Parent node to add city model to
+## @param root_name: Name for the root node
+## @param geo_reference: PLATEAUGeoReference for coordinate info
+## @param options: PLATEAUMeshExtractOptions used for import
+## @param gml_path: Path to the source GML file
+## @return: Dictionary with "city_model_root", "flat_mesh_data", "bounds_min", "bounds_max"
+static func import_to_city_model(
+	mesh_data_array: Array,
+	parent: Node,
+	root_name: String,
+	geo_reference: PLATEAUGeoReference = null,
+	options: PLATEAUMeshExtractOptions = null,
+	gml_path: String = ""
+) -> Dictionary:
+	if mesh_data_array.is_empty():
+		return {
+			"city_model_root": null,
+			"flat_mesh_data": [],
+			"bounds_min": Vector3.INF,
+			"bounds_max": -Vector3.INF
+		}
+
+	# Convert to TypedArray
+	var typed_mesh_data: Array[PLATEAUMeshData] = []
+	for md in mesh_data_array:
+		typed_mesh_data.append(md)
+
+	# Create importer and import to scene
+	var importer := PLATEAUImporter.new()
+	var city_model_root: PLATEAUInstancedCityModel = importer.import_to_scene(
+		typed_mesh_data,
+		root_name,
+		geo_reference,
+		options,
+		gml_path
+	)
+
+	if city_model_root == null:
+		return {
+			"city_model_root": null,
+			"flat_mesh_data": [],
+			"bounds_min": Vector3.INF,
+			"bounds_max": -Vector3.INF
+		}
+
+	parent.add_child(city_model_root)
+
+	# Flatten for stats/export
+	var flat_mesh_data := flatten_mesh_data(mesh_data_array)
+
+	# Calculate bounds
+	var bounds := calculate_bounds(flat_mesh_data)
+
+	return {
+		"city_model_root": city_model_root,
+		"flat_mesh_data": flat_mesh_data,
+		"bounds_min": bounds["bounds_min"],
+		"bounds_max": bounds["bounds_max"]
+	}
+
+
+## Clear city model root node
+## @param city_model_root: Reference to PLATEAUInstancedCityModel (will be set to null)
+static func clear_city_model(city_model_root: PLATEAUInstancedCityModel) -> void:
+	if city_model_root != null and is_instance_valid(city_model_root):
+		city_model_root.queue_free()
+
+
+## Create GeoReference from zone_id and update with center point from city model
+## @param city_model: PLATEAUCityModel to get center point from
+## @param zone_id: Japan Plane Rectangular CS zone (1-19)
+## @return: Configured PLATEAUGeoReference
+static func create_geo_reference(city_model: PLATEAUCityModel, zone_id: int) -> PLATEAUGeoReference:
+	var geo_ref := PLATEAUGeoReference.new()
+	geo_ref.zone_id = zone_id
+	if city_model != null and city_model.is_loaded():
+		var center := city_model.get_center_point(zone_id)
+		geo_ref.reference_point = center
+	return geo_ref
