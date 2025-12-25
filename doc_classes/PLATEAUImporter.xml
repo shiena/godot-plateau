@@ -30,11 +30,27 @@
 			</description>
 		</method>
 		<method name="import_to_scene">
-			<return type="Node3D" />
+			<return type="PLATEAUInstancedCityModel" />
 			<param index="0" name="mesh_data_array" type="PLATEAUMeshData[]" />
 			<param index="1" name="root_name" type="String" />
+			<param index="2" name="geo_reference" type="PLATEAUGeoReference" default="null" />
+			<param index="3" name="options" type="PLATEAUMeshExtractOptions" default="null" />
+			<param index="4" name="gml_path" type="String" default="&quot;&quot;" />
 			<description>
-				Create a Node3D hierarchy from pre-extracted mesh data. Returns the root node containing all mesh instances.
+				Create a [PLATEAUInstancedCityModel] hierarchy from pre-extracted mesh data. The returned node contains metadata about the import including GeoReference data, LOD range, and mesh granularity.
+				[codeblock]
+				var city_model = PLATEAUCityModel.new()
+				city_model.load("path/to/file.gml")
+				var meshes = city_model.extract_meshes(options)
+
+				var importer = PLATEAUImporter.new()
+				var root = importer.import_to_scene(meshes, "MyCity", geo_ref, options, "path/to/file.gml")
+				add_child(root)
+
+				# Access metadata from PLATEAUInstancedCityModel
+				print("Zone ID: ", root.zone_id)
+				print("Latitude: ", root.get_latitude())
+				[/codeblock]
 			</description>
 		</method>
 		<method name="clear_meshes">

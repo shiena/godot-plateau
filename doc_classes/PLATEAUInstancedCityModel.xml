@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PLATEAUInstancedCityModel" inherits="Node3D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Root node for imported PLATEAU city model containing metadata and child meshes.
+	</brief_description>
+	<description>
+		PLATEAUInstancedCityModel serves as the root node for imported PLATEAU CityGML data. It stores metadata about the import including geographic reference data, LOD range, and mesh granularity settings. Child nodes contain the actual mesh data organized by LOD levels.
+		This class is similar to Unity SDK's PLATEAUInstancedCityModel and provides methods to access GML transforms and LOD information.
+		[codeblock]
+		# Import and access metadata
+		var importer = PLATEAUImporter.new()
+		var city_model_node = importer.import_to_scene(mesh_data, "Tokyo", geo_ref, options, "path/to/file.gml")
+
+		# Access geographic info
+		print("Latitude: ", city_model_node.get_latitude())
+		print("Longitude: ", city_model_node.get_longitude())
+
+		# Access LOD information
+		var gml_nodes = city_model_node.get_gml_transforms()
+		for gml in gml_nodes:
+		    var lods = city_model_node.get_lods(gml)
+		    print("Available LODs: ", lods)
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_latitude" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the latitude at the origin point (0, 0, 0) of the local coordinate system.
+			</description>
+		</method>
+		<method name="get_longitude" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the longitude at the origin point (0, 0, 0) of the local coordinate system.
+			</description>
+		</method>
+		<method name="get_geo_reference" qualifiers="const">
+			<return type="PLATEAUGeoReference" />
+			<description>
+				Returns a [PLATEAUGeoReference] object for coordinate conversion between latitude/longitude and local coordinates.
+			</description>
+		</method>
+		<method name="get_gml_transforms" qualifiers="const">
+			<return type="Node3D[]" />
+			<description>
+				Returns all direct child Node3D nodes representing GML file containers.
+			</description>
+		</method>
+		<method name="get_lods" qualifiers="const">
+			<return type="PackedInt32Array" />
+			<param index="0" name="gml_transform" type="Node3D" />
+			<description>
+				Returns an array of available LOD numbers for the given GML transform node.
+			</description>
+		</method>
+		<method name="get_lod_transforms" qualifiers="const">
+			<return type="Node3D[]" />
+			<param index="0" name="gml_transform" type="Node3D" />
+			<description>
+				Returns all LOD transform nodes (children starting with "LOD") for the given GML transform.
+			</description>
+		</method>
+		<method name="get_city_objects" qualifiers="const">
+			<return type="Node3D[]" />
+			<param index="0" name="gml_transform" type="Node3D" />
+			<param index="1" name="lod" type="int" />
+			<description>
+				Returns all MeshInstance3D nodes under the specified LOD level for the given GML transform.
+			</description>
+		</method>
+		<method name="parse_lod_from_name" qualifiers="static">
+			<return type="int" />
+			<param index="0" name="name" type="String" />
+			<description>
+				Parses the LOD number from a node name (e.g., "LOD2" returns 2). Returns -1 if the name is not a valid LOD node name.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="zone_id" type="int" setter="set_zone_id" getter="get_zone_id" default="9">
+			Japan Plane Rectangular Coordinate System zone ID (1-19). Default is 9 (Tokyo region).
+		</member>
+		<member name="reference_point" type="Vector3" setter="set_reference_point" getter="get_reference_point" default="Vector3(0, 0, 0)">
+			Reference point (origin) for local coordinates in meters.
+		</member>
+		<member name="unit_scale" type="float" setter="set_unit_scale" getter="get_unit_scale" default="1.0">
+			Unit scale factor for coordinate conversion.
+		</member>
+		<member name="coordinate_system" type="int" setter="set_coordinate_system" getter="get_coordinate_system" default="3">
+			Coordinate system type: 0=ENU, 1=WUN, 2=ESU (Unreal), 3=EUN (Unity/Godot).
+		</member>
+		<member name="gml_path" type="String" setter="set_gml_path" getter="get_gml_path" default="&quot;&quot;">
+			Path to the source GML file.
+		</member>
+		<member name="min_lod" type="int" setter="set_min_lod" getter="get_min_lod" default="0">
+			Minimum LOD level used during import.
+		</member>
+		<member name="max_lod" type="int" setter="set_max_lod" getter="get_max_lod" default="4">
+			Maximum LOD level used during import.
+		</member>
+		<member name="mesh_granularity" type="int" setter="set_mesh_granularity" getter="get_mesh_granularity" default="1">
+			Mesh granularity: 0=Area (combined), 1=Primary (per-building), 2=Atomic (per-component).
+		</member>
+	</members>
+</class>

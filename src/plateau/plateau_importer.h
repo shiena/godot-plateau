@@ -10,6 +10,7 @@
 #include "plateau_city_model.h"
 #include "plateau_mesh_extract_options.h"
 #include "plateau_geo_reference.h"
+#include "plateau_instanced_city_model.h"
 
 namespace godot {
 
@@ -58,8 +59,14 @@ public:
     bool get_show_only_max_lod() const;
 
     // Import mesh data array to scene and return root node
-    // This creates a Node3D hierarchy from pre-extracted mesh data
-    Node3D *import_to_scene(const TypedArray<PLATEAUMeshData> &mesh_data_array, const String &root_name);
+    // This creates a PLATEAUInstancedCityModel hierarchy from pre-extracted mesh data
+    // The returned node contains metadata about the import (GeoReference, LOD range, etc.)
+    PLATEAUInstancedCityModel *import_to_scene(
+        const TypedArray<PLATEAUMeshData> &mesh_data_array,
+        const String &root_name,
+        const Ref<PLATEAUGeoReference> &geo_reference = Ref<PLATEAUGeoReference>(),
+        const Ref<PLATEAUMeshExtractOptions> &options = Ref<PLATEAUMeshExtractOptions>(),
+        const String &gml_path = String());
 
 protected:
     static void _bind_methods();

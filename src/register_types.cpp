@@ -18,6 +18,7 @@
 #include "plateau/plateau_mesh_extract_options.h"
 #include "plateau/plateau_city_model.h"
 #include "plateau/plateau_importer.h"
+#include "plateau/plateau_instanced_city_model.h"
 #include "plateau/plateau_dataset_source.h"
 #include "plateau/plateau_gml_file.h"
 #include "plateau/plateau_granularity_converter.h"
@@ -50,6 +51,7 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(PLATEAUMeshData);
 	GDREGISTER_CLASS(PLATEAUCityModel);
 	GDREGISTER_CLASS(PLATEAUImporter);
+	GDREGISTER_CLASS(PLATEAUInstancedCityModel);
 
 	// Phase 5: Extended features
 	GDREGISTER_CLASS(PLATEAUDatasetMetadata);

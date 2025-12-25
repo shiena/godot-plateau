@@ -119,18 +119,49 @@ bool PLATEAUImporter::is_imported() const {
     return is_imported_;
 }
 
-Node3D *PLATEAUImporter::import_to_scene(const TypedArray<PLATEAUMeshData> &mesh_data_array, const String &root_name) {
+PLATEAUInstancedCityModel *PLATEAUImporter::import_to_scene(
+    const TypedArray<PLATEAUMeshData> &mesh_data_array,
+    const String &root_name,
+    const Ref<PLATEAUGeoReference> &geo_reference,
+    const Ref<PLATEAUMeshExtractOptions> &options,
+    const String &gml_path) {
+
     if (mesh_data_array.is_empty()) {
         UtilityFunctions::printerr("PLATEAUImporter: mesh_data_array is empty");
         return nullptr;
     }
 
-    // Create root node
-    Node3D *root = memnew(Node3D);
+    // Create PLATEAUInstancedCityModel as root node
+    PLATEAUInstancedCityModel *root = memnew(PLATEAUInstancedCityModel);
     root->set_name(root_name.is_empty() ? "PLATEAU_Import" : root_name);
+
+    // Set GeoReference data if provided
+    if (geo_reference.is_valid()) {
+        root->set_zone_id(geo_reference->get_zone_id());
+        root->set_reference_point(geo_reference->get_reference_point());
+        root->set_unit_scale(geo_reference->get_unit_scale());
+        root->set_coordinate_system(geo_reference->get_coordinate_system());
+    }
+
+    // Set import options if provided
+    if (options.is_valid()) {
+        root->set_min_lod(options->get_min_lod());
+        root->set_max_lod(options->get_max_lod());
+        root->set_mesh_granularity(static_cast<int>(options->get_mesh_granularity()));
+    }
+
+    // Set GML path if provided
+    if (!gml_path.is_empty()) {
+        root->set_gml_path(gml_path);
+    }
 
     // Build scene hierarchy under root
     build_scene_hierarchy(mesh_data_array, root);
+
+    // Apply LOD visibility if enabled
+    if (show_only_max_lod_) {
+        apply_lod_visibility(root);
+    }
 
     UtilityFunctions::print("PLATEAUImporter: Created scene with ", mesh_data_array.size(), " root meshes");
     return root;
@@ -349,7 +380,7 @@ void PLATEAUImporter::_bind_methods() {
     // Methods
     ClassDB::bind_method(D_METHOD("import_gml"), &PLATEAUImporter::import_gml);
     ClassDB::bind_method(D_METHOD("import_from_path", "gml_path"), &PLATEAUImporter::import_from_path);
-    ClassDB::bind_method(D_METHOD("import_to_scene", "mesh_data_array", "root_name"), &PLATEAUImporter::import_to_scene);
+    ClassDB::bind_method(D_METHOD("import_to_scene", "mesh_data_array", "root_name", "geo_reference", "options", "gml_path"), &PLATEAUImporter::import_to_scene, DEFVAL(Ref<PLATEAUGeoReference>()), DEFVAL(Ref<PLATEAUMeshExtractOptions>()), DEFVAL(String()));
     ClassDB::bind_method(D_METHOD("clear_meshes"), &PLATEAUImporter::clear_meshes);
     ClassDB::bind_method(D_METHOD("get_city_model"), &PLATEAUImporter::get_city_model);
     ClassDB::bind_method(D_METHOD("is_imported"), &PLATEAUImporter::is_imported);
