@@ -51,6 +51,12 @@ public:
     void set_generate_collision(bool enable);
     bool get_generate_collision() const;
 
+    // LOD visibility control
+    // When true, only the highest LOD nodes are visible (others are hidden)
+    // This prevents z-fighting when highest_lod_only=false is used
+    void set_show_only_max_lod(bool enable);
+    bool get_show_only_max_lod() const;
+
     // Import mesh data array to scene and return root node
     // This creates a Node3D hierarchy from pre-extracted mesh data
     Node3D *import_to_scene(const TypedArray<PLATEAUMeshData> &mesh_data_array, const String &root_name);
@@ -65,11 +71,16 @@ private:
     Ref<PLATEAUCityModel> city_model_;
     bool is_imported_;
     bool generate_collision_;
+    bool show_only_max_lod_;
 
     // Helper methods
     void build_scene_hierarchy(const TypedArray<PLATEAUMeshData> &mesh_data_array, Node3D *parent);
     Node3D *create_node_from_mesh_data(const Ref<PLATEAUMeshData> &mesh_data);
     void create_collision_for_mesh(MeshInstance3D *mesh_instance);
+
+    // LOD visibility helper - hides all but the highest LOD nodes
+    void apply_lod_visibility(Node3D *root);
+    static int parse_lod_from_name(const String &name);
 };
 
 } // namespace godot

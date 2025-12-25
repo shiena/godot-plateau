@@ -69,5 +69,11 @@
 		<member name="generate_collision" type="bool" setter="set_generate_collision" getter="get_generate_collision" default="false">
 			If [code]true[/code], collision shapes will be generated for imported meshes.
 		</member>
+		<member name="show_only_max_lod" type="bool" setter="set_show_only_max_lod" getter="get_show_only_max_lod" default="true">
+			If [code]true[/code], only the highest LOD nodes are visible after import. Other LOD nodes are hidden but remain in the scene tree.
+			This prevents z-fighting when [code]highest_lod_only=false[/code] is used in [member extract_options].
+			When [code]false[/code], all LOD nodes remain visible (may cause z-fighting).
+			Use this to switch between LOD levels at runtime by toggling visibility of LOD0, LOD1, LOD2, etc. nodes.
+		</member>
 	</members>
 </class>

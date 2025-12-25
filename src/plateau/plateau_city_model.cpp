@@ -11,11 +11,17 @@
 using namespace godot;
 
 // Simple CityGML logger that forwards to Godot's output
+// Supports PLATEAULogLevel for controlling verbosity
 class GodotCityGMLLogger : public citygml::CityGMLLogger {
 public:
-    GodotCityGMLLogger(LOGLEVEL level = LOGLEVEL::LL_WARNING) : CityGMLLogger(level) {}
+    // silent_mode: if true, suppress all log output (for LOG_LEVEL_NONE)
+    GodotCityGMLLogger(LOGLEVEL level = LOGLEVEL::LL_WARNING, bool silent_mode = false)
+        : CityGMLLogger(level), silent_mode_(silent_mode) {}
 
     void log(LOGLEVEL level, const std::string& message, const char* file, int line) const override {
+        if (silent_mode_) {
+            return;  // Suppress all log output
+        }
         String godot_msg = String::utf8(message.c_str());
         switch (level) {
             case LOGLEVEL::LL_ERROR:
@@ -33,6 +39,9 @@ public:
                 break;
         }
     }
+
+private:
+    bool silent_mode_;
 };
 
 // Type aliases to avoid name collision with godot::Node and godot::Mesh
@@ -316,8 +325,29 @@ bool PLATEAUCityModel::load(const String &gml_path) {
     params.keepVertices = true;
     params.ignoreGeometries = false;
 
-    // Create logger for CityGML parser warnings
-    auto logger = std::make_shared<GodotCityGMLLogger>(citygml::CityGMLLogger::LOGLEVEL::LL_WARNING);
+    // Create logger for CityGML parser based on log_level_ setting
+    citygml::CityGMLLogger::LOGLEVEL citygml_level;
+    bool silent_mode = false;
+    switch (log_level_) {
+        case LOG_LEVEL_NONE:
+            citygml_level = citygml::CityGMLLogger::LOGLEVEL::LL_ERROR;
+            silent_mode = true;
+            break;
+        case LOG_LEVEL_ERROR:
+            citygml_level = citygml::CityGMLLogger::LOGLEVEL::LL_ERROR;
+            break;
+        case LOG_LEVEL_INFO:
+            citygml_level = citygml::CityGMLLogger::LOGLEVEL::LL_INFO;
+            break;
+        case LOG_LEVEL_DEBUG:
+            citygml_level = citygml::CityGMLLogger::LOGLEVEL::LL_DEBUG;
+            break;
+        case LOG_LEVEL_WARNING:
+        default:
+            citygml_level = citygml::CityGMLLogger::LOGLEVEL::LL_WARNING;
+            break;
+    }
+    auto logger = std::make_shared<GodotCityGMLLogger>(citygml_level, silent_mode);
 
     try {
         city_model_ = citygml::load(path, params, logger);
@@ -908,6 +938,14 @@ int64_t PLATEAUCityModel::get_city_object_type(const String &gml_id) const {
     return static_cast<int64_t>(city_obj->getType());
 }
 
+void PLATEAUCityModel::set_log_level(int level) {
+    log_level_ = level;
+}
+
+int PLATEAUCityModel::get_log_level() const {
+    return log_level_;
+}
+
 void PLATEAUCityModel::_bind_methods() {
     ClassDB::bind_method(D_METHOD("load", "gml_path"), &PLATEAUCityModel::load);
     ClassDB::bind_method(D_METHOD("is_loaded"), &PLATEAUCityModel::is_loaded);
@@ -923,6 +961,18 @@ void PLATEAUCityModel::_bind_methods() {
     ClassDB::bind_method(D_METHOD("load_async", "gml_path"), &PLATEAUCityModel::load_async);
     ClassDB::bind_method(D_METHOD("extract_meshes_async", "options"), &PLATEAUCityModel::extract_meshes_async);
     ClassDB::bind_method(D_METHOD("is_processing"), &PLATEAUCityModel::is_processing);
+
+    // Log level control
+    ClassDB::bind_method(D_METHOD("set_log_level", "level"), &PLATEAUCityModel::set_log_level);
+    ClassDB::bind_method(D_METHOD("get_log_level"), &PLATEAUCityModel::get_log_level);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "log_level", PROPERTY_HINT_ENUM, "None,Error,Warning,Info,Debug"), "set_log_level", "get_log_level");
+
+    // Log level enum constants
+    BIND_CONSTANT(LOG_LEVEL_NONE);
+    BIND_CONSTANT(LOG_LEVEL_ERROR);
+    BIND_CONSTANT(LOG_LEVEL_WARNING);
+    BIND_CONSTANT(LOG_LEVEL_INFO);
+    BIND_CONSTANT(LOG_LEVEL_DEBUG);
 
     // Internal method for deferred call from worker thread (not for GDScript use)
     ClassDB::bind_method(D_METHOD("_finalize_meshes_on_main_thread"), &PLATEAUCityModel::_finalize_meshes_on_main_thread);

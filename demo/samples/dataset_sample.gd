@@ -489,7 +489,10 @@ func _on_load_gml_pressed() -> void:
 	_clear_meshes()
 
 	# Load and display the GML
+	# Suppress codelist file not found errors for downloaded GML files
+	# (downloaded files don't include codelist XMLs, which is expected)
 	var city_model = PLATEAUCityModel.new()
+	city_model.log_level = PLATEAUCityModel.LOG_LEVEL_NONE
 	if not city_model.load(path):
 		_log("[color=red]ERROR: Failed to load GML[/color]")
 		return

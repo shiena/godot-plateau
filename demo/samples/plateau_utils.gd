@@ -212,3 +212,85 @@ static func create_mesh_instances_async(
 		"bounds_min": bounds_min,
 		"bounds_max": bounds_max
 	}
+
+
+## Parse LOD number from node name (e.g., "LOD0", "LOD1", "LOD2")
+## @param name: Node name
+## @return: LOD number or -1 if not an LOD node
+static func parse_lod_from_name(name: String) -> int:
+	if not name.begins_with("LOD"):
+		return -1
+	var num_str := name.substr(3)
+	if num_str.is_valid_int():
+		return num_str.to_int()
+	return -1
+
+
+## Apply LOD visibility control to imported scene
+## Shows only the highest LOD nodes, hides others
+## Use this when highest_lod_only=false to prevent z-fighting
+## @param root: Root node containing LOD0, LOD1, etc. children
+## @return: The max LOD that was set to visible, or -1 if no LOD nodes found
+static func apply_lod_visibility(root: Node3D) -> int:
+	if root == null:
+		return -1
+
+	# Find max LOD among children
+	var max_lod := -1
+	for child in root.get_children():
+		if child is Node3D:
+			var lod := parse_lod_from_name(child.name)
+			if lod > max_lod:
+				max_lod = lod
+
+	# No LOD nodes found
+	if max_lod < 0:
+		return -1
+
+	# Set visibility: only max LOD is visible
+	for child in root.get_children():
+		if child is Node3D:
+			var lod := parse_lod_from_name(child.name)
+			if lod >= 0:
+				child.visible = (lod == max_lod)
+
+	return max_lod
+
+
+## Set specific LOD level visible, hide others
+## @param root: Root node containing LOD0, LOD1, etc. children
+## @param target_lod: LOD level to show (e.g., 0, 1, 2)
+## @return: true if target LOD was found and shown
+static func set_lod_visible(root: Node3D, target_lod: int) -> bool:
+	if root == null:
+		return false
+
+	var found := false
+	for child in root.get_children():
+		if child is Node3D:
+			var lod := parse_lod_from_name(child.name)
+			if lod >= 0:
+				var should_show := (lod == target_lod)
+				child.visible = should_show
+				if should_show:
+					found = true
+
+	return found
+
+
+## Get available LOD levels in the scene
+## @param root: Root node containing LOD0, LOD1, etc. children
+## @return: Array of available LOD numbers (sorted ascending)
+static func get_available_lods(root: Node3D) -> Array[int]:
+	var lods: Array[int] = []
+	if root == null:
+		return lods
+
+	for child in root.get_children():
+		if child is Node3D:
+			var lod := parse_lod_from_name(child.name)
+			if lod >= 0 and lod not in lods:
+				lods.append(lod)
+
+	lods.sort()
+	return lods

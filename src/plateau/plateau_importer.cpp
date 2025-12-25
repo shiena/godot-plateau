@@ -4,7 +4,7 @@
 using namespace godot;
 
 PLATEAUImporter::PLATEAUImporter()
-    : is_imported_(false), generate_collision_(false) {
+    : is_imported_(false), generate_collision_(false), show_only_max_lod_(true) {
     // Note: extract_options_ and geo_reference_ are created lazily
     // to avoid "Instantiated ... used as default value" warning
 }
@@ -85,6 +85,11 @@ bool PLATEAUImporter::import_from_path(const String &gml_path) {
     // Build scene hierarchy
     build_scene_hierarchy(mesh_data_array, this);
 
+    // Apply LOD visibility if enabled
+    if (show_only_max_lod_) {
+        apply_lod_visibility(this);
+    }
+
     is_imported_ = true;
     gml_path_ = gml_path;
 
@@ -137,6 +142,69 @@ void PLATEAUImporter::set_generate_collision(bool enable) {
 
 bool PLATEAUImporter::get_generate_collision() const {
     return generate_collision_;
+}
+
+void PLATEAUImporter::set_show_only_max_lod(bool enable) {
+    show_only_max_lod_ = enable;
+}
+
+bool PLATEAUImporter::get_show_only_max_lod() const {
+    return show_only_max_lod_;
+}
+
+int PLATEAUImporter::parse_lod_from_name(const String &name) {
+    // Parse LOD number from node name (e.g., "LOD0", "LOD1", "LOD2")
+    // Returns -1 if not an LOD node
+    if (!name.begins_with("LOD")) {
+        return -1;
+    }
+    String num_str = name.substr(3);
+    if (num_str.is_valid_int()) {
+        return num_str.to_int();
+    }
+    return -1;
+}
+
+void PLATEAUImporter::apply_lod_visibility(Node3D *root) {
+    if (!root) {
+        return;
+    }
+
+    // Collect all LOD nodes at the root level and find max LOD
+    TypedArray<Node> children = root->get_children();
+    int max_lod = -1;
+
+    for (int i = 0; i < children.size(); i++) {
+        Node3D *child = Object::cast_to<Node3D>(children[i].operator Object*());
+        if (!child) {
+            continue;
+        }
+
+        int lod = parse_lod_from_name(child->get_name());
+        if (lod > max_lod) {
+            max_lod = lod;
+        }
+    }
+
+    // If no LOD nodes found, nothing to do
+    if (max_lod < 0) {
+        return;
+    }
+
+    // Set visibility: only max LOD is visible
+    for (int i = 0; i < children.size(); i++) {
+        Node3D *child = Object::cast_to<Node3D>(children[i].operator Object*());
+        if (!child) {
+            continue;
+        }
+
+        int lod = parse_lod_from_name(child->get_name());
+        if (lod >= 0) {
+            child->set_visible(lod == max_lod);
+        }
+    }
+
+    UtilityFunctions::print("PLATEAUImporter: Applied LOD visibility (max LOD: ", max_lod, ")");
 }
 
 void PLATEAUImporter::build_scene_hierarchy(const TypedArray<PLATEAUMeshData> &mesh_data_array, Node3D *parent) {
@@ -272,6 +340,11 @@ void PLATEAUImporter::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_generate_collision", "enable"), &PLATEAUImporter::set_generate_collision);
     ClassDB::bind_method(D_METHOD("get_generate_collision"), &PLATEAUImporter::get_generate_collision);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "generate_collision"), "set_generate_collision", "get_generate_collision");
+
+    // LOD visibility control
+    ClassDB::bind_method(D_METHOD("set_show_only_max_lod", "enable"), &PLATEAUImporter::set_show_only_max_lod);
+    ClassDB::bind_method(D_METHOD("get_show_only_max_lod"), &PLATEAUImporter::get_show_only_max_lod);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "show_only_max_lod"), "set_show_only_max_lod", "get_show_only_max_lod");
 
     // Methods
     ClassDB::bind_method(D_METHOD("import_gml"), &PLATEAUImporter::import_gml);

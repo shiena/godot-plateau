@@ -66,4 +66,32 @@
 			</description>
 		</method>
 	</methods>
+	<members>
+		<member name="log_level" type="int" setter="set_log_level" getter="get_log_level" default="2">
+			Controls the verbosity of CityGML parser log messages. Use [constant LOG_LEVEL_NONE] to suppress all messages, or [constant LOG_LEVEL_WARNING] (default) for normal operation.
+			This is useful when loading downloaded GML files where missing texture/codelist warnings are expected and can be safely ignored.
+			[codeblock]
+			var city_model = PLATEAUCityModel.new()
+			city_model.log_level = PLATEAUCityModel.LOG_LEVEL_NONE  # Suppress all logs
+			city_model.load("path/to/downloaded.gml")
+			[/codeblock]
+		</member>
+	</members>
+	<constants>
+		<constant name="LOG_LEVEL_NONE" value="0">
+			No log messages. Completely silent operation.
+		</constant>
+		<constant name="LOG_LEVEL_ERROR" value="1">
+			Only error messages.
+		</constant>
+		<constant name="LOG_LEVEL_WARNING" value="2">
+			Warnings and errors. This is the default level.
+		</constant>
+		<constant name="LOG_LEVEL_INFO" value="3">
+			Info, warnings, and errors.
+		</constant>
+		<constant name="LOG_LEVEL_DEBUG" value="4">
+			All messages including debug output.
+		</constant>
+	</constants>
 </class>

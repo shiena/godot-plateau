@@ -68,6 +68,16 @@ enum PLATEAUCityObjectType : int64_t {
     COT_Unknown                     = 1ll << 41,
 };
 
+// Log levels for CityGML parser
+// Controls verbosity of log messages during GML loading
+enum PLATEAULogLevel : int {
+    LOG_LEVEL_NONE = 0,     // No log messages
+    LOG_LEVEL_ERROR = 1,    // Errors only
+    LOG_LEVEL_WARNING = 2,  // Warnings and errors
+    LOG_LEVEL_INFO = 3,     // Info, warnings, and errors
+    LOG_LEVEL_DEBUG = 4,    // All messages including debug
+};
+
 // Represents extracted mesh data for a single node
 class PLATEAUMeshData : public RefCounted {
     GDCLASS(PLATEAUMeshData, RefCounted)
@@ -176,6 +186,10 @@ public:
     void extract_meshes_async(const Ref<PLATEAUMeshExtractOptions> &options);
     bool is_processing() const;
 
+    // Log level control
+    void set_log_level(int level);
+    int get_log_level() const;
+
 protected:
     static void _bind_methods();
 
@@ -183,6 +197,7 @@ private:
     std::shared_ptr<const citygml::CityModel> city_model_;
     String gml_path_;
     bool is_loaded_;
+    int log_level_ = LOG_LEVEL_WARNING;  // Default: show warnings and errors
 
     // Async processing state
     std::atomic<bool> is_processing_{false};
