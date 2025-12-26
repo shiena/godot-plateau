@@ -82,8 +82,8 @@ bool PLATEAUImporter::import_from_path(const String &gml_path) {
         return true;
     }
 
-    // Build scene hierarchy
-    build_scene_hierarchy(mesh_data_array, this);
+    // Build scene hierarchy (this is in scene tree, so set proper owner)
+    build_scene_hierarchy(mesh_data_array, this, get_owner() ? get_owner() : this);
 
     // Apply LOD visibility if enabled
     if (show_only_max_lod_) {
@@ -156,7 +156,8 @@ PLATEAUInstancedCityModel *PLATEAUImporter::import_to_scene(
     }
 
     // Build scene hierarchy under root
-    build_scene_hierarchy(mesh_data_array, root);
+    // Pass nullptr as owner since root is standalone (not yet in scene tree)
+    build_scene_hierarchy(mesh_data_array, root, nullptr);
 
     // Apply LOD visibility if enabled
     if (show_only_max_lod_) {
@@ -238,7 +239,7 @@ void PLATEAUImporter::apply_lod_visibility(Node3D *root) {
     UtilityFunctions::print("PLATEAUImporter: Applied LOD visibility (max LOD: ", max_lod, ")");
 }
 
-void PLATEAUImporter::build_scene_hierarchy(const TypedArray<PLATEAUMeshData> &mesh_data_array, Node3D *parent) {
+void PLATEAUImporter::build_scene_hierarchy(const TypedArray<PLATEAUMeshData> &mesh_data_array, Node3D *parent, Node *owner) {
     for (int i = 0; i < mesh_data_array.size(); i++) {
         Ref<PLATEAUMeshData> mesh_data = mesh_data_array[i];
         if (mesh_data.is_null()) {
@@ -248,12 +249,15 @@ void PLATEAUImporter::build_scene_hierarchy(const TypedArray<PLATEAUMeshData> &m
         Node3D *node = create_node_from_mesh_data(mesh_data);
         if (node) {
             parent->add_child(node);
-            node->set_owner(get_owner() ? get_owner() : this);
+            // Only set owner if provided (standalone scenes don't need owner set)
+            if (owner != nullptr) {
+                node->set_owner(owner);
+            }
 
             // Recursively add children
             TypedArray<PLATEAUMeshData> children = mesh_data->get_children();
             if (!children.is_empty()) {
-                build_scene_hierarchy(children, node);
+                build_scene_hierarchy(children, node, owner);
             }
         }
     }

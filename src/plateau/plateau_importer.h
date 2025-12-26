@@ -81,7 +81,7 @@ private:
     bool show_only_max_lod_;
 
     // Helper methods
-    void build_scene_hierarchy(const TypedArray<PLATEAUMeshData> &mesh_data_array, Node3D *parent);
+    void build_scene_hierarchy(const TypedArray<PLATEAUMeshData> &mesh_data_array, Node3D *parent, Node *owner = nullptr);
     Node3D *create_node_from_mesh_data(const Ref<PLATEAUMeshData> &mesh_data);
     void create_collision_for_mesh(MeshInstance3D *mesh_instance);
 
