@@ -56,28 +56,58 @@ static func create_mesh_instances(mesh_data_array: Array, parent: Node) -> Dicti
 
 
 ## Position camera to view bounds
+## Uses the camera's FOV to calculate proper viewing distance
 ## @param camera: Camera3D to position
 ## @param bounds_min: Minimum corner of AABB
 ## @param bounds_max: Maximum corner of AABB
-## @param height_factor: Camera height relative to size (default 0.5)
-## @param distance_factor: Camera distance relative to size (default 0.8)
+## @param pitch_degrees: Camera pitch angle in degrees (default -30, looking down)
+## @param margin: Extra margin factor for comfortable viewing (default 1.2)
 static func fit_camera_to_bounds(
 	camera: Camera3D,
 	bounds_min: Vector3,
 	bounds_max: Vector3,
-	height_factor: float = 0.5,
-	distance_factor: float = 0.8
+	pitch_degrees: float = -30.0,
+	margin: float = 1.2
 ) -> void:
 	if bounds_min == Vector3.INF or bounds_max == -Vector3.INF:
 		return
 
 	var center := (bounds_min + bounds_max) / 2.0
-	var size := (bounds_max - bounds_min).length()
+	var bounds_size := bounds_max - bounds_min
 
-	if size < 0.001:
-		size = 100.0  # Default size if bounds are too small
+	# Use the largest horizontal dimension for distance calculation
+	var horizontal_size := maxf(bounds_size.x, bounds_size.z)
+	var vertical_size := bounds_size.y
 
-	camera.position = center + Vector3(0, size * height_factor, size * distance_factor)
+	if horizontal_size < 0.001 and vertical_size < 0.001:
+		horizontal_size = 100.0  # Default size if bounds are too small
+
+	# Calculate required distance based on camera FOV
+	var fov_rad := deg_to_rad(camera.fov)
+	var aspect := 16.0 / 9.0  # Default aspect ratio
+	var viewport := camera.get_viewport()
+	if viewport != null:
+		var rect_size := viewport.get_visible_rect().size
+		if rect_size.x > 0.001 and rect_size.y > 0.001:
+			aspect = rect_size.x / rect_size.y
+
+	# Calculate distance to fit both horizontal and vertical extents
+	var distance_for_horizontal := (horizontal_size * margin) / (2.0 * tan(fov_rad / 2.0) * aspect)
+	var distance_for_vertical := (vertical_size * margin) / (2.0 * tan(fov_rad / 2.0))
+	var distance := maxf(distance_for_horizontal, distance_for_vertical)
+
+	# Ensure minimum distance
+	distance = maxf(distance, 10.0)
+
+	# Position camera at pitch angle
+	var pitch_rad := deg_to_rad(pitch_degrees)
+	var horizontal_distance := distance * cos(pitch_rad)
+	var vertical_offset := -distance * sin(pitch_rad)  # Negative because pitch is negative (looking down)
+
+	# Position camera behind and above center (looking from +Z direction)
+	camera.position = center + Vector3(0, vertical_offset, horizontal_distance)
+
+	# Look at center
 	if not camera.position.is_equal_approx(center):
 		camera.look_at(center)
 
