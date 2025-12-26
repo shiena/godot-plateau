@@ -16,6 +16,8 @@ Godot Engine 4.x 向けの PLATEAU SDK GDExtension です。国土交通省が�
 - カメラ距離に基づく動的タイル読み込み
 - 道路ネットワークデータ構造（車線、交差点、歩道）
 - 日本語表示名付きCityObjectType階層
+- GMLファイルメタデータアクセス（グリッドコード、EPSG、地物タイプ）
+- PLATEAUInstancedCityModelによる構造化された都市モデルインポート
 
 ## 主要クラス
 
@@ -154,6 +156,54 @@ manager.tile_loaded.connect(_on_tile_loaded)
 manager.tile_unloaded.connect(_on_tile_unloaded)
 ```
 
+### PLATEAUGmlFile (RefCounted)
+GMLファイルのメタデータにアクセスするためのクラス。
+
+```gdscript
+var gml = PLATEAUGmlFile.create("C:/path/to/udx/bldg/53394601_bldg_6697_op.gml")
+if gml.is_valid():
+    print("グリッドコード: ", gml.get_grid_code())        # 53394601
+    print("地物タイプ: ", gml.get_feature_type())  # bldg
+    print("EPSG: ", gml.get_epsg())                  # 6697
+    print("データセットルート: ", gml.get_dataset_root_path())
+    print("最大LOD: ", gml.get_max_lod())
+
+    # GMLで参照されているテクスチャパスを取得
+    var textures = gml.search_image_paths()
+    for tex_path in textures:
+        print("テクスチャ: ", tex_path)
+
+    # グリッドコードの地理的範囲を取得
+    var extent = gml.get_grid_extent()
+    print("緯度: ", extent.min_lat, " - ", extent.max_lat)
+```
+
+### PLATEAUInstancedCityModel (Node3D)
+インポートされたPLATEAU都市モデルのルートノード。メタデータを保持し、子ノードへのアクセスを提供。
+
+```gdscript
+# PLATEAUImporter.import_to_scene()で作成
+var city_model: PLATEAUInstancedCityModel = importer.import_to_scene(
+    mesh_data_array, "MyCity", geo_reference, options, gml_path
+)
+add_child(city_model)
+
+# メタデータへのアクセス
+print("Zone ID: ", city_model.zone_id)
+print("緯度: ", city_model.get_latitude())
+print("経度: ", city_model.get_longitude())
+print("GMLパス: ", city_model.gml_path)
+
+# 座標変換用のGeoReferenceを取得
+var geo_ref = city_model.get_geo_reference()
+
+# 子トランスフォームへのアクセス
+for gml_transform in city_model.get_gml_transforms():
+    print("GML: ", gml_transform.name)
+    var lods = city_model.get_lods(gml_transform)
+    print("利用可能なLOD: ", lods)
+```
+
 ### PLATEAURnModel (RefCounted)
 道路ネットワークデータのルートコンテナ。道路、交差点、歩道を含む。
 
@@ -191,10 +241,18 @@ var mesh = model.generate_mesh()
 - 浸水リスク（データに含まれる場合）で色分け
 
 ### APIサンプル (`api_sample.tscn`)
-PLATEAU SDKの主要APIを示します。
-- **インポート**: 各種オプション（LOD、粒度、テクスチャ）でCityGMLを読み込み
+PLATEAU SDKの主要APIを示します（データセットフォルダ選択版）。
+- **データセット選択**: PLATEAUデータセットフォルダを選択、パッケージとメッシュコードを選択
+- **インポート**: 各種オプション（LOD、粒度、テクスチャ）で複数GMLを読み込み
 - **エクスポート**: glTF/GLB/OBJ形式でメッシュを保存
 - **粒度変換**: 最小地物/主要地物/地域単位の変換
+
+### APIサンプルシンプル版 (`api_sample_simple.tscn`)
+単一GMLファイルインポート用のシンプル版APIサンプル。
+- **単一ファイルインポート**: 1つのCityGMLファイルを選択して読み込み
+- **エクスポート**: glTF/GLB/OBJ形式でメッシュを保存
+- **粒度変換**: メッシュ粒度レベルの変換
+- シーン構成にPLATEAUInstancedCityModelを使用
 
 ### 地形サンプル (`terrain_sample.tscn`)
 地形関連の機能を示します。
@@ -337,14 +395,18 @@ godot-plateau/
 │       ├── plateau_geo_reference.cpp/h        # 座標変換
 │       ├── plateau_importer.cpp/h             # シーン構築
 │       ├── plateau_mesh_extract_options.cpp/h
+│       ├── plateau_gml_file.cpp/h             # GMLファイルメタデータ
+│       ├── plateau_instanced_city_model.cpp/h # インポートした都市モデルルート
 │       ├── plateau_city_model_scene.cpp/h     # CityModelScene, FilterCondition
 │       ├── plateau_city_object_type.cpp/h     # タイプ階層
 │       ├── plateau_dynamic_tile.cpp/h         # 動的タイル読み込み
 │       └── plateau_road_network.cpp/h         # 道路ネットワークデータ
 ├── doc_classes/        # APIドキュメントXMLファイル
 ├── demo/
-│   └── bin/
-│       └── godot-plateau.gdextension
+│   ├── bin/
+│   │   └── godot-plateau.gdextension
+│   └── samples/
+│       └── plateau_utils.gd    # サンプル用ユーティリティ関数
 ├── libplateau/         # サブモジュール
 ├── godot-cpp/          # サブモジュール
 ├── SConstruct          # SConsビルドスクリプト（推奨）

@@ -65,7 +65,60 @@
 				Get the CityObject type by GML ID. Returns a [enum PLATEAUCityObjectType] value.
 			</description>
 		</method>
+		<method name="load_async">
+			<return type="void" />
+			<param index="0" name="gml_path" type="String" />
+			<description>
+				Load a CityGML file asynchronously in background thread. Emits [signal load_completed] when done.
+				Use [method is_processing] to check if loading is in progress.
+				[codeblock]
+				city_model.load_completed.connect(_on_load_completed)
+				city_model.load_async("path/to/file.gml")
+
+				func _on_load_completed(success: bool):
+				    if success:
+				        city_model.extract_meshes_async(options)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="extract_meshes_async">
+			<return type="void" />
+			<param index="0" name="options" type="PLATEAUMeshExtractOptions" />
+			<description>
+				Extract meshes asynchronously in background thread. Emits [signal extract_completed] when done.
+				The model must be loaded first using [method load] or [method load_async].
+				[codeblock]
+				city_model.extract_completed.connect(_on_extract_completed)
+				city_model.extract_meshes_async(options)
+
+				func _on_extract_completed(meshes: Array):
+				    for mesh_data in meshes:
+				        # Process mesh data
+				        pass
+				[/codeblock]
+			</description>
+		</method>
+		<method name="is_processing" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if an async load or extract operation is in progress.
+			</description>
+		</method>
 	</methods>
+	<signals>
+		<signal name="load_completed">
+			<param index="0" name="success" type="bool" />
+			<description>
+				Emitted when [method load_async] completes. [param success] is [code]true[/code] if the file was loaded successfully.
+			</description>
+		</signal>
+		<signal name="extract_completed">
+			<param index="0" name="mesh_data_array" type="Array" />
+			<description>
+				Emitted when [method extract_meshes_async] completes. [param mesh_data_array] contains the extracted [PLATEAUMeshData] objects.
+			</description>
+		</signal>
+	</signals>
 	<members>
 		<member name="log_level" type="int" setter="set_log_level" getter="get_log_level" default="2">
 			Controls the verbosity of CityGML parser log messages. Use [constant LOG_LEVEL_NONE] to suppress all messages, or [constant LOG_LEVEL_WARNING] (default) for normal operation.

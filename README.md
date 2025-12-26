@@ -18,6 +18,8 @@ A GDExtension for Godot Engine 4.x that enables loading 3D city models (CityGML)
 - Dynamic tile loading based on camera distance
 - Road network data structures (lanes, intersections, sidewalks)
 - CityObjectType hierarchy with Japanese display names
+- GML file metadata access (grid code, EPSG, feature type)
+- Structured city model import with PLATEAUInstancedCityModel
 
 ## Classes
 
@@ -156,6 +158,54 @@ manager.tile_loaded.connect(_on_tile_loaded)
 manager.tile_unloaded.connect(_on_tile_unloaded)
 ```
 
+### PLATEAUGmlFile (RefCounted)
+GML file information and utilities for accessing file metadata.
+
+```gdscript
+var gml = PLATEAUGmlFile.create("C:/path/to/udx/bldg/53394601_bldg_6697_op.gml")
+if gml.is_valid():
+    print("Grid code: ", gml.get_grid_code())        # 53394601
+    print("Feature type: ", gml.get_feature_type())  # bldg
+    print("EPSG: ", gml.get_epsg())                  # 6697
+    print("Dataset root: ", gml.get_dataset_root_path())
+    print("Max LOD: ", gml.get_max_lod())
+
+    # Get texture paths referenced in GML
+    var textures = gml.search_image_paths()
+    for tex_path in textures:
+        print("Texture: ", tex_path)
+
+    # Get geographic extent of grid code
+    var extent = gml.get_grid_extent()
+    print("Lat: ", extent.min_lat, " - ", extent.max_lat)
+```
+
+### PLATEAUInstancedCityModel (Node3D)
+Root node for imported PLATEAU city model. Holds metadata and provides access to child nodes.
+
+```gdscript
+# Created by PLATEAUImporter.import_to_scene()
+var city_model: PLATEAUInstancedCityModel = importer.import_to_scene(
+    mesh_data_array, "MyCity", geo_reference, options, gml_path
+)
+add_child(city_model)
+
+# Access metadata
+print("Zone ID: ", city_model.zone_id)
+print("Latitude: ", city_model.get_latitude())
+print("Longitude: ", city_model.get_longitude())
+print("GML Path: ", city_model.gml_path)
+
+# Get GeoReference for coordinate conversion
+var geo_ref = city_model.get_geo_reference()
+
+# Access child transforms
+for gml_transform in city_model.get_gml_transforms():
+    print("GML: ", gml_transform.name)
+    var lods = city_model.get_lods(gml_transform)
+    print("Available LODs: ", lods)
+```
+
 ### PLATEAURnModel (RefCounted)
 Root container for road network data including roads, intersections, and sidewalks.
 
@@ -193,10 +243,18 @@ Demonstrates how to color-code buildings based on their attributes.
 - Color by flood risk (if available in data)
 
 ### API Sample (`api_sample.tscn`)
-Demonstrates the main PLATEAU SDK APIs.
-- **Import**: Load CityGML files with various options (LOD, granularity, textures)
+Demonstrates the main PLATEAU SDK APIs with dataset folder selection.
+- **Dataset Selection**: Select PLATEAU dataset folder, choose packages and mesh codes
+- **Import**: Load multiple GML files with various options (LOD, granularity, textures)
 - **Export**: Save meshes to glTF/GLB/OBJ formats
 - **Granularity Conversion**: Convert between Atomic/Primary/Area mesh levels
+
+### API Sample Simple (`api_sample_simple.tscn`)
+Simplified version of API Sample for single GML file import.
+- **Single File Import**: Select and load one CityGML file
+- **Export**: Save meshes to glTF/GLB/OBJ formats
+- **Granularity Conversion**: Convert between mesh granularity levels
+- Uses PLATEAUInstancedCityModel for scene organization
 
 ### Terrain Sample (`terrain_sample.tscn`)
 Demonstrates terrain-related features.
@@ -339,14 +397,18 @@ godot-plateau/
 │       ├── plateau_geo_reference.cpp/h        # Coordinate conversion
 │       ├── plateau_importer.cpp/h             # Scene builder
 │       ├── plateau_mesh_extract_options.cpp/h
+│       ├── plateau_gml_file.cpp/h             # GML file metadata
+│       ├── plateau_instanced_city_model.cpp/h # Imported city model root
 │       ├── plateau_city_model_scene.cpp/h     # CityModelScene, FilterCondition
 │       ├── plateau_city_object_type.cpp/h     # Type hierarchy
 │       ├── plateau_dynamic_tile.cpp/h         # Dynamic tile loading
 │       └── plateau_road_network.cpp/h         # Road network data
 ├── doc_classes/        # API documentation XML files
 ├── demo/
-│   └── bin/
-│       └── godot-plateau.gdextension
+│   ├── bin/
+│   │   └── godot-plateau.gdextension
+│   └── samples/
+│       └── plateau_utils.gd    # Sample utility functions
 ├── libplateau/         # Submodule
 ├── godot-cpp/          # Submodule
 ├── SConstruct          # SCons build script (recommended)

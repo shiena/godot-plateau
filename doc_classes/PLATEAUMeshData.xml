@@ -66,6 +66,25 @@
 				Get the GML ID from UV4 coordinates (used for raycast hit lookup).
 			</description>
 		</method>
+		<method name="get_texture_paths" qualifiers="const">
+			<return type="PackedStringArray" />
+			<description>
+				Returns the texture file paths for each surface (used for export operations).
+			</description>
+		</method>
+		<method name="get_texture_path" qualifiers="const">
+			<return type="String" />
+			<param index="0" name="surface_index" type="int" />
+			<description>
+				Returns the texture file path for the specified surface index. Returns an empty string if no texture is assigned.
+			</description>
+		</method>
+		<method name="get_texture_path_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the number of texture paths stored for this mesh.
+			</description>
+		</method>
 	</methods>
 	<members>
 		<member name="name" type="String" setter="set_name" getter="get_name" default="&quot;&quot;">
