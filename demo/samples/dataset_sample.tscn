@@ -233,7 +233,7 @@ offset_top = 30.0
 offset_right = 380.0
 offset_bottom = 55.0
 disabled = true
-text = "Load Selected GML"
+text = "Import to Scene"
 
 [node name="TileSourceLabel" type="Label" parent="UI/TexturePanel"]
 offset_left = 10.0
@@ -277,7 +277,7 @@ offset_left = 200.0
 offset_top = 95.0
 offset_right = 380.0
 offset_bottom = 120.0
-text = "Apply to Terrain"
+text = "Apply Texture"
 disabled = true
 
 [node name="TextureProgress" type="ProgressBar" parent="UI/TexturePanel"]
