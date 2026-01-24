@@ -763,6 +763,14 @@ func _on_load_gml_pressed() -> void:
 	options.mesh_granularity = 1  # Primary
 	options.export_appearance = true
 
+	# Restrict LOD range based on user selection to reduce RID usage
+	if not selected_lod_values.is_empty():
+		var lod_min = selected_lod_values.min()
+		var lod_max = selected_lod_values.max()
+		options.min_lod = lod_min
+		options.max_lod = lod_max
+		_log("LOD range restricted to: %d-%d" % [lod_min, lod_max])
+
 	# Initialize combined bounds
 	var combined_bounds_min = Vector3(INF, INF, INF)
 	var combined_bounds_max = Vector3(-INF, -INF, -INF)
