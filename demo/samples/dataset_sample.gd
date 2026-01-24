@@ -422,7 +422,7 @@ func _handle_files_response(json: Variant) -> void:
 
 			var code = file_info.get("code", "")
 			var url = file_info.get("url", "")
-			var max_lod = file_info.get("maxLod", 0)
+			var max_lod = int(file_info.get("maxLod", 0))  # Convert to int (JSON may return float)
 
 			# Store file data for filtering
 			all_server_files.append({
@@ -695,7 +695,7 @@ func _on_package_selected(_index: int) -> void:
 	for file_info in gml_files:
 		var path = file_info.get_path()
 		var mesh_code = file_info.get_mesh_code()
-		var max_lod = file_info.get_max_lod()
+		var max_lod = int(file_info.get_max_lod())  # Ensure int type
 
 		var display_name = path.get_file()
 		if not mesh_code.is_empty():
@@ -750,8 +750,6 @@ func _on_load_gml_pressed() -> void:
 			selected_lod_values.append(lod_num)
 
 	_log("--- Loading %d GML file(s) ---" % local_files.size())
-	if not selected_lod_values.is_empty():
-		_log("Selected LOD filter: %s" % str(selected_lod_values))
 
 	# Show loading status
 	texture_status.text = "Loading GML..."
@@ -850,12 +848,16 @@ func _on_load_gml_pressed() -> void:
 		_log("  Latitude: %.6f" % city_model_root.get_latitude())
 		_log("  Longitude: %.6f" % city_model_root.get_longitude())
 
-	# Apply user-selected LOD visibility (override PLATEAUImporter's default max LOD behavior)
-	if city_model_root != null and not selected_lod_values.is_empty():
-		_apply_selected_lod_visibility(city_model_root, selected_lod_values)
+	# Apply user-selected LOD visibility to ALL imported city models
+	# (override PLATEAUImporter's default max LOD behavior)
+	if not selected_lod_values.is_empty():
+		_log("Applying LOD filter to all imported models...")
+		for child in mesh_container.get_children():
+			if child is PLATEAUInstancedCityModel:
+				_apply_selected_lod_visibility(child, selected_lod_values)
 		# Re-collect mesh instances after visibility change (only visible ones)
 		mesh_instances.clear()
-		_collect_visible_mesh_instances(city_model_root, mesh_instances)
+		_collect_visible_mesh_instances(mesh_container, mesh_instances)
 		_log("After LOD filter: %d visible meshes" % mesh_instances.size())
 
 	_log("[color=green]Loaded! Files: %d, Meshes: %d[/color]" % [local_files.size(), mesh_instances.size()])
@@ -912,7 +914,6 @@ func _apply_selected_lod_visibility(root: Node3D, selected_lods: Array[int]) -> 
 			if lod >= 0:
 				# Show only if LOD is in selected list
 				child.visible = lod in selected_lods
-				_log("  LOD%d: visible=%s" % [lod, child.visible])
 
 
 func _on_download_pressed() -> void:
