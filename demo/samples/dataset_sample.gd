@@ -741,7 +741,17 @@ func _on_load_gml_pressed() -> void:
 		_log("[color=yellow]No local files to load. Download files first.[/color]")
 		return
 
+	# Get selected LODs from UI (for visibility control after import)
+	var selected_lod_values: Array[int] = []
+	for i in lod_list.get_selected_items():
+		var lod_text = lod_list.get_item_text(i)  # e.g., "LOD1"
+		var lod_num = PLATEAUUtils.parse_lod_from_name(lod_text)
+		if lod_num >= 0:
+			selected_lod_values.append(lod_num)
+
 	_log("--- Loading %d GML file(s) ---" % local_files.size())
+	if not selected_lod_values.is_empty():
+		_log("Selected LOD filter: %s" % str(selected_lod_values))
 
 	# Show loading status
 	texture_status.text = "Loading GML..."
@@ -840,7 +850,16 @@ func _on_load_gml_pressed() -> void:
 		_log("  Latitude: %.6f" % city_model_root.get_latitude())
 		_log("  Longitude: %.6f" % city_model_root.get_longitude())
 
+	# Apply user-selected LOD visibility (override PLATEAUImporter's default max LOD behavior)
+	if city_model_root != null and not selected_lod_values.is_empty():
+		_apply_selected_lod_visibility(city_model_root, selected_lod_values)
+		# Re-collect mesh instances after visibility change (only visible ones)
+		mesh_instances.clear()
+		_collect_visible_mesh_instances(city_model_root, mesh_instances)
+		_log("After LOD filter: %d visible meshes" % mesh_instances.size())
+
 	_log("[color=green]Loaded! Files: %d, Meshes: %d[/color]" % [local_files.size(), mesh_instances.size()])
+
 	texture_status.text = ""
 
 	# Enable texture download button now that meshes are loaded
@@ -865,6 +884,35 @@ func _collect_mesh_instances(parent: Node, instances: Array[MeshInstance3D]) -> 
 		if child is MeshInstance3D:
 			instances.append(child)
 		_collect_mesh_instances(child, instances)
+
+
+## Recursively collect only visible MeshInstance3D nodes
+## Checks if parent LOD node is visible before collecting
+func _collect_visible_mesh_instances(parent: Node, instances: Array[MeshInstance3D]) -> void:
+	for child in parent.get_children():
+		# Skip invisible nodes and their children
+		if child is Node3D and not child.visible:
+			continue
+		if child is MeshInstance3D:
+			instances.append(child)
+		_collect_visible_mesh_instances(child, instances)
+
+
+## Apply LOD visibility based on user's selection
+## Shows only LOD nodes that match the selected LOD values
+## @param root: Root node containing LOD0, LOD1, etc. children
+## @param selected_lods: Array of LOD numbers to show (e.g., [1] for LOD1 only)
+func _apply_selected_lod_visibility(root: Node3D, selected_lods: Array[int]) -> void:
+	if root == null:
+		return
+
+	for child in root.get_children():
+		if child is Node3D:
+			var lod = PLATEAUUtils.parse_lod_from_name(child.name)
+			if lod >= 0:
+				# Show only if LOD is in selected list
+				child.visible = lod in selected_lods
+				_log("  LOD%d: visible=%s" % [lod, child.visible])
 
 
 func _on_download_pressed() -> void:
