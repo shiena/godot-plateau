@@ -28,8 +28,9 @@ var selected_dataset_id: String = ""
 @onready var group_list: ItemList = $UI/DatasetPanel/GroupList
 @onready var dataset_list: ItemList = $UI/DatasetPanel/DatasetList
 @onready var package_option: OptionButton = $UI/FilePanel/PackageOption
-@onready var file_list: ItemList = $UI/FilePanel/FileList
 @onready var mesh_code_list: ItemList = $UI/FilePanel/MeshCodeList
+@onready var lod_list: ItemList = $UI/FilePanel/LODList
+@onready var packages_list: ItemList = $UI/FilePanel/PackagesList
 
 @onready var server_url_edit: LineEdit = $UI/ServerPanel/ServerUrlEdit
 @onready var token_edit: LineEdit = $UI/ServerPanel/TokenEdit
@@ -64,6 +65,11 @@ var mesh_instances: Array[MeshInstance3D] = []  # Cached mesh instances for text
 var pending_request_type: String = ""
 var download_url: String = ""
 var download_dest: String = ""
+var all_server_files: Array = []  # Store all file data for filtering
+
+# GML download queue state
+var gml_download_queue: Array = []  # Array of file_data dictionaries to download
+var gml_download_index: int = 0
 
 # Texture download state
 var tile_downloader: PLATEAUVectorTileDownloader
@@ -98,9 +104,12 @@ func _ready() -> void:
 	group_list.item_selected.connect(_on_group_selected)
 	dataset_list.item_selected.connect(_on_dataset_selected)
 	package_option.item_selected.connect(_on_package_selected)
+	mesh_code_list.multi_selected.connect(_on_mesh_code_selected)
+	lod_list.multi_selected.connect(_on_lod_selected)
+	packages_list.multi_selected.connect(_on_package_filter_selected)
 
-	$UI/FilePanel/LoadGMLButton.pressed.connect(_on_load_gml_pressed)
-	$UI/FilePanel/DownloadButton.pressed.connect(_on_download_pressed)
+	$UI/TexturePanel/LoadGMLButton.pressed.connect(_on_load_gml_pressed)
+	$UI/TexturePanel/DownloadButton.pressed.connect(_on_download_pressed)
 
 	# Connect HTTP signals
 	http_request.request_completed.connect(_on_http_request_completed)
@@ -209,8 +218,14 @@ func _on_fetch_server_pressed() -> void:
 
 	group_list.clear()
 	dataset_list.clear()
-	file_list.clear()
+	mesh_code_list.clear()
+	lod_list.clear()
+	packages_list.clear()
+	all_server_files.clear()
+	gml_download_queue.clear()
 	dataset_groups.clear()
+	_clear_meshes()
+	_update_file_buttons_state()
 
 	# Make HTTP request to /sdk/datasets
 	var full_url = url + "/sdk/datasets"
@@ -310,7 +325,13 @@ func _on_group_selected(index: int) -> void:
 		return
 
 	dataset_list.clear()
-	file_list.clear()
+	mesh_code_list.clear()
+	lod_list.clear()
+	packages_list.clear()
+	all_server_files.clear()
+	gml_download_queue.clear()
+	_clear_meshes()
+	_update_file_buttons_state()
 
 	var group = dataset_groups[index]
 	_log("Selected group: " + group["title"])
@@ -331,6 +352,15 @@ func _on_dataset_selected(index: int) -> void:
 
 	if index < 0 or index >= datasets.size():
 		return
+
+	# Clear previous state
+	mesh_code_list.clear()
+	lod_list.clear()
+	packages_list.clear()
+	all_server_files.clear()
+	gml_download_queue.clear()
+	_clear_meshes()
+	_update_file_buttons_state()
 
 	var dataset = datasets[index]
 	selected_dataset_id = dataset["id"]
@@ -373,9 +403,13 @@ func _handle_files_response(json: Variant) -> void:
 		_log("[color=red]ERROR: Unexpected response format[/color]")
 		return
 
-	file_list.clear()
+	mesh_code_list.clear()
+	lod_list.clear()
+	packages_list.clear()
+	all_server_files.clear()
+	gml_download_queue.clear()
 
-	var total_files = 0
+	var mesh_codes: Dictionary = {}  # Use Dictionary as a Set to collect unique codes
 
 	for package_name in json.keys():
 		var files = json[package_name]
@@ -390,13 +424,199 @@ func _handle_files_response(json: Variant) -> void:
 			var url = file_info.get("url", "")
 			var max_lod = file_info.get("maxLod", 0)
 
-			var display_name = package_name + " [" + code + "] (LOD" + str(max_lod) + ")"
-			file_list.add_item(display_name)
-			file_list.set_item_metadata(file_list.item_count - 1, url)
-			total_files += 1
+			# Store file data for filtering
+			all_server_files.append({
+				"package": package_name,
+				"code": code,
+				"url": url,
+				"max_lod": max_lod,
+				"display_name": package_name + " [" + code + "] (LOD" + str(max_lod) + ")"
+			})
 
-	_log("Found " + str(total_files) + " files")
-	_log("[color=green]Files loaded![/color]")
+			# Collect unique mesh codes
+			if not code.is_empty():
+				mesh_codes[code] = true
+
+	# Add sorted mesh codes to the list
+	var sorted_codes = mesh_codes.keys()
+	sorted_codes.sort()
+	for code in sorted_codes:
+		mesh_code_list.add_item(code)
+
+	# LOD and Packages lists remain empty until Mesh Codes are selected
+
+	_log("Found " + str(all_server_files.size()) + " files")
+	_log("Mesh codes: " + str(sorted_codes.size()))
+	_log("[color=green]Select Mesh Codes to continue[/color]")
+
+
+## Returns filtered files based on current Mesh Codes, LOD, and Packages selection
+func _get_filtered_files() -> Array:
+	# Get selected mesh codes (required)
+	var selected_codes: Array = []
+	for i in mesh_code_list.get_selected_items():
+		selected_codes.append(mesh_code_list.get_item_text(i))
+
+	# Get selected LODs (optional)
+	var selected_lods: Array = []
+	for i in lod_list.get_selected_items():
+		selected_lods.append(lod_list.get_item_text(i))
+
+	# Get selected packages (optional)
+	var selected_packages: Array = []
+	for i in packages_list.get_selected_items():
+		selected_packages.append(packages_list.get_item_text(i))
+
+	# Return files matching all filters
+	var result: Array = []
+	for file_data in all_server_files:
+		# Filter by mesh codes (required)
+		if not selected_codes.is_empty() and not file_data["code"] in selected_codes:
+			continue
+		# Filter by LOD (optional)
+		if not selected_lods.is_empty():
+			var lod_str = "LOD" + str(file_data["max_lod"])
+			if not lod_str in selected_lods:
+				continue
+		# Filter by packages (optional)
+		if not selected_packages.is_empty() and not file_data["package"] in selected_packages:
+			continue
+		result.append(file_data)
+	return result
+
+
+## Update LOD list based on selected Mesh Codes
+func _update_lod_list() -> void:
+	# Remember current selection
+	var prev_selected_lods: Array = []
+	for i in lod_list.get_selected_items():
+		prev_selected_lods.append(lod_list.get_item_text(i))
+
+	lod_list.clear()
+
+	# Get selected mesh codes (required)
+	var selected_codes: Array = []
+	for i in mesh_code_list.get_selected_items():
+		selected_codes.append(mesh_code_list.get_item_text(i))
+
+	# Don't show LODs if no mesh codes are selected
+	if selected_codes.is_empty():
+		return
+
+	# Collect LODs for selected mesh codes
+	var lods: Dictionary = {}
+	for file_data in all_server_files:
+		if file_data["code"] in selected_codes:
+			var lod_str = "LOD" + str(file_data["max_lod"])
+			lods[lod_str] = file_data["max_lod"]
+
+	# Add sorted LODs to the list (sort by numeric value)
+	var sorted_lods = lods.keys()
+	sorted_lods.sort_custom(func(a, b): return lods[a] < lods[b])
+	for lod in sorted_lods:
+		lod_list.add_item(lod)
+		# Restore selection
+		if lod in prev_selected_lods:
+			lod_list.select(lod_list.item_count - 1, false)
+
+
+## Update Packages list based on selected Mesh Codes and LOD
+func _update_packages_list() -> void:
+	# Remember current selection
+	var prev_selected_packages: Array = []
+	for i in packages_list.get_selected_items():
+		prev_selected_packages.append(packages_list.get_item_text(i))
+
+	packages_list.clear()
+
+	# Get selected mesh codes (required)
+	var selected_codes: Array = []
+	for i in mesh_code_list.get_selected_items():
+		selected_codes.append(mesh_code_list.get_item_text(i))
+
+	# Don't show packages if no mesh codes are selected
+	if selected_codes.is_empty():
+		return
+
+	# Get selected LODs (optional)
+	var selected_lods: Array = []
+	for i in lod_list.get_selected_items():
+		selected_lods.append(lod_list.get_item_text(i))
+
+	# Collect packages for selected mesh codes and LODs
+	var packages: Dictionary = {}
+	for file_data in all_server_files:
+		if not file_data["code"] in selected_codes:
+			continue
+		if not selected_lods.is_empty():
+			var lod_str = "LOD" + str(file_data["max_lod"])
+			if not lod_str in selected_lods:
+				continue
+		packages[file_data["package"]] = true
+
+	# Add sorted packages to the list
+	var sorted_packages = packages.keys()
+	sorted_packages.sort()
+	for pkg in sorted_packages:
+		packages_list.add_item(pkg)
+		# Restore selection
+		if pkg in prev_selected_packages:
+			packages_list.select(packages_list.item_count - 1, false)
+
+
+func _update_file_buttons_state() -> void:
+	# Mesh Codes selection is required
+	var has_mesh_code_selection = not mesh_code_list.get_selected_items().is_empty()
+
+	if not has_mesh_code_selection:
+		$UI/TexturePanel/DownloadButton.disabled = true
+		$UI/TexturePanel/LoadGMLButton.disabled = true
+		return
+
+	# Get filtered files based on current selection
+	var filtered_files = _get_filtered_files()
+
+	# Check if any filtered file is remote (needs download) or local (can load directly)
+	var has_remote_files = false
+	var has_local_files = false
+	for file_data in filtered_files:
+		var url = file_data["url"]
+		if url.begins_with("http"):
+			has_remote_files = true
+		else:
+			has_local_files = true
+
+	# Download GML: enabled if has mesh code selection and has remote files
+	$UI/TexturePanel/DownloadButton.disabled = not has_remote_files
+	# Load Selected GML: enabled if has mesh code selection and has local files
+	$UI/TexturePanel/LoadGMLButton.disabled = not has_local_files
+
+
+func _on_mesh_code_selected(_index: int, _selected: bool) -> void:
+	_update_lod_list()
+	_update_packages_list()
+	_update_file_buttons_state()
+	var selected_count = mesh_code_list.get_selected_items().size()
+	var filtered_count = _get_filtered_files().size()
+	if selected_count > 0:
+		_log("Mesh codes: %d selected, %d files match" % [selected_count, filtered_count])
+
+
+func _on_lod_selected(_index: int, _selected: bool) -> void:
+	_update_packages_list()
+	_update_file_buttons_state()
+	var selected_count = lod_list.get_selected_items().size()
+	var filtered_count = _get_filtered_files().size()
+	if selected_count > 0:
+		_log("LOD: %d selected, %d files match" % [selected_count, filtered_count])
+
+
+func _on_package_filter_selected(_index: int, _selected: bool) -> void:
+	_update_file_buttons_state()
+	var selected_count = packages_list.get_selected_items().size()
+	var filtered_count = _get_filtered_files().size()
+	if selected_count > 0:
+		_log("Packages: %d selected, %d files match" % [selected_count, filtered_count])
 
 
 func _on_open_local_pressed() -> void:
@@ -418,7 +638,13 @@ func _open_local_dataset(path: String) -> void:
 
 	group_list.clear()
 	dataset_list.clear()
-	file_list.clear()
+	mesh_code_list.clear()
+	lod_list.clear()
+	packages_list.clear()
+	all_server_files.clear()
+	gml_download_queue.clear()
+	_clear_meshes()
+	_update_file_buttons_state()
 
 	current_source = PLATEAUDatasetSource.create_local(path)
 
@@ -438,6 +664,7 @@ func _update_source_info() -> void:
 	# Show mesh codes
 	var mesh_codes = current_source.get_mesh_codes()
 	mesh_code_list.clear()
+	packages_list.clear()
 	_log("Mesh codes: " + str(mesh_codes.size()))
 	for code in mesh_codes:
 		mesh_code_list.add_item(code)
@@ -450,12 +677,20 @@ func _on_package_selected(_index: int) -> void:
 	if current_source == null or not current_source.is_valid():
 		return
 
-	file_list.clear()
+	# Clear and rebuild all_server_files from local dataset
+	mesh_code_list.clear()
+	lod_list.clear()
+	packages_list.clear()
+	all_server_files.clear()
+	gml_download_queue.clear()
+	_update_file_buttons_state()
 
 	var package_flag = package_option.get_selected_id()
 	var gml_files = current_source.get_gml_files(package_flag)
 
 	_log("Found " + str(gml_files.size()) + " GML files for selected package")
+
+	var mesh_codes: Dictionary = {}
 
 	for file_info in gml_files:
 		var path = file_info.get_path()
@@ -467,77 +702,133 @@ func _on_package_selected(_index: int) -> void:
 			display_name += " [" + mesh_code + "]"
 		display_name += " (LOD" + str(max_lod) + ")"
 
-		file_list.add_item(display_name)
-		file_list.set_item_metadata(file_list.item_count - 1, path)
+		# Store in all_server_files for unified handling
+		all_server_files.append({
+			"package": package_flag,
+			"code": mesh_code,
+			"url": path,  # Local path
+			"max_lod": max_lod,
+			"display_name": display_name
+		})
+
+		# Collect unique mesh codes
+		if not mesh_code.is_empty():
+			mesh_codes[mesh_code] = true
+
+	# Add sorted mesh codes to the list
+	var sorted_codes = mesh_codes.keys()
+	sorted_codes.sort()
+	for code in sorted_codes:
+		mesh_code_list.add_item(code)
+
+	# LOD and Packages lists remain empty until Mesh Codes are selected
+
+	_log("Mesh codes: " + str(sorted_codes.size()))
+	_log("[color=green]Select Mesh Codes to continue[/color]")
 
 
 func _on_load_gml_pressed() -> void:
-	var selected = file_list.get_selected_items()
-	if selected.is_empty():
-		_log("[color=yellow]Select a GML file first[/color]")
+	# Get filtered files (respects GML Files, Mesh Codes, and Packages selection)
+	var filtered_files = _get_filtered_files()
+
+	# Filter to only local files
+	var local_files: Array = []
+	for file_data in filtered_files:
+		if not file_data["url"].begins_with("http"):
+			local_files.append(file_data)
+
+	if local_files.is_empty():
+		_log("[color=yellow]No local files to load. Download files first.[/color]")
 		return
 
-	var path = file_list.get_item_metadata(selected[0])
+	_log("--- Loading %d GML file(s) ---" % local_files.size())
 
-	# Check if it's a URL or local path
-	if path.begins_with("http"):
-		_log("[color=yellow]This is a remote file. Download it first.[/color]")
-		return
-
-	_log("Loading GML: " + path)
+	# Show loading status
+	texture_status.text = "Loading GML..."
+	await get_tree().process_frame
 
 	# Clear previous meshes
 	_clear_meshes()
-
-	# Load and display the GML
-	# Suppress codelist file not found errors for downloaded GML files
-	# (downloaded files don't include codelist XMLs, which is expected)
-	var city_model = PLATEAUCityModel.new()
-	city_model.log_level = PLATEAUCityModel.LOG_LEVEL_NONE
-	if not city_model.load(path):
-		_log("[color=red]ERROR: Failed to load GML[/color]")
-		return
 
 	var options = PLATEAUMeshExtractOptions.new()
 	options.coordinate_zone_id = 9  # Tokyo
 	options.mesh_granularity = 1  # Primary
 	options.export_appearance = true
 
-	# Get center point from CityModel for proper coordinate transformation
-	var center_point = city_model.get_center_point(options.coordinate_zone_id)
-	options.reference_point = center_point
-	_log("Reference point: " + str(center_point))
+	# Initialize combined bounds
+	var combined_bounds_min = Vector3(INF, INF, INF)
+	var combined_bounds_max = Vector3(-INF, -INF, -INF)
+	var first_file = true
+	var total_mesh_count = 0
 
-	var root_mesh_data = city_model.extract_meshes(options)
+	for file_data in local_files:
+		var path = file_data["url"]
+		_log("Loading: " + path.get_file())
 
-	# Create GeoReference for coordinate conversion
-	geo_reference = PLATEAUGeoReference.new()
-	geo_reference.zone_id = options.coordinate_zone_id
-	geo_reference.reference_point = center_point
+		texture_status.text = "Loading: " + path.get_file()
+		await get_tree().process_frame
 
-	# Use PLATEAUUtils to import to city model
-	var result = PLATEAUUtils.import_to_city_model(
-		Array(root_mesh_data),
-		mesh_container,
-		path.get_file().get_basename(),
-		geo_reference,
-		options,
-		path
-	)
+		# Load and display the GML
+		var city_model = PLATEAUCityModel.new()
+		city_model.log_level = PLATEAUCityModel.LOG_LEVEL_NONE
+		if not city_model.load(path):
+			_log("[color=red]ERROR: Failed to load " + path.get_file() + "[/color]")
+			continue
 
-	city_model_root = result["city_model_root"]
-	var flat_mesh_data: Array = result["flat_mesh_data"]
+		# Get center point from first file for reference
+		if first_file:
+			var center_point = city_model.get_center_point(options.coordinate_zone_id)
+			options.reference_point = center_point
+			_log("Reference point: " + str(center_point))
 
-	_log("Extracted " + str(flat_mesh_data.size()) + " meshes")
+			# Create GeoReference for coordinate conversion
+			geo_reference = PLATEAUGeoReference.new()
+			geo_reference.zone_id = options.coordinate_zone_id
+			geo_reference.reference_point = center_point
+			first_file = false
 
-	# Cache mesh instances for texture application (get from city model root)
-	mesh_instances.clear()
-	if city_model_root != null:
-		_collect_mesh_instances(city_model_root, mesh_instances)
+		texture_status.text = "Extracting meshes: " + path.get_file()
+		await get_tree().process_frame
 
-	# Save bounds for texture download
-	mesh_bounds_min = result["bounds_min"]
-	mesh_bounds_max = result["bounds_max"]
+		var root_mesh_data = city_model.extract_meshes(options)
+
+		texture_status.text = "Creating scene: " + path.get_file()
+		await get_tree().process_frame
+
+		# Use PLATEAUUtils to import to city model
+		var result = PLATEAUUtils.import_to_city_model(
+			Array(root_mesh_data),
+			mesh_container,
+			path.get_file().get_basename(),
+			geo_reference,
+			options,
+			path
+		)
+
+		# Track city model root (use last one for info display)
+		city_model_root = result["city_model_root"]
+		var flat_mesh_data: Array = result["flat_mesh_data"]
+		total_mesh_count += flat_mesh_data.size()
+
+		# Collect mesh instances
+		if city_model_root != null:
+			_collect_mesh_instances(city_model_root, mesh_instances)
+
+		# Expand combined bounds
+		var file_bounds_min: Vector3 = result["bounds_min"]
+		var file_bounds_max: Vector3 = result["bounds_max"]
+		combined_bounds_min.x = minf(combined_bounds_min.x, file_bounds_min.x)
+		combined_bounds_min.y = minf(combined_bounds_min.y, file_bounds_min.y)
+		combined_bounds_min.z = minf(combined_bounds_min.z, file_bounds_min.z)
+		combined_bounds_max.x = maxf(combined_bounds_max.x, file_bounds_max.x)
+		combined_bounds_max.y = maxf(combined_bounds_max.y, file_bounds_max.y)
+		combined_bounds_max.z = maxf(combined_bounds_max.z, file_bounds_max.z)
+
+	# Save combined bounds for texture download
+	mesh_bounds_min = combined_bounds_min
+	mesh_bounds_max = combined_bounds_max
+
+	_log("Extracted " + str(total_mesh_count) + " meshes total")
 
 	# Position camera to view all meshes
 	PLATEAUUtils.fit_camera_to_bounds(camera, mesh_bounds_min, mesh_bounds_max)
@@ -549,16 +840,21 @@ func _on_load_gml_pressed() -> void:
 		_log("  Latitude: %.6f" % city_model_root.get_latitude())
 		_log("  Longitude: %.6f" % city_model_root.get_longitude())
 
-	_log("[color=green]Loaded! Meshes: " + str(mesh_instances.size()) + "[/color]")
+	_log("[color=green]Loaded! Files: %d, Meshes: %d[/color]" % [local_files.size(), mesh_instances.size()])
+	texture_status.text = ""
+
+	# Enable texture download button now that meshes are loaded
+	download_texture_button.disabled = mesh_instances.is_empty()
 
 	# Calculate center lat/lon and set navigation UI
-	var center = (mesh_bounds_min + mesh_bounds_max) / 2
-	var center_geo = geo_reference.unproject(center)
-	nav_lat_spin.value = center_geo.x
-	nav_lon_spin.value = center_geo.y
-	_log("Model center: lat=%.6f, lon=%.6f" % [center_geo.x, center_geo.y])
+	if geo_reference != null:
+		var center = (mesh_bounds_min + mesh_bounds_max) / 2
+		var center_geo = geo_reference.unproject(center)
+		nav_lat_spin.value = center_geo.x
+		nav_lon_spin.value = center_geo.y
+		_log("Model center: lat=%.6f, lon=%.6f" % [center_geo.x, center_geo.y])
 
-	# Enable texture download button
+	# Reset texture state
 	apply_texture_button.disabled = true
 	combined_texture = null
 
@@ -572,23 +868,46 @@ func _collect_mesh_instances(parent: Node, instances: Array[MeshInstance3D]) -> 
 
 
 func _on_download_pressed() -> void:
-	var selected = file_list.get_selected_items()
-	if selected.is_empty():
-		_log("[color=yellow]Select a GML file first[/color]")
+	# Get filtered files (respects GML Files, Mesh Codes, and Packages selection)
+	var filtered_files = _get_filtered_files()
+
+	# Filter to only remote files
+	gml_download_queue.clear()
+	for file_data in filtered_files:
+		if file_data["url"].begins_with("http"):
+			gml_download_queue.append(file_data)
+
+	if gml_download_queue.is_empty():
+		_log("[color=yellow]No remote files to download[/color]")
 		return
 
-	var url = file_list.get_item_metadata(selected[0])
-	if not url.begins_with("http"):
-		_log("[color=yellow]Selected file is local, no download needed[/color]")
+	_log("--- Downloading %d GML file(s) ---" % gml_download_queue.size())
+
+	# Disable buttons during download
+	$UI/TexturePanel/DownloadButton.disabled = true
+	$UI/TexturePanel/LoadGMLButton.disabled = true
+
+	gml_download_index = 0
+	_download_next_gml()
+
+
+func _download_next_gml() -> void:
+	if gml_download_index >= gml_download_queue.size():
+		# All downloads complete
+		_log("[color=green]All downloads complete![/color]")
+		status_label.text = ""
+		_update_file_buttons_state()
 		return
 
-	_log("Downloading: " + url)
-	status_label.text = "Downloading..."
+	var file_data = gml_download_queue[gml_download_index]
+	var url = file_data["url"]
+
+	status_label.text = "Downloading %d/%d: %s" % [gml_download_index + 1, gml_download_queue.size(), url.get_file()]
+	_log("Downloading %d/%d: %s" % [gml_download_index + 1, gml_download_queue.size(), url.get_file()])
 
 	var dest_dir = OS.get_user_data_dir() + "/downloads"
 	DirAccess.make_dir_recursive_absolute(dest_dir)
 
-	# Extract filename from URL
 	var filename = url.get_file()
 	if filename.is_empty():
 		filename = "download_" + str(Time.get_unix_time_from_system()) + ".gml"
@@ -596,34 +915,33 @@ func _on_download_pressed() -> void:
 	download_dest = dest_dir + "/" + filename
 	download_url = url
 
-	# For file downloads, we typically don't need auth (CMS server rejects it)
 	var headers: PackedStringArray = []
-
 	download_request.download_file = download_dest
 	var error = download_request.request(url, headers, HTTPClient.METHOD_GET)
 
 	if error != OK:
 		_log("[color=red]ERROR: Failed to start download: " + str(error) + "[/color]")
-		status_label.text = ""
+		gml_download_index += 1
+		call_deferred("_download_next_gml")
 
 
 func _on_download_completed(result: int, response_code: int, _headers: PackedStringArray, _body: PackedByteArray) -> void:
-	status_label.text = ""
-
 	if result != HTTPRequest.RESULT_SUCCESS:
 		_log("[color=red]ERROR: Download failed (result: " + str(result) + ")[/color]")
-		return
-
-	if response_code != 200:
+	elif response_code != 200:
 		_log("[color=red]ERROR: HTTP " + str(response_code) + "[/color]")
-		return
+	else:
+		_log("[color=green]Downloaded: " + download_dest.get_file() + "[/color]")
 
-	_log("[color=green]Downloaded to: " + download_dest + "[/color]")
+		# Update the URL in all_server_files to local path
+		for i in range(all_server_files.size()):
+			if all_server_files[i]["url"] == download_url:
+				all_server_files[i]["url"] = download_dest
+				break
 
-	# Update the file list item to use local path
-	var selected = file_list.get_selected_items()
-	if not selected.is_empty():
-		file_list.set_item_metadata(selected[0], download_dest)
+	# Continue to next file
+	gml_download_index += 1
+	_download_next_gml()
 
 
 func _packages_to_string(flags: int) -> String:
@@ -674,6 +992,8 @@ func _clear_meshes() -> void:
 		city_model_root.queue_free()
 		city_model_root = null
 	mesh_instances.clear()
+	download_texture_button.disabled = true
+	apply_texture_button.disabled = true
 
 
 # --- Texture Download Functions ---
@@ -904,6 +1224,10 @@ func _on_apply_texture_pressed() -> void:
 		_log("[color=yellow]No meshes to apply texture to[/color]")
 		return
 
+	# Show processing status
+	texture_status.text = "Applying texture to meshes..."
+	await get_tree().process_frame
+
 	_log("--- Applying Texture to Meshes ---")
 	_log("[color=yellow]Note: This feature is designed for terrain (Relief/DEM) data.[/color]")
 	_log("[color=yellow]Meshes with existing textures will be skipped.[/color]")
@@ -966,6 +1290,7 @@ func _on_apply_texture_pressed() -> void:
 			applied_count += 1
 
 	_log("[color=green]Texture applied to %d meshes (skipped %d with existing textures)[/color]" % [applied_count, skipped_count])
+	texture_status.text = ""
 
 
 func _remap_mesh_uvs_to_geographic(mesh: Mesh, min_lat: float, max_lat: float, min_lon: float, max_lon: float, transform: Transform3D) -> ArrayMesh:
