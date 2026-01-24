@@ -64,7 +64,17 @@ var current_filter_mode: FilterMode = FilterMode.BY_MESH_CODE
 @onready var nav_lat_spin: SpinBox = $UI/NavigationPanel/LatSpin
 @onready var nav_lon_spin: SpinBox = $UI/NavigationPanel/LonSpin
 @onready var jump_to_location_button: Button = $UI/NavigationPanel/JumpToLocationButton
+@onready var rotate_check: CheckButton = $UI/NavigationPanel/RotateCheck
 @onready var marker: MeshInstance3D = $Marker
+
+# Camera rotation state
+enum RotateMode { NONE, PANORAMA, ORBIT }
+var camera_rotate_mode: RotateMode = RotateMode.NONE
+var camera_rotate_speed: float = 0.3  # radians per second
+var camera_orbit_center: Vector3 = Vector3.ZERO
+var camera_orbit_radius: float = 0.0
+var camera_orbit_angle: float = 0.0
+var camera_orbit_height: float = 0.0
 
 var dataset_groups: Array = []
 var city_model_root: PLATEAUInstancedCityModel
@@ -147,6 +157,7 @@ func _ready() -> void:
 	jump_center_button.pressed.connect(_on_jump_center_pressed)
 	fit_view_button.pressed.connect(_on_fit_view_pressed)
 	jump_to_location_button.pressed.connect(_on_jump_to_location_pressed)
+	rotate_check.toggled.connect(_on_rotate_toggled)
 
 	# Setup marker (red sphere)
 	var sphere = SphereMesh.new()
@@ -164,6 +175,23 @@ func _ready() -> void:
 	_log("")
 	_log("Note: Production server requires Bearer token.")
 	_log("Check 'Use Mock Server' for testing without auth.")
+
+
+func _process(delta: float) -> void:
+	if camera_rotate_mode == RotateMode.NONE:
+		return
+
+	match camera_rotate_mode:
+		RotateMode.PANORAMA:
+			# Rotate camera in place (look around)
+			camera.rotate_y(-camera_rotate_speed * delta)
+		RotateMode.ORBIT:
+			# Orbit around the center point
+			camera_orbit_angle += camera_rotate_speed * delta
+			var x = camera_orbit_center.x + camera_orbit_radius * cos(camera_orbit_angle)
+			var z = camera_orbit_center.z + camera_orbit_radius * sin(camera_orbit_angle)
+			camera.position = Vector3(x, camera_orbit_height, z)
+			camera.look_at(camera_orbit_center)
 
 
 func _setup_package_options() -> void:
@@ -1748,7 +1776,13 @@ func _on_jump_center_pressed() -> void:
 	camera.position = center + Vector3(0, 100, 150)
 	camera.look_at(center)
 
-	_log("Jumped to center: lat=%.6f, lon=%.6f" % [center_geo.x, center_geo.y])
+	# Setup panorama rotation mode if rotate is enabled
+	if rotate_check.button_pressed:
+		camera_rotate_mode = RotateMode.PANORAMA
+		_log("Jumped to center (panorama rotation): lat=%.6f, lon=%.6f" % [center_geo.x, center_geo.y])
+	else:
+		camera_rotate_mode = RotateMode.NONE
+		_log("Jumped to center: lat=%.6f, lon=%.6f" % [center_geo.x, center_geo.y])
 
 
 func _on_fit_view_pressed() -> void:
@@ -1758,13 +1792,28 @@ func _on_fit_view_pressed() -> void:
 
 	PLATEAUUtils.fit_camera_to_bounds(camera, mesh_bounds_min, mesh_bounds_max)
 	marker.visible = false
-	_log("Fit view to model bounds")
+
+	# Setup orbit rotation mode if rotate is enabled
+	if rotate_check.button_pressed:
+		camera_orbit_center = (mesh_bounds_min + mesh_bounds_max) / 2
+		var cam_pos = camera.position
+		camera_orbit_radius = Vector2(cam_pos.x - camera_orbit_center.x, cam_pos.z - camera_orbit_center.z).length()
+		camera_orbit_height = cam_pos.y
+		camera_orbit_angle = atan2(cam_pos.z - camera_orbit_center.z, cam_pos.x - camera_orbit_center.x)
+		camera_rotate_mode = RotateMode.ORBIT
+		_log("Fit view (orbit rotation)")
+	else:
+		camera_rotate_mode = RotateMode.NONE
+		_log("Fit view to model bounds")
 
 
 func _on_jump_to_location_pressed() -> void:
 	if geo_reference == null:
 		_log("[color=yellow]Load a GML file first to set coordinate zone[/color]")
 		return
+
+	# Stop any rotation
+	_stop_camera_rotation()
 
 	var lat = nav_lat_spin.value
 	var lon = nav_lon_spin.value
@@ -1783,3 +1832,16 @@ func _on_jump_to_location_pressed() -> void:
 	camera.look_at(xyz)
 
 	_log("Jumped to: lat=%.6f, lon=%.6f -> xyz=(%.2f, %.2f, %.2f)" % [lat, lon, xyz.x, xyz.y, xyz.z])
+
+
+func _on_rotate_toggled(enabled: bool) -> void:
+	if not enabled:
+		_stop_camera_rotation()
+		_log("Camera rotation stopped")
+	else:
+		_log("Camera rotation enabled (use Jump to Center or Fit View to start)")
+
+
+func _stop_camera_rotation() -> void:
+	camera_rotate_mode = RotateMode.NONE
+	rotate_check.button_pressed = false

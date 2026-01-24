@@ -327,7 +327,7 @@ theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
 offset_left = 410.0
 offset_top = 220.0
 offset_right = 800.0
-offset_bottom = 360.0
+offset_bottom = 390.0
 
 [node name="Title" type="Label" parent="UI/NavigationPanel"]
 offset_left = 10.0
@@ -391,6 +391,13 @@ offset_top = 95.0
 offset_right = 380.0
 offset_bottom = 120.0
 text = "Jump to Lat/Lon"
+
+[node name="RotateCheck" type="CheckButton" parent="UI/NavigationPanel"]
+offset_left = 10.0
+offset_top = 125.0
+offset_right = 380.0
+offset_bottom = 150.0
+text = "Rotate Camera"
 
 [node name="LogPanel" type="Panel" parent="UI"]
 anchors_preset = 3
