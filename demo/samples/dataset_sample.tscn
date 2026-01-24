@@ -160,48 +160,76 @@ offset_right = 280.0
 offset_bottom = 52.0
 visible = false
 
-[node name="MeshCodeLabel" type="Label" parent="UI/FilePanel"]
-offset_left = 10.0
-offset_top = 30.0
-offset_right = 200.0
-offset_bottom = 50.0
+[node name="FilterTabContainer" type="TabContainer" parent="UI/FilePanel"]
+offset_left = 5.0
+offset_top = 28.0
+offset_right = 385.0
+offset_bottom = 460.0
+
+[node name="By Mesh Code" type="VBoxContainer" parent="UI/FilePanel/FilterTabContainer"]
+layout_mode = 2
+
+[node name="MeshCodeLabel" type="Label" parent="UI/FilePanel/FilterTabContainer/By Mesh Code"]
+layout_mode = 2
 text = "Mesh Codes (required):"
 
-[node name="MeshCodeList" type="ItemList" parent="UI/FilePanel"]
-offset_left = 10.0
-offset_top = 50.0
-offset_right = 380.0
-offset_bottom = 200.0
+[node name="MeshCodeList" type="ItemList" parent="UI/FilePanel/FilterTabContainer/By Mesh Code"]
+custom_minimum_size = Vector2(0, 130)
+layout_mode = 2
 select_mode = 1
 max_columns = 3
 
-[node name="LODLabel" type="Label" parent="UI/FilePanel"]
-offset_left = 10.0
-offset_top = 205.0
-offset_right = 150.0
-offset_bottom = 225.0
+[node name="LODLabel" type="Label" parent="UI/FilePanel/FilterTabContainer/By Mesh Code"]
+layout_mode = 2
 text = "LOD (optional):"
 
-[node name="LODList" type="ItemList" parent="UI/FilePanel"]
-offset_left = 10.0
-offset_top = 225.0
-offset_right = 380.0
-offset_bottom = 325.0
+[node name="LODList" type="ItemList" parent="UI/FilePanel/FilterTabContainer/By Mesh Code"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
 select_mode = 1
 max_columns = 4
 
-[node name="PackagesLabel" type="Label" parent="UI/FilePanel"]
-offset_left = 10.0
-offset_top = 330.0
-offset_right = 180.0
-offset_bottom = 350.0
+[node name="PackagesLabel" type="Label" parent="UI/FilePanel/FilterTabContainer/By Mesh Code"]
+layout_mode = 2
 text = "Packages (optional):"
 
-[node name="PackagesList" type="ItemList" parent="UI/FilePanel"]
-offset_left = 10.0
-offset_top = 350.0
-offset_right = 380.0
-offset_bottom = 450.0
+[node name="PackagesList" type="ItemList" parent="UI/FilePanel/FilterTabContainer/By Mesh Code"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+select_mode = 1
+max_columns = 4
+
+[node name="By Package" type="VBoxContainer" parent="UI/FilePanel/FilterTabContainer"]
+visible = false
+layout_mode = 2
+
+[node name="PackagesLabel2" type="Label" parent="UI/FilePanel/FilterTabContainer/By Package"]
+layout_mode = 2
+text = "Packages (required):"
+
+[node name="PackagesList2" type="ItemList" parent="UI/FilePanel/FilterTabContainer/By Package"]
+custom_minimum_size = Vector2(0, 130)
+layout_mode = 2
+select_mode = 1
+max_columns = 4
+
+[node name="MeshCodeLabel2" type="Label" parent="UI/FilePanel/FilterTabContainer/By Package"]
+layout_mode = 2
+text = "Mesh Codes (required):"
+
+[node name="MeshCodeList2" type="ItemList" parent="UI/FilePanel/FilterTabContainer/By Package"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+select_mode = 1
+max_columns = 3
+
+[node name="LODLabel2" type="Label" parent="UI/FilePanel/FilterTabContainer/By Package"]
+layout_mode = 2
+text = "LOD (optional):"
+
+[node name="LODList2" type="ItemList" parent="UI/FilePanel/FilterTabContainer/By Package"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
 select_mode = 1
 max_columns = 4
 

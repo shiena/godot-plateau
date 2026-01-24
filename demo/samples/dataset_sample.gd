@@ -28,9 +28,16 @@ var selected_dataset_id: String = ""
 @onready var group_list: ItemList = $UI/DatasetPanel/GroupList
 @onready var dataset_list: ItemList = $UI/DatasetPanel/DatasetList
 @onready var package_option: OptionButton = $UI/FilePanel/PackageOption
-@onready var mesh_code_list: ItemList = $UI/FilePanel/MeshCodeList
-@onready var lod_list: ItemList = $UI/FilePanel/LODList
-@onready var packages_list: ItemList = $UI/FilePanel/PackagesList
+@onready var filter_tab_container: TabContainer = $"UI/FilePanel/FilterTabContainer"
+@onready var mesh_code_list: ItemList = $"UI/FilePanel/FilterTabContainer/By Mesh Code/MeshCodeList"
+@onready var lod_list: ItemList = $"UI/FilePanel/FilterTabContainer/By Mesh Code/LODList"
+@onready var packages_list: ItemList = $"UI/FilePanel/FilterTabContainer/By Mesh Code/PackagesList"
+@onready var packages_list_2: ItemList = $"UI/FilePanel/FilterTabContainer/By Package/PackagesList2"
+@onready var mesh_code_list_2: ItemList = $"UI/FilePanel/FilterTabContainer/By Package/MeshCodeList2"
+@onready var lod_list_2: ItemList = $"UI/FilePanel/FilterTabContainer/By Package/LODList2"
+
+enum FilterMode { BY_MESH_CODE, BY_PACKAGE }
+var current_filter_mode: FilterMode = FilterMode.BY_MESH_CODE
 
 @onready var server_url_edit: LineEdit = $UI/ServerPanel/ServerUrlEdit
 @onready var token_edit: LineEdit = $UI/ServerPanel/TokenEdit
@@ -107,6 +114,12 @@ func _ready() -> void:
 	mesh_code_list.multi_selected.connect(_on_mesh_code_selected)
 	lod_list.multi_selected.connect(_on_lod_selected)
 	packages_list.multi_selected.connect(_on_package_filter_selected)
+
+	# Tab 2 (By Package) signal connections
+	filter_tab_container.tab_changed.connect(_on_filter_tab_changed)
+	packages_list_2.multi_selected.connect(_on_package_2_selected)
+	mesh_code_list_2.multi_selected.connect(_on_mesh_code_2_selected)
+	lod_list_2.multi_selected.connect(_on_lod_2_selected)
 
 	$UI/TexturePanel/LoadGMLButton.pressed.connect(_on_load_gml_pressed)
 	$UI/TexturePanel/DownloadButton.pressed.connect(_on_download_pressed)
@@ -218,9 +231,7 @@ func _on_fetch_server_pressed() -> void:
 
 	group_list.clear()
 	dataset_list.clear()
-	mesh_code_list.clear()
-	lod_list.clear()
-	packages_list.clear()
+	_clear_filter_lists()
 	all_server_files.clear()
 	gml_download_queue.clear()
 	dataset_groups.clear()
@@ -325,9 +336,7 @@ func _on_group_selected(index: int) -> void:
 		return
 
 	dataset_list.clear()
-	mesh_code_list.clear()
-	lod_list.clear()
-	packages_list.clear()
+	_clear_filter_lists()
 	all_server_files.clear()
 	gml_download_queue.clear()
 	_clear_meshes()
@@ -354,9 +363,7 @@ func _on_dataset_selected(index: int) -> void:
 		return
 
 	# Clear previous state
-	mesh_code_list.clear()
-	lod_list.clear()
-	packages_list.clear()
+	_clear_filter_lists()
 	all_server_files.clear()
 	gml_download_queue.clear()
 	_clear_meshes()
@@ -403,18 +410,19 @@ func _handle_files_response(json: Variant) -> void:
 		_log("[color=red]ERROR: Unexpected response format[/color]")
 		return
 
-	mesh_code_list.clear()
-	lod_list.clear()
-	packages_list.clear()
+	_clear_filter_lists()
 	all_server_files.clear()
 	gml_download_queue.clear()
 
 	var mesh_codes: Dictionary = {}  # Use Dictionary as a Set to collect unique codes
+	var packages: Dictionary = {}  # Collect unique package names for Tab 2
 
 	for package_name in json.keys():
 		var files = json[package_name]
 		if not files is Array:
 			continue
+
+		packages[package_name] = true  # Collect package name
 
 		for file_info in files:
 			if not file_info is Dictionary:
@@ -437,21 +445,40 @@ func _handle_files_response(json: Variant) -> void:
 			if not code.is_empty():
 				mesh_codes[code] = true
 
-	# Add sorted mesh codes to the list
+	# Tab 1: Add sorted mesh codes to the list with tooltips
 	var sorted_codes = mesh_codes.keys()
 	sorted_codes.sort()
 	for code in sorted_codes:
 		mesh_code_list.add_item(code)
+		var latlon = _mesh_code_to_latlon(code)
+		if not latlon.is_empty():
+			var tooltip = "Center: %.4f, %.4f" % [latlon["lat"], latlon["lon"]]
+			mesh_code_list.set_item_tooltip(mesh_code_list.item_count - 1, tooltip)
+
+	# Tab 2: Add sorted packages to PackagesList2
+	var sorted_packages = packages.keys()
+	sorted_packages.sort()
+	for pkg in sorted_packages:
+		packages_list_2.add_item(pkg)
 
 	# LOD and Packages lists remain empty until Mesh Codes are selected
 
 	_log("Found " + str(all_server_files.size()) + " files")
 	_log("Mesh codes: " + str(sorted_codes.size()))
-	_log("[color=green]Select Mesh Codes to continue[/color]")
+	_log("Packages: " + str(sorted_packages.size()))
+	_log("[color=green]Select filters to continue[/color]")
 
 
-## Returns filtered files based on current Mesh Codes, LOD, and Packages selection
+## Returns filtered files based on current filter mode and selections
 func _get_filtered_files() -> Array:
+	if current_filter_mode == FilterMode.BY_PACKAGE:
+		return _get_filtered_files_by_package()
+	else:
+		return _get_filtered_files_by_mesh_code()
+
+
+## Returns filtered files for Tab 1 (By Mesh Code): Mesh Codes → LOD → Packages
+func _get_filtered_files_by_mesh_code() -> Array:
 	# Get selected mesh codes (required)
 	var selected_codes: Array = []
 	for i in mesh_code_list.get_selected_items():
@@ -481,6 +508,41 @@ func _get_filtered_files() -> Array:
 		# Filter by packages (optional)
 		if not selected_packages.is_empty() and not file_data["package"] in selected_packages:
 			continue
+		result.append(file_data)
+	return result
+
+
+## Returns filtered files for Tab 2 (By Package): Packages → Mesh Codes → LOD
+func _get_filtered_files_by_package() -> Array:
+	# Get selected packages (required)
+	var selected_packages: Array = []
+	for i in packages_list_2.get_selected_items():
+		selected_packages.append(packages_list_2.get_item_text(i))
+
+	# Get selected mesh codes (required)
+	var selected_codes: Array = []
+	for i in mesh_code_list_2.get_selected_items():
+		selected_codes.append(mesh_code_list_2.get_item_text(i))
+
+	# Get selected LODs (optional)
+	var selected_lods: Array = []
+	for i in lod_list_2.get_selected_items():
+		selected_lods.append(lod_list_2.get_item_text(i))
+
+	# Return files matching all filters
+	var result: Array = []
+	for file_data in all_server_files:
+		# Filter by packages (required)
+		if not selected_packages.is_empty() and not file_data["package"] in selected_packages:
+			continue
+		# Filter by mesh codes (required)
+		if not selected_codes.is_empty() and not file_data["code"] in selected_codes:
+			continue
+		# Filter by LOD (optional)
+		if not selected_lods.is_empty():
+			var lod_str = "LOD" + str(file_data["max_lod"])
+			if not lod_str in selected_lods:
+				continue
 		result.append(file_data)
 	return result
 
@@ -565,10 +627,18 @@ func _update_packages_list() -> void:
 
 
 func _update_file_buttons_state() -> void:
-	# Mesh Codes selection is required
-	var has_mesh_code_selection = not mesh_code_list.get_selected_items().is_empty()
+	var has_required_selection = false
 
-	if not has_mesh_code_selection:
+	if current_filter_mode == FilterMode.BY_PACKAGE:
+		# Tab 2: Packages AND Mesh Codes are required
+		var has_package_selection = not packages_list_2.get_selected_items().is_empty()
+		var has_mesh_code_selection = not mesh_code_list_2.get_selected_items().is_empty()
+		has_required_selection = has_package_selection and has_mesh_code_selection
+	else:
+		# Tab 1: Mesh Codes are required
+		has_required_selection = not mesh_code_list.get_selected_items().is_empty()
+
+	if not has_required_selection:
 		$UI/TexturePanel/DownloadButton.disabled = true
 		$UI/TexturePanel/LoadGMLButton.disabled = true
 		return
@@ -586,9 +656,9 @@ func _update_file_buttons_state() -> void:
 		else:
 			has_local_files = true
 
-	# Download GML: enabled if has mesh code selection and has remote files
+	# Download GML: enabled if has required selection and has remote files
 	$UI/TexturePanel/DownloadButton.disabled = not has_remote_files
-	# Load Selected GML: enabled if has mesh code selection and has local files
+	# Load Selected GML: enabled if has required selection and has local files
 	$UI/TexturePanel/LoadGMLButton.disabled = not has_local_files
 
 
@@ -619,6 +689,127 @@ func _on_package_filter_selected(_index: int, _selected: bool) -> void:
 		_log("Packages: %d selected, %d files match" % [selected_count, filtered_count])
 
 
+# --- Tab 2 (By Package) Handlers ---
+
+func _on_filter_tab_changed(tab: int) -> void:
+	if tab == 0:
+		current_filter_mode = FilterMode.BY_MESH_CODE
+		_log("Filter mode: By Mesh Code")
+	else:
+		current_filter_mode = FilterMode.BY_PACKAGE
+		_log("Filter mode: By Package")
+
+	# Reset selections when switching tabs
+	_clear_filter_selections()
+	_update_file_buttons_state()
+
+
+func _on_package_2_selected(_index: int, _selected: bool) -> void:
+	_update_mesh_code_list_2()
+	lod_list_2.clear()  # Clear LOD when packages change
+	_update_file_buttons_state()
+	var selected_count = packages_list_2.get_selected_items().size()
+	if selected_count > 0:
+		_log("Packages: %d selected" % selected_count)
+
+
+func _on_mesh_code_2_selected(_index: int, _selected: bool) -> void:
+	_update_lod_list_2()
+	_update_file_buttons_state()
+	var selected_count = mesh_code_list_2.get_selected_items().size()
+	var filtered_count = _get_filtered_files().size()
+	if selected_count > 0:
+		_log("Mesh codes: %d selected, %d files match" % [selected_count, filtered_count])
+
+
+func _on_lod_2_selected(_index: int, _selected: bool) -> void:
+	_update_file_buttons_state()
+	var selected_count = lod_list_2.get_selected_items().size()
+	var filtered_count = _get_filtered_files().size()
+	if selected_count > 0:
+		_log("LOD: %d selected, %d files match" % [selected_count, filtered_count])
+
+
+## Update MeshCodeList2 based on selected Packages in Tab 2
+func _update_mesh_code_list_2() -> void:
+	# Remember current selection
+	var prev_selected_codes: Array = []
+	for i in mesh_code_list_2.get_selected_items():
+		prev_selected_codes.append(mesh_code_list_2.get_item_text(i))
+
+	mesh_code_list_2.clear()
+
+	# Get selected packages (required)
+	var selected_packages: Array = []
+	for i in packages_list_2.get_selected_items():
+		selected_packages.append(packages_list_2.get_item_text(i))
+
+	# Don't show mesh codes if no packages are selected
+	if selected_packages.is_empty():
+		return
+
+	# Collect mesh codes for selected packages
+	var codes: Dictionary = {}
+	for file_data in all_server_files:
+		if file_data["package"] in selected_packages:
+			var code = file_data["code"]
+			if not code.is_empty():
+				codes[code] = true
+
+	# Add sorted codes to the list with tooltips
+	var sorted_codes = codes.keys()
+	sorted_codes.sort()
+	for code in sorted_codes:
+		mesh_code_list_2.add_item(code)
+		var latlon = _mesh_code_to_latlon(code)
+		if not latlon.is_empty():
+			var tooltip = "Center: %.4f, %.4f" % [latlon["lat"], latlon["lon"]]
+			mesh_code_list_2.set_item_tooltip(mesh_code_list_2.item_count - 1, tooltip)
+		# Restore selection
+		if code in prev_selected_codes:
+			mesh_code_list_2.select(mesh_code_list_2.item_count - 1, false)
+
+
+## Update LODList2 based on selected Packages and Mesh Codes in Tab 2
+func _update_lod_list_2() -> void:
+	# Remember current selection
+	var prev_selected_lods: Array = []
+	for i in lod_list_2.get_selected_items():
+		prev_selected_lods.append(lod_list_2.get_item_text(i))
+
+	lod_list_2.clear()
+
+	# Get selected packages (required)
+	var selected_packages: Array = []
+	for i in packages_list_2.get_selected_items():
+		selected_packages.append(packages_list_2.get_item_text(i))
+
+	# Get selected mesh codes (required)
+	var selected_codes: Array = []
+	for i in mesh_code_list_2.get_selected_items():
+		selected_codes.append(mesh_code_list_2.get_item_text(i))
+
+	# Don't show LODs if packages or mesh codes are not selected
+	if selected_packages.is_empty() or selected_codes.is_empty():
+		return
+
+	# Collect LODs for selected packages and mesh codes
+	var lods: Dictionary = {}
+	for file_data in all_server_files:
+		if file_data["package"] in selected_packages and file_data["code"] in selected_codes:
+			var lod_str = "LOD" + str(file_data["max_lod"])
+			lods[lod_str] = file_data["max_lod"]
+
+	# Add sorted LODs to the list (sort by numeric value)
+	var sorted_lods = lods.keys()
+	sorted_lods.sort_custom(func(a, b): return lods[a] < lods[b])
+	for lod in sorted_lods:
+		lod_list_2.add_item(lod)
+		# Restore selection
+		if lod in prev_selected_lods:
+			lod_list_2.select(lod_list_2.item_count - 1, false)
+
+
 func _on_open_local_pressed() -> void:
 	if not local_dataset_path.is_empty():
 		_open_local_dataset(local_dataset_path)
@@ -638,9 +829,7 @@ func _open_local_dataset(path: String) -> void:
 
 	group_list.clear()
 	dataset_list.clear()
-	mesh_code_list.clear()
-	lod_list.clear()
-	packages_list.clear()
+	_clear_filter_lists()
 	all_server_files.clear()
 	gml_download_queue.clear()
 	_clear_meshes()
@@ -678,15 +867,14 @@ func _on_package_selected(_index: int) -> void:
 		return
 
 	# Clear and rebuild all_server_files from local dataset
-	mesh_code_list.clear()
-	lod_list.clear()
-	packages_list.clear()
+	_clear_filter_lists()
 	all_server_files.clear()
 	gml_download_queue.clear()
 	_update_file_buttons_state()
 
 	var package_flag = package_option.get_selected_id()
 	var gml_files = current_source.get_gml_files(package_flag)
+	var package_name = _package_flag_to_name(package_flag)
 
 	_log("Found " + str(gml_files.size()) + " GML files for selected package")
 
@@ -702,9 +890,9 @@ func _on_package_selected(_index: int) -> void:
 			display_name += " [" + mesh_code + "]"
 		display_name += " (LOD" + str(max_lod) + ")"
 
-		# Store in all_server_files for unified handling
+		# Store in all_server_files for unified handling (use string package name)
 		all_server_files.append({
-			"package": package_flag,
+			"package": package_name,
 			"code": mesh_code,
 			"url": path,  # Local path
 			"max_lod": max_lod,
@@ -715,16 +903,24 @@ func _on_package_selected(_index: int) -> void:
 		if not mesh_code.is_empty():
 			mesh_codes[mesh_code] = true
 
-	# Add sorted mesh codes to the list
+	# Tab 1: Add sorted mesh codes to the list with tooltips
 	var sorted_codes = mesh_codes.keys()
 	sorted_codes.sort()
 	for code in sorted_codes:
 		mesh_code_list.add_item(code)
+		var latlon = _mesh_code_to_latlon(code)
+		if not latlon.is_empty():
+			var tooltip = "Center: %.4f, %.4f" % [latlon["lat"], latlon["lon"]]
+			mesh_code_list.set_item_tooltip(mesh_code_list.item_count - 1, tooltip)
+
+	# Tab 2: Add package name to PackagesList2 (for local dataset, only one package at a time)
+	if not package_name.is_empty():
+		packages_list_2.add_item(package_name)
 
 	# LOD and Packages lists remain empty until Mesh Codes are selected
 
 	_log("Mesh codes: " + str(sorted_codes.size()))
-	_log("[color=green]Select Mesh Codes to continue[/color]")
+	_log("[color=green]Select filters to continue[/color]")
 
 
 func _on_load_gml_pressed() -> void:
@@ -743,8 +939,9 @@ func _on_load_gml_pressed() -> void:
 
 	# Get selected LODs from UI (for visibility control after import)
 	var selected_lod_values: Array[int] = []
-	for i in lod_list.get_selected_items():
-		var lod_text = lod_list.get_item_text(i)  # e.g., "LOD1"
+	var active_lod_list = lod_list_2 if current_filter_mode == FilterMode.BY_PACKAGE else lod_list
+	for i in active_lod_list.get_selected_items():
+		var lod_text = active_lod_list.get_item_text(i)  # e.g., "LOD1"
 		var lod_num = PLATEAUUtils.parse_lod_from_name(lod_text)
 		if lod_num >= 0:
 			selected_lod_values.append(lod_num)
@@ -755,8 +952,13 @@ func _on_load_gml_pressed() -> void:
 	texture_status.text = "Loading GML..."
 	await get_tree().process_frame
 
-	# Clear previous meshes
+	# Clear previous meshes and log RID usage
+	_log("Clearing previous meshes...")
+	_log_rid_usage()
 	_clear_meshes()
+	await get_tree().process_frame  # Wait for queue_free to complete
+	_log("After clearing:")
+	_log_rid_usage()
 
 	var options = PLATEAUMeshExtractOptions.new()
 	options.coordinate_zone_id = 9  # Tokyo
@@ -869,6 +1071,7 @@ func _on_load_gml_pressed() -> void:
 		_log("After LOD filter: %d visible meshes" % mesh_instances.size())
 
 	_log("[color=green]Loaded! Files: %d, Meshes: %d[/color]" % [local_files.size(), mesh_instances.size()])
+	_log_rid_usage()
 
 	texture_status.text = ""
 
@@ -1024,6 +1227,74 @@ func _packages_to_string(flags: int) -> String:
 	return ", ".join(names) if not names.is_empty() else "None"
 
 
+## Convert package flag to short name (for local dataset compatibility with server format)
+func _package_flag_to_name(flag: int) -> String:
+	match flag:
+		PLATEAUDatasetSource.PACKAGE_BUILDING:
+			return "bldg"
+		PLATEAUDatasetSource.PACKAGE_ROAD:
+			return "tran"
+		PLATEAUDatasetSource.PACKAGE_RELIEF:
+			return "dem"
+		PLATEAUDatasetSource.PACKAGE_LAND_USE:
+			return "luse"
+		PLATEAUDatasetSource.PACKAGE_VEGETATION:
+			return "veg"
+		PLATEAUDatasetSource.PACKAGE_CITY_FURNITURE:
+			return "frn"
+		PLATEAUDatasetSource.PACKAGE_BRIDGE:
+			return "brid"
+		PLATEAUDatasetSource.PACKAGE_FLOOD:
+			return "fld"
+		PLATEAUDatasetSource.PACKAGE_TSUNAMI:
+			return "tnm"
+		_:
+			return ""
+
+
+## Calculate center lat/lon from Japan Standard Regional Mesh Code
+## @param mesh_code: 8-digit mesh code (e.g., "53393548")
+## @return: Dictionary with "lat", "lon" or empty if invalid
+func _mesh_code_to_latlon(mesh_code: String) -> Dictionary:
+	if mesh_code.length() < 4:
+		return {}
+
+	# 1st mesh (4 digits): lat = p * 2/3 degrees, lon = u + 100 degrees
+	var p = mesh_code.substr(0, 2).to_int()  # Latitude code
+	var u = mesh_code.substr(2, 2).to_int()  # Longitude code
+
+	var lat = p * 2.0 / 3.0
+	var lon = u + 100.0
+
+	# 1st mesh size: 40 min lat, 1 degree lon
+	var lat_size = 40.0 / 60.0
+	var lon_size = 1.0
+
+	if mesh_code.length() >= 6:
+		# 2nd mesh (2 more digits): 0-7 for each
+		var q = mesh_code.substr(4, 1).to_int()  # Latitude subdivision
+		var v = mesh_code.substr(5, 1).to_int()  # Longitude subdivision
+		lat += q * 5.0 / 60.0
+		lon += v * 7.5 / 60.0
+		lat_size = 5.0 / 60.0
+		lon_size = 7.5 / 60.0
+
+	if mesh_code.length() >= 8:
+		# 3rd mesh (2 more digits): 0-9 for each
+		var r = mesh_code.substr(6, 1).to_int()  # Latitude subdivision
+		var w = mesh_code.substr(7, 1).to_int()  # Longitude subdivision
+		lat += r * 30.0 / 3600.0
+		lon += w * 45.0 / 3600.0
+		lat_size = 30.0 / 3600.0
+		lon_size = 45.0 / 3600.0
+
+	# Return center of mesh
+	return {
+		"lat": lat + lat_size / 2.0,
+		"lon": lon + lon_size / 2.0
+	}
+
+
 func _count_meshes(mesh_data_array: Array) -> int:
 	var count = 0
 	for mesh_data in mesh_data_array:
@@ -1044,11 +1315,42 @@ func _log(message: String) -> void:
 	print(message)
 
 
+## Clear all filter lists (both tabs)
+func _clear_filter_lists() -> void:
+	# Tab 1
+	mesh_code_list.clear()
+	lod_list.clear()
+	packages_list.clear()
+	# Tab 2
+	packages_list_2.clear()
+	mesh_code_list_2.clear()
+	lod_list_2.clear()
+
+
+## Clear filter selections only (keep list items)
+func _clear_filter_selections() -> void:
+	# Tab 1
+	mesh_code_list.deselect_all()
+	lod_list.deselect_all()
+	packages_list.deselect_all()
+	# Tab 2
+	packages_list_2.deselect_all()
+	mesh_code_list_2.deselect_all()
+	lod_list_2.deselect_all()
+
+
 func _clear_meshes() -> void:
-	if city_model_root != null and is_instance_valid(city_model_root):
-		city_model_root.queue_free()
-		city_model_root = null
+	# Clear all children from mesh_container (may have multiple city models)
+	for child in mesh_container.get_children():
+		child.queue_free()
+	city_model_root = null
 	mesh_instances.clear()
+
+	# Clear texture resources
+	combined_texture = null
+	downloaded_tiles.clear()
+	tile_queue.clear()
+
 	download_texture_button.disabled = true
 	apply_texture_button.disabled = true
 
@@ -1339,43 +1641,35 @@ func _on_apply_texture_pressed() -> void:
 
 		if new_mesh != null:
 			mi.mesh = new_mesh
-			mi.set_surface_override_material(0, material)
+			# Apply material to all surfaces
+			for surface_idx in range(new_mesh.get_surface_count()):
+				mi.set_surface_override_material(surface_idx, material)
 			applied_count += 1
 		else:
 			# If UV remap failed, still try to apply texture with existing UVs
-			mi.set_surface_override_material(0, material)
+			for surface_idx in range(mesh.get_surface_count()):
+				mi.set_surface_override_material(surface_idx, material)
 			applied_count += 1
 
 	_log("[color=green]Texture applied to %d meshes (skipped %d with existing textures)[/color]" % [applied_count, skipped_count])
+	_log_rid_usage()
 	texture_status.text = ""
 
 
-func _remap_mesh_uvs_to_geographic(mesh: Mesh, min_lat: float, max_lat: float, min_lon: float, max_lon: float, transform: Transform3D) -> ArrayMesh:
-	if mesh.get_surface_count() == 0:
+func _log_rid_usage() -> void:
+	var total_objects = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME)
+	var total_primitives = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
+	var total_draw_calls = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
+	var video_mem = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_VIDEO_MEM_USED)
+	_log("[color=cyan]RID Usage: Objects=%d, Primitives=%d, DrawCalls=%d, VideoMem=%.1fMB[/color]" % [
+		total_objects, total_primitives, total_draw_calls, video_mem / 1048576.0
+	])
+
+
+func _remap_mesh_uvs_to_geographic(mesh: Mesh, min_lat: float, max_lat: float, min_lon: float, max_lon: float, mesh_transform: Transform3D) -> ArrayMesh:
+	var surface_count = mesh.get_surface_count()
+	if surface_count == 0:
 		return null
-
-	var arrays = mesh.surface_get_arrays(0)
-	if arrays.is_empty():
-		return null
-
-	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	if vertices.is_empty():
-		return null
-
-	# Calculate new UVs based on vertex positions converted to geographic coordinates
-	# Using libplateau's Extent::uvAt() formula:
-	#   - Southwest corner (min_lat, min_lon) = UV(0, 0)
-	#   - Northeast corner (max_lat, max_lon) = UV(1, 1)
-	#   - U = (lon - min_lon) / (max_lon - min_lon)
-	#   - V = (lat - min_lat) / (max_lat - min_lat)
-	#
-	# However, in the combined tile texture:
-	#   - North (max_lat) is at the top (V=0 in texture coords)
-	#   - South (min_lat) is at the bottom (V=1 in texture coords)
-	# So we invert V: V_texture = 1.0 - V_extent
-
-	var new_uvs = PackedVector2Array()
-	new_uvs.resize(vertices.size())
 
 	var lat_range = max_lat - min_lat
 	var lon_range = max_lon - min_lon
@@ -1383,21 +1677,51 @@ func _remap_mesh_uvs_to_geographic(mesh: Mesh, min_lat: float, max_lat: float, m
 	if lat_range <= 0 or lon_range <= 0:
 		return null
 
-	for i in range(vertices.size()):
-		var world_pos = transform * vertices[i]
-		var geo = geo_reference.unproject(world_pos)  # Returns Vector3(lat, lon, height)
-
-		# Calculate UV using Extent::uvAt() formula with V inverted for texture coords
-		var u = (geo.y - min_lon) / lon_range  # Longitude -> U
-		var v = 1.0 - (geo.x - min_lat) / lat_range  # Latitude -> V (inverted for texture)
-
-		new_uvs[i] = Vector2(u, v)
-
-	# Create new mesh with updated UVs
-	arrays[Mesh.ARRAY_TEX_UV] = new_uvs
-
 	var new_mesh = ArrayMesh.new()
-	new_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+
+	# Process all surfaces in the mesh
+	for surface_idx in range(surface_count):
+		var arrays = mesh.surface_get_arrays(surface_idx)
+		if arrays.is_empty():
+			continue
+
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		if vertices.is_empty():
+			continue
+
+		# Calculate new UVs based on vertex positions converted to geographic coordinates
+		# Using libplateau's Extent::uvAt() formula:
+		#   - Southwest corner (min_lat, min_lon) = UV(0, 0)
+		#   - Northeast corner (max_lat, max_lon) = UV(1, 1)
+		#   - U = (lon - min_lon) / (max_lon - min_lon)
+		#   - V = (lat - min_lat) / (max_lat - min_lat)
+		#
+		# However, in the combined tile texture:
+		#   - North (max_lat) is at the top (V=0 in texture coords)
+		#   - South (min_lat) is at the bottom (V=1 in texture coords)
+		# So we invert V: V_texture = 1.0 - V_extent
+
+		var new_uvs = PackedVector2Array()
+		new_uvs.resize(vertices.size())
+
+		for i in range(vertices.size()):
+			var world_pos = mesh_transform * vertices[i]
+			var geo = geo_reference.unproject(world_pos)  # Returns Vector3(lat, lon, height)
+
+			# Calculate UV using Extent::uvAt() formula with V inverted for texture coords
+			var u = (geo.y - min_lon) / lon_range  # Longitude -> U
+			var v = 1.0 - (geo.x - min_lat) / lat_range  # Latitude -> V (inverted for texture)
+
+			new_uvs[i] = Vector2(u, v)
+
+		# Update UVs in the arrays
+		arrays[Mesh.ARRAY_TEX_UV] = new_uvs
+
+		# Add surface to new mesh
+		new_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+
+	if new_mesh.get_surface_count() == 0:
+		return null
 
 	return new_mesh
 
