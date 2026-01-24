@@ -557,15 +557,17 @@ func _update_stats() -> void:
 
 	for mesh_data in current_mesh_data:
 		var mesh = mesh_data.get_mesh()
-		if mesh != null and mesh.get_surface_count() > 0:
-			var arrays = mesh.surface_get_arrays(0)
-			if arrays.size() > Mesh.ARRAY_VERTEX:
-				var vertices = arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array
-				total_vertices += vertices.size()
-			if arrays.size() > Mesh.ARRAY_INDEX:
-				var indices = arrays[Mesh.ARRAY_INDEX] as PackedInt32Array
-				@warning_ignore("integer_division")
-				total_triangles += indices.size() / 3
+		if mesh != null:
+			# Sum vertices and triangles from all surfaces
+			for surface_idx in range(mesh.get_surface_count()):
+				var arrays = mesh.surface_get_arrays(surface_idx)
+				if arrays.size() > Mesh.ARRAY_VERTEX:
+					var vertices = arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array
+					total_vertices += vertices.size()
+				if arrays.size() > Mesh.ARRAY_INDEX:
+					var indices = arrays[Mesh.ARRAY_INDEX] as PackedInt32Array
+					@warning_ignore("integer_division")
+					total_triangles += indices.size() / 3
 
 	stats_label.text = "Meshes: %d | Vertices: %d | Triangles: %d" % [
 		current_mesh_data.size(), total_vertices, total_triangles

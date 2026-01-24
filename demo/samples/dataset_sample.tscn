@@ -132,17 +132,17 @@ offset_right = 380.0
 offset_bottom = 280.0
 
 [node name="FilePanel" type="Panel" parent="UI"]
-offset_left = 410.0
-offset_top = 10.0
-offset_right = 750.0
-offset_bottom = 480.0
+offset_left = 10.0
+offset_top = 490.0
+offset_right = 400.0
+offset_bottom = 960.0
 
 [node name="Title" type="Label" parent="UI/FilePanel"]
 offset_left = 10.0
 offset_top = 5.0
-offset_right = 330.0
+offset_right = 380.0
 offset_bottom = 25.0
-text = "GML Files"
+text = "Filter Selection"
 horizontal_alignment = 1
 
 [node name="PackageLabel" type="Label" parent="UI/FilePanel"]
@@ -151,125 +151,183 @@ offset_top = 30.0
 offset_right = 80.0
 offset_bottom = 50.0
 text = "Package:"
+visible = false
 
 [node name="PackageOption" type="OptionButton" parent="UI/FilePanel"]
 offset_left = 85.0
 offset_top = 28.0
-offset_right = 250.0
+offset_right = 280.0
 offset_bottom = 52.0
+visible = false
 
-[node name="FileList" type="ItemList" parent="UI/FilePanel"]
-offset_left = 10.0
-offset_top = 60.0
-offset_right = 330.0
-offset_bottom = 320.0
+[node name="FilterTabContainer" type="TabContainer" parent="UI/FilePanel"]
+offset_left = 5.0
+offset_top = 28.0
+offset_right = 385.0
+offset_bottom = 460.0
 
-[node name="MeshCodeLabel" type="Label" parent="UI/FilePanel"]
-offset_left = 10.0
-offset_top = 325.0
-offset_right = 100.0
-offset_bottom = 345.0
-text = "Mesh Codes:"
+[node name="By Mesh Code" type="VBoxContainer" parent="UI/FilePanel/FilterTabContainer"]
+layout_mode = 2
 
-[node name="MeshCodeList" type="ItemList" parent="UI/FilePanel"]
-offset_left = 10.0
-offset_top = 345.0
-offset_right = 200.0
-offset_bottom = 415.0
+[node name="MeshCodeLabel" type="Label" parent="UI/FilePanel/FilterTabContainer/By Mesh Code"]
+layout_mode = 2
+text = "Mesh Codes (required):"
+
+[node name="MeshCodeList" type="ItemList" parent="UI/FilePanel/FilterTabContainer/By Mesh Code"]
+custom_minimum_size = Vector2(0, 130)
+layout_mode = 2
+select_mode = 1
 max_columns = 3
 
-[node name="DownloadButton" type="Button" parent="UI/FilePanel"]
-offset_left = 10.0
-offset_top = 425.0
-offset_right = 160.0
-offset_bottom = 450.0
-text = "Download"
+[node name="LODLabel" type="Label" parent="UI/FilePanel/FilterTabContainer/By Mesh Code"]
+layout_mode = 2
+text = "LOD (optional):"
 
-[node name="LoadGMLButton" type="Button" parent="UI/FilePanel"]
-offset_left = 170.0
-offset_top = 425.0
-offset_right = 330.0
-offset_bottom = 450.0
-text = "Load Selected GML"
+[node name="LODList" type="ItemList" parent="UI/FilePanel/FilterTabContainer/By Mesh Code"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+select_mode = 1
+max_columns = 4
+
+[node name="PackagesLabel" type="Label" parent="UI/FilePanel/FilterTabContainer/By Mesh Code"]
+layout_mode = 2
+text = "Packages (optional):"
+
+[node name="PackagesList" type="ItemList" parent="UI/FilePanel/FilterTabContainer/By Mesh Code"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+select_mode = 1
+max_columns = 4
+
+[node name="By Package" type="VBoxContainer" parent="UI/FilePanel/FilterTabContainer"]
+visible = false
+layout_mode = 2
+
+[node name="PackagesLabel2" type="Label" parent="UI/FilePanel/FilterTabContainer/By Package"]
+layout_mode = 2
+text = "Packages (required):"
+
+[node name="PackagesList2" type="ItemList" parent="UI/FilePanel/FilterTabContainer/By Package"]
+custom_minimum_size = Vector2(0, 130)
+layout_mode = 2
+select_mode = 1
+max_columns = 4
+
+[node name="MeshCodeLabel2" type="Label" parent="UI/FilePanel/FilterTabContainer/By Package"]
+layout_mode = 2
+text = "Mesh Codes (required):"
+
+[node name="MeshCodeList2" type="ItemList" parent="UI/FilePanel/FilterTabContainer/By Package"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+select_mode = 1
+max_columns = 3
+
+[node name="LODLabel2" type="Label" parent="UI/FilePanel/FilterTabContainer/By Package"]
+layout_mode = 2
+text = "LOD (optional):"
+
+[node name="LODList2" type="ItemList" parent="UI/FilePanel/FilterTabContainer/By Package"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+select_mode = 1
+max_columns = 4
 
 [node name="TexturePanel" type="Panel" parent="UI"]
-offset_left = 10.0
-offset_top = 490.0
-offset_right = 400.0
-offset_bottom = 630.0
+offset_left = 410.0
+offset_top = 10.0
+offset_right = 800.0
+offset_bottom = 210.0
 
 [node name="Title" type="Label" parent="UI/TexturePanel"]
 offset_left = 10.0
 offset_top = 5.0
 offset_right = 380.0
 offset_bottom = 25.0
-text = "Terrain Texture"
+text = "Import & Texture"
 horizontal_alignment = 1
+
+[node name="DownloadButton" type="Button" parent="UI/TexturePanel"]
+offset_left = 10.0
+offset_top = 30.0
+offset_right = 185.0
+offset_bottom = 55.0
+disabled = true
+text = "Download GML"
+
+[node name="LoadGMLButton" type="Button" parent="UI/TexturePanel"]
+offset_left = 195.0
+offset_top = 30.0
+offset_right = 380.0
+offset_bottom = 55.0
+disabled = true
+text = "Import to Scene"
 
 [node name="TileSourceLabel" type="Label" parent="UI/TexturePanel"]
 offset_left = 10.0
-offset_top = 30.0
+offset_top = 65.0
 offset_right = 100.0
-offset_bottom = 50.0
+offset_bottom = 85.0
 text = "Tile Source:"
 
 [node name="TileSourceOption" type="OptionButton" parent="UI/TexturePanel"]
 offset_left = 105.0
-offset_top = 28.0
+offset_top = 63.0
 offset_right = 280.0
-offset_bottom = 52.0
+offset_bottom = 87.0
 
 [node name="ZoomLabel" type="Label" parent="UI/TexturePanel"]
 offset_left = 290.0
-offset_top = 30.0
+offset_top = 65.0
 offset_right = 330.0
-offset_bottom = 50.0
+offset_bottom = 85.0
 text = "Zoom:"
 
 [node name="ZoomSpin" type="SpinBox" parent="UI/TexturePanel"]
 offset_left = 335.0
-offset_top = 28.0
+offset_top = 63.0
 offset_right = 380.0
-offset_bottom = 52.0
+offset_bottom = 87.0
 min_value = 10.0
 max_value = 18.0
 value = 15.0
 
 [node name="DownloadTextureButton" type="Button" parent="UI/TexturePanel"]
 offset_left = 10.0
-offset_top = 60.0
+offset_top = 95.0
 offset_right = 190.0
-offset_bottom = 85.0
+offset_bottom = 120.0
+disabled = true
 text = "Download Texture"
 
 [node name="ApplyTextureButton" type="Button" parent="UI/TexturePanel"]
 offset_left = 200.0
-offset_top = 60.0
+offset_top = 95.0
 offset_right = 380.0
-offset_bottom = 85.0
-text = "Apply to Terrain"
+offset_bottom = 120.0
+text = "Apply Texture"
 disabled = true
 
 [node name="TextureProgress" type="ProgressBar" parent="UI/TexturePanel"]
 offset_left = 10.0
-offset_top = 95.0
+offset_top = 130.0
 offset_right = 380.0
-offset_bottom = 115.0
+offset_bottom = 150.0
 show_percentage = true
 
 [node name="TextureStatus" type="Label" parent="UI/TexturePanel"]
 offset_left = 10.0
-offset_top = 118.0
+offset_top = 155.0
 offset_right = 380.0
-offset_bottom = 138.0
+offset_bottom = 175.0
 text = ""
 theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
 
 [node name="NavigationPanel" type="Panel" parent="UI"]
-offset_left = 10.0
-offset_top = 640.0
-offset_right = 400.0
-offset_bottom = 780.0
+offset_left = 410.0
+offset_top = 220.0
+offset_right = 800.0
+offset_bottom = 390.0
 
 [node name="Title" type="Label" parent="UI/NavigationPanel"]
 offset_left = 10.0
@@ -333,6 +391,13 @@ offset_top = 95.0
 offset_right = 380.0
 offset_bottom = 120.0
 text = "Jump to Lat/Lon"
+
+[node name="RotateCheck" type="CheckButton" parent="UI/NavigationPanel"]
+offset_left = 10.0
+offset_top = 125.0
+offset_right = 380.0
+offset_bottom = 150.0
+text = "Rotate Camera"
 
 [node name="LogPanel" type="Panel" parent="UI"]
 anchors_preset = 3
