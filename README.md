@@ -279,6 +279,42 @@ Demonstrates map tile download features.
 
 **Note**: You need to prepare your own PLATEAU CityGML data. Download from [G空間情報センター](https://www.geospatial.jp/ckan/dataset/plateau).
 
+## Editor Plugin
+
+### PLATEAU Converter
+
+An editor tool for importing CityGML into your project and exporting to external formats.
+
+**Opening the Tool**: Tool menu → PLATEAU Converter...
+
+#### Import to Project
+
+Import CityGML files as `.tscn` scenes into your Godot project.
+
+- **Scene Structure**: Creates `PLATEAUInstancedCityModel` as root node
+- **Mesh Resources**: Saves meshes as separate `.res` files for better performance
+- **Texture Handling**: Copies textures from external PLATEAU dataset to project folder
+- **LOD Auto-Switch**: Optional distance-based LOD switching using `visibility_range`
+
+Usage:
+1. Click "Import GML..." to select a CityGML file
+2. Configure import options (LOD range, granularity, textures)
+3. Enable "LOD auto-switch" if you want distance-based LOD switching
+4. Click "Import to Project" and select output folder
+5. The scene is saved as `.tscn` with mesh resources in a `meshes/` subfolder
+
+#### Export to File
+
+Export loaded meshes to external 3D formats for use in other applications.
+
+- **Supported Formats**: glTF (.gltf), GLB (.glb), OBJ (.obj)
+- **Use Cases**: External 3D software, mobile apps, web viewers
+
+Usage:
+1. Load a CityGML file using "Import GML..."
+2. Select export format (glTF/GLB/OBJ)
+3. Click "Export to File" and choose destination
+
 ## Building
 
 ### Requirements
