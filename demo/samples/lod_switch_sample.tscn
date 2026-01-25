@@ -1,0 +1,162 @@
+[gd_scene load_steps=6 format=3 uid="uid://lod_switch_sample"]
+
+[ext_resource type="Script" path="res://samples/lod_switch_sample.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://japanese_font" path="res://fonts/japanese_font.tres" id="2_font"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 2
+ambient_light_color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="LODSwitchSample" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 100, 200)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 100, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="ImportPanel" type="Panel" parent="UI"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 250.0
+offset_bottom = 70.0
+
+[node name="ImportButton" type="Button" parent="UI/ImportPanel"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 230.0
+offset_bottom = 50.0
+text = "Import GML..."
+
+[node name="LODPanel" type="Panel" parent="UI"]
+offset_left = 10.0
+offset_top = 80.0
+offset_right = 250.0
+offset_bottom = 310.0
+
+[node name="Title" type="Label" parent="UI/LODPanel"]
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 230.0
+offset_bottom = 25.0
+text = "LOD Control"
+horizontal_alignment = 1
+
+[node name="CurrentLODLabel" type="Label" parent="UI/LODPanel"]
+offset_left = 10.0
+offset_top = 30.0
+offset_right = 230.0
+offset_bottom = 50.0
+text = "Current LOD: -"
+
+[node name="DistanceLabel" type="Label" parent="UI/LODPanel"]
+offset_left = 10.0
+offset_top = 50.0
+offset_right = 230.0
+offset_bottom = 70.0
+text = "Distance: - m"
+
+[node name="LOD0Button" type="Button" parent="UI/LODPanel"]
+offset_left = 10.0
+offset_top = 80.0
+offset_right = 65.0
+offset_bottom = 105.0
+text = "LOD0"
+
+[node name="LOD1Button" type="Button" parent="UI/LODPanel"]
+offset_left = 70.0
+offset_top = 80.0
+offset_right = 125.0
+offset_bottom = 105.0
+text = "LOD1"
+
+[node name="LOD2Button" type="Button" parent="UI/LODPanel"]
+offset_left = 130.0
+offset_top = 80.0
+offset_right = 185.0
+offset_bottom = 105.0
+text = "LOD2"
+
+[node name="LOD3Button" type="Button" parent="UI/LODPanel"]
+offset_left = 190.0
+offset_top = 80.0
+offset_right = 230.0
+offset_bottom = 105.0
+text = "LOD3"
+
+[node name="AutoSwitchCheck" type="CheckBox" parent="UI/LODPanel"]
+offset_left = 10.0
+offset_top = 115.0
+offset_right = 230.0
+offset_bottom = 140.0
+button_pressed = true
+text = "Auto Switch by Distance"
+
+[node name="ThresholdLabel" type="Label" parent="UI/LODPanel"]
+offset_left = 10.0
+offset_top = 150.0
+offset_right = 230.0
+offset_bottom = 170.0
+text = "LOD2 Threshold (m):"
+
+[node name="ThresholdSlider" type="HSlider" parent="UI/LODPanel"]
+offset_left = 10.0
+offset_top = 175.0
+offset_right = 230.0
+offset_bottom = 195.0
+min_value = 50.0
+max_value = 500.0
+value = 100.0
+
+[node name="LogPanel" type="Panel" parent="UI"]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -420.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 0
+
+[node name="Title" type="Label" parent="UI/LogPanel"]
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 390.0
+offset_bottom = 25.0
+text = "Log"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="UI/LogPanel"]
+offset_left = 10.0
+offset_top = 30.0
+offset_right = 400.0
+offset_bottom = -10.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="LogLabel" type="RichTextLabel" parent="UI/LogPanel/ScrollContainer"]
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_fonts/normal_font = ExtResource("2_font")
+bbcode_enabled = true
+fit_content = true
+scroll_following = true
