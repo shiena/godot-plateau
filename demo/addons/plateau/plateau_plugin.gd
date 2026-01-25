@@ -6,9 +6,11 @@ extends EditorPlugin
 
 const PLUGIN_NAME := "PLATEAU SDK"
 const IMPORT_DIALOG_SCRIPT := preload("res://addons/plateau/plateau_import_dialog.gd")
+const EXPORT_DIALOG_SCRIPT := preload("res://addons/plateau/plateau_export_dialog.gd")
 
 var dock_panel: Control
 var import_dialog: AcceptDialog
+var export_dialog: AcceptDialog
 var file_dialog: FileDialog
 
 func _enter_tree() -> void:
@@ -25,10 +27,15 @@ func _enter_tree() -> void:
 	file_dialog.file_selected.connect(_on_file_selected)
 	add_child(file_dialog)
 
+	# Add tool menu item
+	add_tool_menu_item("PLATEAU Exporter...", _on_exporter_menu_pressed)
+
 	print("[PLATEAU] Plugin enabled")
 
 func _exit_tree() -> void:
 	# Clean up
+	remove_tool_menu_item("PLATEAU Exporter...")
+
 	if dock_panel:
 		remove_control_from_docks(dock_panel)
 		dock_panel.queue_free()
@@ -38,6 +45,9 @@ func _exit_tree() -> void:
 
 	if import_dialog:
 		import_dialog.queue_free()
+
+	if export_dialog:
+		export_dialog.queue_free()
 
 	print("[PLATEAU] Plugin disabled")
 
@@ -137,3 +147,10 @@ func _on_add_georef_pressed() -> void:
 	geo_ref.owner = edited_scene_root
 
 	print("[PLATEAU] Added GeoReference node (Zone: 9)")
+
+func _on_exporter_menu_pressed() -> void:
+	if export_dialog:
+		export_dialog.queue_free()
+	export_dialog = EXPORT_DIALOG_SCRIPT.create_dialog()
+	add_child(export_dialog)
+	export_dialog.popup_centered(Vector2i(550, 700))
