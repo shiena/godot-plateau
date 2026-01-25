@@ -480,8 +480,8 @@ Core functionality (CityGML loading, mesh extraction, coordinate conversion) wor
 
 ## References
 
+- [Project PLATEAU](https://www.mlit.go.jp/plateau/)
 - [PLATEAU SDK for Unity](https://github.com/Project-PLATEAU/PLATEAU-SDK-for-Unity)
 - [PLATEAU SDK for Unreal](https://github.com/Project-PLATEAU/PLATEAU-SDK-for-Unreal)
-- [3D-Tiles-For-Godot](https://github.com/pslehisl/3D-Tiles-For-Godot)
+- [3D-Tiles-For-Godot](https://github.com/Battle-Road-Labs/3D-Tiles-For-Godot)
 - [Godot GDExtension](https://docs.godotengine.org/en/stable/tutorials/scripting/gdextension/index.html)
-- [Project PLATEAU](https://www.mlit.go.jp/plateau/)
