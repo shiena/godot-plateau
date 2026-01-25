@@ -196,10 +196,9 @@ static func _save_setting(key: String, value: String) -> void:
 
 static func create_dialog() -> AcceptDialog:
 	var dialog = AcceptDialog.new()
-	dialog.title = "PLATEAU Exporter"
-	dialog.ok_button_text = "Export"
+	dialog.title = "PLATEAU Converter"
+	dialog.ok_button_text = "Close"
 	dialog.size = Vector2i(550, 700)
-	dialog.dialog_hide_on_ok = false
 
 	# Main container
 	var main_vbox = VBoxContainer.new()
@@ -496,8 +495,14 @@ static func create_dialog() -> AcceptDialog:
 
 	texture_section.add_child(packing_hbox)
 
-	# === Output Section ===
-	var output_section = _create_section("Output", options_vbox)
+	# === Export Section ===
+	var export_section = _create_section("Export (External)", options_vbox)
+
+	var export_desc = Label.new()
+	export_desc.text = "外部アプリやiOS/Android向けにglTF/GLB/OBJ形式で出力"
+	export_desc.autowrap_mode = TextServer.AUTOWRAP_WORD
+	export_desc.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+	export_section.add_child(export_desc)
 
 	# Format selection
 	var format_hbox = HBoxContainer.new()
@@ -514,7 +519,7 @@ static func create_dialog() -> AcceptDialog:
 	format_dropdown.select(0)  # Default: GLB (first item)
 	format_hbox.add_child(format_dropdown)
 
-	output_section.add_child(format_hbox)
+	export_section.add_child(format_hbox)
 
 	# Output path
 	var output_path_hbox = HBoxContainer.new()
@@ -530,7 +535,86 @@ static func create_dialog() -> AcceptDialog:
 	output_browse_btn.text = "Browse..."
 	output_path_hbox.add_child(output_browse_btn)
 
-	output_section.add_child(output_path_hbox)
+	export_section.add_child(output_path_hbox)
+
+	# Export button
+	var export_btn = Button.new()
+	export_btn.name = "ExportButton"
+	export_btn.text = "Export to File"
+	export_section.add_child(export_btn)
+
+	# === Import Section ===
+	var import_section = _create_section("Import (Project)", options_vbox)
+
+	var import_desc = Label.new()
+	import_desc.text = "PC向けにプロジェクト内に.tscnシーンとして取り込み"
+	import_desc.autowrap_mode = TextServer.AUTOWRAP_WORD
+	import_desc.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+	import_section.add_child(import_desc)
+
+	# LOD auto-switch option
+	var lod_switch_check = CheckBox.new()
+	lod_switch_check.name = "LODSwitchCheck"
+	lod_switch_check.text = "LOD自動切り替え (距離ベース)"
+	lod_switch_check.button_pressed = true
+	import_section.add_child(lod_switch_check)
+
+	# LOD distance settings
+	var lod_distance_hbox = HBoxContainer.new()
+	lod_distance_hbox.name = "LODDistanceHBox"
+
+	var lod_dist_label = Label.new()
+	lod_dist_label.text = "LOD2距離:"
+	lod_distance_hbox.add_child(lod_dist_label)
+
+	var lod2_dist_spin = SpinBox.new()
+	lod2_dist_spin.name = "LOD2DistSpin"
+	lod2_dist_spin.min_value = 50
+	lod2_dist_spin.max_value = 2000
+	lod2_dist_spin.value = 200
+	lod2_dist_spin.suffix = "m"
+	lod_distance_hbox.add_child(lod2_dist_spin)
+
+	var lod1_label = Label.new()
+	lod1_label.text = " LOD1:"
+	lod_distance_hbox.add_child(lod1_label)
+
+	var lod1_dist_spin = SpinBox.new()
+	lod1_dist_spin.name = "LOD1DistSpin"
+	lod1_dist_spin.min_value = 100
+	lod1_dist_spin.max_value = 5000
+	lod1_dist_spin.value = 500
+	lod1_dist_spin.suffix = "m"
+	lod_distance_hbox.add_child(lod1_dist_spin)
+
+	import_section.add_child(lod_distance_hbox)
+
+	# Import output path
+	var import_path_hbox = HBoxContainer.new()
+	var import_path = LineEdit.new()
+	import_path.name = "ImportPath"
+	import_path.placeholder_text = "Select project folder... (res://)"
+	import_path.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	import_path.editable = false
+	import_path_hbox.add_child(import_path)
+
+	var import_browse_btn = Button.new()
+	import_browse_btn.name = "ImportBrowseButton"
+	import_browse_btn.text = "Browse..."
+	import_path_hbox.add_child(import_browse_btn)
+
+	import_section.add_child(import_path_hbox)
+
+	# Import button
+	var import_btn = Button.new()
+	import_btn.name = "ImportButton"
+	import_btn.text = "Import to Project"
+	import_section.add_child(import_btn)
+
+	# Connect LOD switch checkbox
+	lod_switch_check.toggled.connect(func(pressed):
+		lod_distance_hbox.visible = pressed
+	)
 
 	# === Progress Section ===
 	var progress_section = _create_section("Progress", options_vbox)
@@ -578,6 +662,15 @@ static func create_dialog() -> AcceptDialog:
 	if saved_settings.has("last_output_folder"):
 		output_file_dialog.current_dir = saved_settings["last_output_folder"]
 	dialog.add_child(output_file_dialog)
+
+	# Import folder dialog (project-internal)
+	var import_folder_dialog = FileDialog.new()
+	import_folder_dialog.name = "ImportFolderDialog"
+	import_folder_dialog.title = "Select Import Folder (Project)"
+	import_folder_dialog.file_mode = FileDialog.FILE_MODE_OPEN_DIR
+	import_folder_dialog.access = FileDialog.ACCESS_RESOURCES  # res:// only
+	import_folder_dialog.current_dir = "res://"
+	dialog.add_child(import_folder_dialog)
 
 	# Connect signals
 	var filter_section_parent = filter_section.get_parent().get_parent()
@@ -664,8 +757,22 @@ static func create_dialog() -> AcceptDialog:
 		_save_setting("last_output_folder", path.get_base_dir())
 	)
 
-	# Connect confirmed signal
-	dialog.confirmed.connect(func():
+	# Connect import browse button
+	import_browse_btn.pressed.connect(func():
+		import_folder_dialog.popup_centered(Vector2i(800, 600))
+	)
+
+	import_folder_dialog.dir_selected.connect(func(path):
+		import_path.text = path
+	)
+
+	# Connect import button
+	import_btn.pressed.connect(func():
+		_on_import_confirmed(dialog)
+	)
+
+	# Connect export button
+	export_btn.pressed.connect(func():
 		_on_export_confirmed(dialog)
 	)
 
@@ -959,9 +1066,11 @@ static func _on_export_confirmed(dialog: AcceptDialog) -> void:
 	progress_label.text = "Preparing..."
 	progress_label.remove_theme_color_override("font_color")
 
-	dialog.get_ok_button().disabled = true
+	var export_btn: Button = dialog.find_child("ExportButton", true, false)
+	if export_btn:
+		export_btn.disabled = true
 
-	print("[PLATEAU Exporter] Starting export:")
+	print("[PLATEAU Converter] Starting export:")
 	print("  Input: ", input_path.text)
 	print("  Is Dataset: ", is_dataset)
 	print("  Package Flags: ", package_flags)
@@ -1014,7 +1123,7 @@ static func _do_export(
 		progress_label.text = "Scanning dataset folder..."
 		var source = PLATEAUDatasetSource.create_local(input_path)
 		if not source.is_valid():
-			push_error("[PLATEAU Exporter] Invalid dataset folder: " + input_path)
+			push_error("[PLATEAU Converter] Invalid dataset folder: " + input_path)
 			_export_finished(dialog, false, progress_label)
 			return
 
@@ -1030,11 +1139,13 @@ static func _do_export(
 		if gml_paths.is_empty():
 			progress_label.text = "Error: No GML files match the selected filters"
 			progress_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
-			push_error("[PLATEAU Exporter] No GML files found for selected package/mesh code combination")
-			dialog.get_ok_button().disabled = false
+			push_error("[PLATEAU Converter] No GML files found for selected package/mesh code combination")
+			var export_btn_err: Button = dialog.find_child("ExportButton", true, false)
+			if export_btn_err:
+				export_btn_err.disabled = false
 			return
 
-		print("[PLATEAU Exporter] Found %d GML files for selected filters" % gml_paths.size())
+		print("[PLATEAU Converter] Found %d GML files for selected filters" % gml_paths.size())
 	else:
 		gml_paths.append(input_path)
 
@@ -1061,7 +1172,7 @@ static func _do_export(
 		progress_bar.value = progress
 
 	if all_mesh_data.is_empty():
-		push_warning("[PLATEAU Exporter] No meshes extracted from GML files")
+		push_warning("[PLATEAU Converter] No meshes extracted from GML files")
 
 
 	progress_bar.value = 85
@@ -1083,11 +1194,11 @@ static func _do_export(
 	var elapsed := (Time.get_ticks_msec() - start_time) / 1000.0
 
 	if success:
-		print("[PLATEAU Exporter] Export completed in %.2f seconds" % elapsed)
-		print("[PLATEAU Exporter] Total meshes: %d" % all_mesh_data.size())
-		print("[PLATEAU Exporter] Output: %s" % output_path)
+		print("[PLATEAU Converter] Export completed in %.2f seconds" % elapsed)
+		print("[PLATEAU Converter] Total meshes: %d" % all_mesh_data.size())
+		print("[PLATEAU Converter] Output: %s" % output_path)
 	else:
-		push_error("[PLATEAU Exporter] Export failed")
+		push_error("[PLATEAU Converter] Export failed")
 
 	_export_finished(dialog, success, progress_label)
 
@@ -1110,7 +1221,7 @@ static func _extract_meshes_from_gml(
 
 	var city_model = PLATEAUCityModel.new()
 	if not city_model.load(gml_path):
-		push_error("[PLATEAU Exporter] Failed to load: " + gml_path)
+		push_error("[PLATEAU Converter] Failed to load: " + gml_path)
 		return result
 
 	var options = PLATEAUMeshExtractOptions.new()
@@ -1180,11 +1291,485 @@ static func _flatten_mesh_data(mesh_data, result: Array) -> void:
 
 
 static func _export_finished(dialog: AcceptDialog, success: bool, progress_label: Label) -> void:
-	dialog.get_ok_button().disabled = false
+	var export_btn: Button = dialog.find_child("ExportButton", true, false)
+	if export_btn:
+		export_btn.disabled = false
 
 	if success:
 		progress_label.text = "Export completed!"
-		await dialog.get_tree().create_timer(1.0).timeout
-		dialog.hide()
+		progress_label.add_theme_color_override("font_color", Color(0.4, 0.8, 0.4))
 	else:
 		progress_label.text = "Export failed. Check console for details."
+		progress_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
+
+
+static func _on_import_confirmed(dialog: AcceptDialog) -> void:
+	var source_radio_dataset: CheckBox = dialog.find_child("SourceRadioDataset", true, false)
+	var input_path: LineEdit = dialog.find_child("InputPath", true, false)
+	var zone_dropdown: OptionButton = dialog.find_child("ZoneDropdown", true, false)
+	var granularity_dropdown: OptionButton = dialog.find_child("GranularityDropdown", true, false)
+	var lod_min_spin: SpinBox = dialog.find_child("LODMinSpin", true, false)
+	var lod_max_spin: SpinBox = dialog.find_child("LODMaxSpin", true, false)
+	var highest_lod_check: CheckBox = dialog.find_child("HighestLODCheck", true, false)
+	var texture_check: CheckBox = dialog.find_child("TextureCheck", true, false)
+	var texture_packing_check: CheckBox = dialog.find_child("TexturePackingCheck", true, false)
+	var texture_res_dropdown: OptionButton = dialog.find_child("TextureResDropdown", true, false)
+	var import_path: LineEdit = dialog.find_child("ImportPath", true, false)
+	var lod_switch_check: CheckBox = dialog.find_child("LODSwitchCheck", true, false)
+	var lod2_dist_spin: SpinBox = dialog.find_child("LOD2DistSpin", true, false)
+	var lod1_dist_spin: SpinBox = dialog.find_child("LOD1DistSpin", true, false)
+	var progress_section: Control = dialog.find_child("ProgressSection", true, false)
+	var progress_bar: ProgressBar = dialog.find_child("ProgressBar", true, false)
+	var progress_label: Label = dialog.find_child("ProgressLabel", true, false)
+
+	# Validation
+	if input_path.text.is_empty():
+		progress_section.visible = true
+		progress_bar.value = 0
+		progress_label.text = "Error: No input path specified"
+		progress_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
+		return
+
+	if import_path.text.is_empty():
+		progress_section.visible = true
+		progress_bar.value = 0
+		progress_label.text = "Error: No import folder specified"
+		progress_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
+		return
+
+	var axis_dropdown: OptionButton = dialog.find_child("AxisDropdown", true, false)
+	var transform_dropdown: OptionButton = dialog.find_child("TransformDropdown", true, false)
+
+	var is_dataset = source_radio_dataset.button_pressed
+	var zone_id = zone_dropdown.get_selected_id()
+	var coordinate_system = axis_dropdown.get_selected_id()
+	var transform_type = transform_dropdown.get_selected_id()
+	var granularity = granularity_dropdown.get_selected_id()
+	var lod_min = int(lod_min_spin.value)
+	var lod_max = int(lod_max_spin.value)
+	var highest_lod_only = highest_lod_check.button_pressed
+	var export_textures = texture_check.button_pressed
+	var texture_packing = texture_packing_check.button_pressed
+	var texture_resolution = texture_res_dropdown.get_selected_id()
+	var lod_auto_switch = lod_switch_check.button_pressed
+	var lod2_distance = lod2_dist_spin.value
+	var lod1_distance = lod1_dist_spin.value
+
+	# Collect package filter flags and mesh codes
+	var package_flags: int = 0
+	var selected_mesh_codes: PackedStringArray = PackedStringArray()
+
+	if is_dataset:
+		var filter_container: VBoxContainer = dialog.find_child("FilterContainer", true, false)
+		if filter_container:
+			for child in filter_container.get_children():
+				if child is CheckBox and child.button_pressed:
+					package_flags |= child.get_meta("package_flag", 0)
+		if package_flags == 0:
+			progress_section.visible = true
+			progress_bar.value = 0
+			progress_label.text = "Error: No package type selected"
+			progress_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
+			return
+
+		var mesh_grid: GridContainer = dialog.find_child("MeshCodeGrid", true, false)
+		if mesh_grid:
+			for child in mesh_grid.get_children():
+				if child is CheckBox and child.button_pressed:
+					selected_mesh_codes.append(child.get_meta("mesh_code", ""))
+		if selected_mesh_codes.is_empty():
+			progress_section.visible = true
+			progress_bar.value = 0
+			progress_label.text = "Error: No mesh code selected"
+			progress_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
+			return
+	else:
+		package_flags = PACKAGE_ALL
+
+	# Show progress
+	progress_section.visible = true
+	progress_bar.value = 0
+	progress_label.text = "Preparing import..."
+	progress_label.remove_theme_color_override("font_color")
+
+	var import_btn: Button = dialog.find_child("ImportButton", true, false)
+	if import_btn:
+		import_btn.disabled = true
+
+	print("[PLATEAU Converter] Starting import:")
+	print("  Input: ", input_path.text)
+	print("  Output: ", import_path.text)
+	print("  Is Dataset: ", is_dataset)
+	print("  Zone: ", zone_id)
+	print("  Granularity: ", granularity)
+	print("  LOD: ", lod_min, " - ", lod_max)
+	print("  Highest LOD Only: ", highest_lod_only)
+	print("  Textures: ", export_textures)
+	print("  LOD Auto Switch: ", lod_auto_switch)
+
+	_do_import.call_deferred(
+		dialog, is_dataset, input_path.text, package_flags, selected_mesh_codes,
+		zone_id, coordinate_system, transform_type, granularity, lod_min, lod_max,
+		highest_lod_only, export_textures, texture_packing, texture_resolution,
+		import_path.text, lod_auto_switch, lod2_distance, lod1_distance,
+		progress_bar, progress_label
+	)
+
+
+static func _do_import(
+	dialog: AcceptDialog,
+	is_dataset: bool,
+	input_path: String,
+	package_flags: int,
+	selected_mesh_codes: PackedStringArray,
+	zone_id: int,
+	coordinate_system: int,
+	transform_type: int,
+	granularity: int,
+	lod_min: int,
+	lod_max: int,
+	highest_lod_only: bool,
+	export_textures: bool,
+	texture_packing: bool,
+	texture_resolution: int,
+	import_folder: String,
+	lod_auto_switch: bool,
+	lod2_distance: float,
+	lod1_distance: float,
+	progress_bar: ProgressBar,
+	progress_label: Label
+) -> void:
+
+	var start_time := Time.get_ticks_msec()
+	var gml_paths: Array[String] = []
+
+	if is_dataset:
+		progress_label.text = "Scanning dataset folder..."
+		var source = PLATEAUDatasetSource.create_local(input_path)
+		if not source.is_valid():
+			push_error("[PLATEAU Converter] Invalid dataset folder: " + input_path)
+			_import_finished(dialog, false, progress_label)
+			return
+
+		var gml_files = source.get_gml_files(package_flags)
+
+		for file_info in gml_files:
+			var file_mesh_code = file_info.mesh_code
+			if selected_mesh_codes.is_empty() or selected_mesh_codes.has(file_mesh_code):
+				gml_paths.append(file_info.get_path())
+
+		if gml_paths.is_empty():
+			progress_label.text = "Error: No GML files match the selected filters"
+			progress_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
+			var import_btn_err: Button = dialog.find_child("ImportButton", true, false)
+			if import_btn_err:
+				import_btn_err.disabled = false
+			return
+
+		print("[PLATEAU Converter] Found %d GML files for selected filters" % gml_paths.size())
+	else:
+		gml_paths.append(input_path)
+
+	progress_bar.value = 5
+
+	# Create output directories
+	var scene_name = input_path.get_file().get_basename() if not is_dataset else "plateau_import"
+	var output_base = import_folder.path_join(scene_name)
+	var meshes_dir = output_base.path_join("meshes")
+	var textures_dir = output_base.path_join("textures")
+
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(meshes_dir))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(textures_dir))
+
+	print("[PLATEAU Converter] Output directories:")
+	print("  Base: ", output_base)
+	print("  Meshes: ", meshes_dir)
+	print("  Textures: ", textures_dir)
+
+	# Create root node
+	var root = PLATEAUInstancedCityModel.new()
+	root.name = scene_name
+	root.zone_id = zone_id
+
+	# Track copied textures to avoid duplicates
+	var copied_textures: Dictionary = {}
+
+	var total_files = gml_paths.size()
+	var first_file = true
+	var reference_point = Vector3.ZERO
+
+	for i in range(total_files):
+		var gml_path = gml_paths[i]
+		var file_name = gml_path.get_file()
+		progress_label.text = "Processing: %s (%d/%d)" % [file_name, i + 1, total_files]
+
+		var city_model = PLATEAUCityModel.new()
+		city_model.log_level = PLATEAUCityModel.LOG_LEVEL_NONE
+		if not city_model.load(gml_path):
+			push_error("[PLATEAU Converter] Failed to load: " + gml_path)
+			continue
+
+		var options = PLATEAUMeshExtractOptions.new()
+		options.coordinate_zone_id = zone_id
+
+		if first_file:
+			if transform_type == 0:  # Local
+				var center_latlon = city_model.get_center_point(zone_id)
+				var geo_ref = PLATEAUGeoReference.new()
+				geo_ref.zone_id = zone_id
+				reference_point = geo_ref.project(center_latlon)
+			else:
+				reference_point = Vector3.ZERO
+
+			root.set_reference_point(reference_point)
+
+			# Store latitude/longitude in root
+			var center = city_model.get_center_point(zone_id)
+			var geo_ref = PLATEAUGeoReference.new()
+			geo_ref.zone_id = zone_id
+			var latlon = geo_ref.unproject(reference_point)
+			# Note: get_center_point returns Vector3(lat, lon, 0) in some implementations
+			first_file = false
+
+		options.reference_point = reference_point
+		options.mesh_granularity = granularity
+		options.min_lod = lod_min
+		options.max_lod = lod_max
+		options.highest_lod_only = highest_lod_only
+		options.export_appearance = export_textures
+		options.enable_texture_packing = texture_packing
+		options.texture_packing_resolution = texture_resolution
+		options.unit_scale = 1.0
+
+		var extracted = city_model.extract_meshes(options)
+
+		# Create GML transform node
+		var gml_node = Node3D.new()
+		gml_node.name = file_name.get_basename()
+		root.add_child(gml_node)
+		gml_node.owner = root
+
+		# Process extracted meshes and organize by LOD
+		var lod_meshes: Dictionary = {}  # LOD number -> Array of mesh data
+
+		for root_mesh in extracted:
+			_collect_meshes_by_lod(root_mesh, lod_meshes)
+
+		# Create LOD nodes and save meshes
+		var lod_keys = lod_meshes.keys()
+		lod_keys.sort()
+
+		for lod in lod_keys:
+			var lod_node = Node3D.new()
+			lod_node.name = "LOD%d" % lod
+			gml_node.add_child(lod_node)
+			lod_node.owner = root
+
+			var mesh_array = lod_meshes[lod]
+			for mesh_data in mesh_array:
+				var mesh = mesh_data.get_mesh()
+				if mesh == null:
+					continue
+
+				# Save mesh as .res file
+				var mesh_name = mesh_data.get_name()
+				if mesh_name.is_empty():
+					mesh_name = "mesh_%d" % mesh_data.get_instance_id()
+
+				var mesh_filename = "%s_LOD%d_%s.res" % [file_name.get_basename(), lod, mesh_name.replace("/", "_")]
+				var mesh_path = meshes_dir.path_join(mesh_filename)
+
+				# Copy textures if needed
+				if export_textures:
+					_copy_mesh_data_textures(mesh_data, mesh, gml_path, textures_dir, copied_textures)
+
+				ResourceSaver.save(mesh, mesh_path)
+
+				# Create MeshInstance3D
+				var mi = MeshInstance3D.new()
+				mi.name = mesh_name.replace("/", "_")
+				mi.mesh = load(mesh_path)
+				mi.transform = mesh_data.get_transform()
+
+				# Set LOD visibility ranges
+				if lod_auto_switch and lod_keys.size() > 1:
+					if lod == lod_max:  # Highest LOD (closest)
+						mi.visibility_range_begin = 0
+						mi.visibility_range_end = lod2_distance
+					elif lod == lod_min:  # Lowest LOD (farthest)
+						mi.visibility_range_begin = lod1_distance
+						mi.visibility_range_end = 0  # 0 = infinite
+					else:  # Middle LODs
+						mi.visibility_range_begin = lod2_distance
+						mi.visibility_range_end = lod1_distance
+
+				lod_node.add_child(mi)
+				mi.owner = root
+
+		var progress = 5 + int(85.0 * (i + 1) / total_files)
+		progress_bar.value = progress
+
+	# Save the scene
+	progress_label.text = "Saving scene..."
+	progress_bar.value = 95
+
+	var packed_scene = PackedScene.new()
+	var result = packed_scene.pack(root)
+
+	if result != OK:
+		push_error("[PLATEAU Converter] Failed to pack scene: " + str(result))
+		_import_finished(dialog, false, progress_label)
+		root.queue_free()
+		return
+
+	var scene_path = output_base.path_join(scene_name + ".tscn")
+	result = ResourceSaver.save(packed_scene, scene_path)
+
+	if result != OK:
+		push_error("[PLATEAU Converter] Failed to save scene: " + str(result))
+		_import_finished(dialog, false, progress_label)
+		root.queue_free()
+		return
+
+	root.queue_free()
+
+	progress_bar.value = 100
+
+	var elapsed := (Time.get_ticks_msec() - start_time) / 1000.0
+
+	print("[PLATEAU Converter] Import completed in %.2f seconds" % elapsed)
+	print("[PLATEAU Converter] Scene saved to: %s" % scene_path)
+	print("[PLATEAU Converter] Textures copied: %d" % copied_textures.size())
+
+	_import_finished(dialog, true, progress_label)
+
+
+static func _collect_meshes_by_lod(mesh_data, lod_meshes: Dictionary, current_lod: int = -1) -> void:
+	var name = mesh_data.get_name()
+
+	# Try to parse LOD from name
+	var lod = current_lod
+	var lod_regex = RegEx.new()
+	lod_regex.compile("LOD(\\d+)")
+	var match_result = lod_regex.search(name)
+	if match_result:
+		lod = match_result.get_string(1).to_int()
+
+	# If this mesh has geometry, add it
+	if mesh_data.get_mesh() != null:
+		var target_lod = lod if lod >= 0 else 0
+		if not lod_meshes.has(target_lod):
+			lod_meshes[target_lod] = []
+		lod_meshes[target_lod].append(mesh_data)
+
+	# Process children
+	for child in mesh_data.get_children():
+		_collect_meshes_by_lod(child, lod_meshes, lod)
+
+
+static func _copy_mesh_data_textures(mesh_data, mesh: ArrayMesh, gml_path: String, textures_dir: String, copied_textures: Dictionary) -> void:
+	if mesh == null:
+		return
+
+	var gml_dir = gml_path.get_base_dir()
+
+	# Get texture paths from mesh_data (stored during extraction)
+	var texture_paths = mesh_data.get_texture_paths()
+
+	for surface_idx in range(mesh.get_surface_count()):
+		var mat = mesh.surface_get_material(surface_idx)
+		if mat == null or not mat is StandardMaterial3D:
+			continue
+
+		var std_mat = mat as StandardMaterial3D
+		var tex = std_mat.albedo_texture
+
+		if tex == null:
+			continue
+
+		# Get texture path from mesh_data or from resource
+		var tex_path = ""
+		if surface_idx < texture_paths.size():
+			tex_path = texture_paths[surface_idx]
+		if tex_path.is_empty():
+			tex_path = tex.resource_path
+
+		if tex_path.is_empty() or tex_path.begins_with("res://"):
+			continue
+
+		# Already copied?
+		if copied_textures.has(tex_path):
+			# Update material to use copied texture
+			var cached_tex = load(copied_textures[tex_path])
+			if cached_tex:
+				std_mat.albedo_texture = cached_tex
+			continue
+
+		# Resolve texture path (may be relative to GML)
+		var src_global = tex_path
+		if not tex_path.is_absolute_path():
+			# Try relative to GML directory
+			src_global = gml_dir.path_join(tex_path)
+			# Also try parent directories (PLATEAU data structure: udx/bldg/xxx.gml, appearance/xxx.jpg)
+			if not FileAccess.file_exists(src_global):
+				var parent_dir = gml_dir.get_base_dir()
+				src_global = parent_dir.path_join(tex_path)
+			if not FileAccess.file_exists(src_global):
+				var grandparent_dir = gml_dir.get_base_dir().get_base_dir()
+				src_global = grandparent_dir.path_join(tex_path)
+
+		if not FileAccess.file_exists(src_global):
+			push_warning("[PLATEAU Converter] Texture not found: " + tex_path)
+			continue
+
+		# Copy texture file
+		var tex_filename = tex_path.get_file()
+
+		# Avoid filename collision by adding hash if needed
+		var dest_path = textures_dir.path_join(tex_filename)
+		var dest_global = ProjectSettings.globalize_path(dest_path)
+
+		if FileAccess.file_exists(dest_global):
+			# File exists, check if it's the same
+			var existing_hash = FileAccess.get_md5(dest_global)
+			var new_hash = FileAccess.get_md5(src_global)
+			if existing_hash != new_hash:
+				# Different file, add suffix
+				var base = tex_filename.get_basename()
+				var ext = tex_filename.get_extension()
+				tex_filename = "%s_%d.%s" % [base, tex_path.hash(), ext]
+				dest_path = textures_dir.path_join(tex_filename)
+				dest_global = ProjectSettings.globalize_path(dest_path)
+
+		if not FileAccess.file_exists(dest_global):
+			var err = DirAccess.copy_absolute(src_global, dest_global)
+			if err != OK:
+				push_error("[PLATEAU Converter] Failed to copy texture: " + src_global + " -> " + dest_global)
+				continue
+			print("[PLATEAU Converter] Copied texture: ", tex_filename)
+
+		copied_textures[tex_path] = dest_path
+
+		# Update material to use copied texture
+		var new_tex = load(dest_path)
+		if new_tex:
+			std_mat.albedo_texture = new_tex
+
+
+static func _import_finished(dialog: AcceptDialog, success: bool, progress_label: Label) -> void:
+	var import_btn: Button = dialog.find_child("ImportButton", true, false)
+	if import_btn:
+		import_btn.disabled = false
+
+	if success:
+		progress_label.text = "Import completed!"
+		progress_label.add_theme_color_override("font_color", Color(0.4, 0.8, 0.4))
+
+		# Refresh the FileSystem dock to show new files
+		if Engine.is_editor_hint():
+			var editor_interface = Engine.get_singleton("EditorInterface")
+			if editor_interface:
+				editor_interface.get_resource_filesystem().scan()
+	else:
+		progress_label.text = "Import failed. Check console for details."
+		progress_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
