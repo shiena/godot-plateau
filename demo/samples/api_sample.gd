@@ -9,6 +9,7 @@ extends Node3D
 ## Based on Unity SDK's RuntimeAPISample pattern.
 
 @export var zone_id: int = 9  ## Japan Plane Rectangular CS (1-19)
+@export var memory_optimized: bool = true  ## Clear mesh data after import to save memory (export will re-extract)
 
 var dataset_source: PLATEAUDatasetSource
 var dataset_path: String = ""
@@ -405,6 +406,15 @@ func _finalize_import() -> void:
 
 	_hide_loading()
 	_update_stats()
+
+	# Memory optimization: clear mesh data after import
+	# Export will re-extract from GML files, so we don't need to keep this data
+	if memory_optimized and pending_gml_files.size() > 1:
+		var mesh_count = current_mesh_data.size()
+		current_mesh_data.clear()
+		_log("[color=cyan]Memory optimized: Cleared %d mesh data references[/color]" % mesh_count)
+		_log("[color=cyan]Note: Granularity conversion disabled, export will re-extract[/color]")
+
 	_log("[color=green]Import complete![/color]")
 
 
@@ -445,7 +455,8 @@ func _clear_meshes() -> void:
 
 
 func _export_meshes(format: int) -> void:
-	if current_mesh_data.is_empty():
+	# Check if we have data to export (either mesh data or GML files for re-extraction)
+	if current_mesh_data.is_empty() and pending_gml_files.is_empty():
 		_log("[color=red]ERROR: No meshes to export. Import first.[/color]")
 		return
 
@@ -465,8 +476,19 @@ func _do_export(path: String, format: int) -> void:
 	_log("Format: " + PLATEAUMeshExporter.get_supported_formats()[format])
 	_log("Path: " + path)
 
-	var exporter = PLATEAUMeshExporter.new()
 	var start_time = Time.get_ticks_msec()
+
+	# Memory optimization: If mesh data was cleared or multiple GML files, export per-file
+	if current_mesh_data.is_empty() or pending_gml_files.size() > 1:
+		if pending_gml_files.is_empty():
+			_log("[color=red]ERROR: No GML files to export from[/color]")
+			return
+		_log("Exporting %d files with memory optimization..." % pending_gml_files.size())
+		_do_export_per_file(path, format)
+		return
+
+	# Single file with mesh data available: use current_mesh_data
+	var exporter = PLATEAUMeshExporter.new()
 
 	# Convert Array to TypedArray
 	var typed_array: Array[PLATEAUMeshData] = []
@@ -483,9 +505,87 @@ func _do_export(path: String, format: int) -> void:
 		_log("[color=red]ERROR: Export failed[/color]")
 
 
+## Export each GML file to a separate output file (memory optimized)
+func _do_export_per_file(base_path: String, format: int) -> void:
+	var start_time = Time.get_ticks_msec()
+	var output_dir = base_path.get_base_dir()
+	var output_ext = base_path.get_extension()
+	var total_files = pending_gml_files.size()
+	var export_count = 0
+	var total_meshes = 0
+
+	_show_loading("Exporting...")
+
+	for i in range(total_files):
+		var file_info = pending_gml_files[i]
+		var gml_path = file_info.get_path()
+		var file_name = gml_path.get_file()
+
+		_update_loading("Exporting: %s (%d/%d)" % [file_name, i + 1, total_files])
+
+		# Create new city model for this file
+		var temp_city_model = PLATEAUCityModel.new()
+		if not temp_city_model.load(gml_path):
+			_log("[color=yellow]Skip: Failed to load " + file_name + "[/color]")
+			continue
+
+		# Extract meshes
+		var mesh_data = temp_city_model.extract_meshes(pending_options)
+		if mesh_data.is_empty():
+			_log("[color=yellow]Skip: No meshes in " + file_name + "[/color]")
+			temp_city_model = null
+			continue
+
+		# Flatten mesh data
+		var flat_meshes = PLATEAUUtils.flatten_mesh_data(Array(mesh_data))
+		total_meshes += flat_meshes.size()
+
+		# Create output path for this file
+		var file_output_name = file_name.get_basename() + "." + output_ext
+		var file_output_path = output_dir.path_join(file_output_name)
+
+		# Export
+		var exporter = PLATEAUMeshExporter.new()
+		var gml_dir = gml_path.get_base_dir()
+		exporter.texture_directory = gml_dir.get_base_dir()
+
+		var typed_array: Array[PLATEAUMeshData] = []
+		for md in flat_meshes:
+			typed_array.append(md)
+
+		var success = exporter.export_to_file(typed_array, file_output_path, format)
+
+		if success:
+			export_count += 1
+			_log("Exported: %s (%d meshes)" % [file_output_path.get_file(), flat_meshes.size()])
+		else:
+			_log("[color=red]Failed: " + file_output_path.get_file() + "[/color]")
+
+		# Clear references to release memory
+		flat_meshes.clear()
+		mesh_data.clear()
+		temp_city_model = null
+		exporter = null
+
+	_hide_loading()
+
+	var export_time = Time.get_ticks_msec() - start_time
+
+	if export_count > 0:
+		_log("Export time: " + str(export_time) + " ms")
+		_log("[color=green]Export complete: %d files, %d meshes[/color]" % [export_count, total_meshes])
+		_log("Output directory: " + output_dir)
+	else:
+		_log("[color=red]ERROR: No files exported[/color]")
+
+
 func _convert_granularity(target_granularity: int) -> void:
 	if current_mesh_data.is_empty():
-		_log("[color=red]ERROR: No meshes to convert. Import first.[/color]")
+		if memory_optimized and pending_gml_files.size() > 1:
+			_log("[color=yellow]Granularity conversion disabled in memory optimized mode.[/color]")
+			_log("[color=yellow]Set 'memory_optimized = false' to enable conversion.[/color]")
+		else:
+			_log("[color=red]ERROR: No meshes to convert. Import first.[/color]")
 		return
 
 	_log("--- Granularity Conversion ---")
@@ -554,24 +654,64 @@ func _convert_granularity(target_granularity: int) -> void:
 func _update_stats() -> void:
 	var total_vertices = 0
 	var total_triangles = 0
+	var mesh_count = 0
 
-	for mesh_data in current_mesh_data:
-		var mesh = mesh_data.get_mesh()
-		if mesh != null:
-			# Sum vertices and triangles from all surfaces
-			for surface_idx in range(mesh.get_surface_count()):
-				var arrays = mesh.surface_get_arrays(surface_idx)
+	# If current_mesh_data is available, use it
+	if not current_mesh_data.is_empty():
+		for mesh_data in current_mesh_data:
+			var mesh = mesh_data.get_mesh()
+			if mesh != null:
+				mesh_count += 1
+				_count_mesh_stats(mesh, total_vertices, total_triangles)
+	else:
+		# Fallback: count from scene MeshInstance3D nodes
+		if imported_root != null:
+			var stats = _count_scene_mesh_stats(imported_root)
+			mesh_count = stats["meshes"]
+			total_vertices = stats["vertices"]
+			total_triangles = stats["triangles"]
+
+	stats_label.text = "Meshes: %d | Vertices: %d | Triangles: %d" % [
+		mesh_count, total_vertices, total_triangles
+	]
+
+
+func _count_mesh_stats(mesh: Mesh, vertices: int, triangles: int) -> void:
+	for surface_idx in range(mesh.get_surface_count()):
+		var arrays = mesh.surface_get_arrays(surface_idx)
+		if arrays.size() > Mesh.ARRAY_VERTEX:
+			var verts = arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array
+			vertices += verts.size()
+		if arrays.size() > Mesh.ARRAY_INDEX:
+			var indices = arrays[Mesh.ARRAY_INDEX] as PackedInt32Array
+			@warning_ignore("integer_division")
+			triangles += indices.size() / 3
+
+
+func _count_scene_mesh_stats(node: Node) -> Dictionary:
+	var result = {"meshes": 0, "vertices": 0, "triangles": 0}
+
+	if node is MeshInstance3D:
+		var mi = node as MeshInstance3D
+		if mi.mesh != null:
+			result["meshes"] += 1
+			for surface_idx in range(mi.mesh.get_surface_count()):
+				var arrays = mi.mesh.surface_get_arrays(surface_idx)
 				if arrays.size() > Mesh.ARRAY_VERTEX:
-					var vertices = arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array
-					total_vertices += vertices.size()
+					var verts = arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array
+					result["vertices"] += verts.size()
 				if arrays.size() > Mesh.ARRAY_INDEX:
 					var indices = arrays[Mesh.ARRAY_INDEX] as PackedInt32Array
 					@warning_ignore("integer_division")
-					total_triangles += indices.size() / 3
+					result["triangles"] += indices.size() / 3
 
-	stats_label.text = "Meshes: %d | Vertices: %d | Triangles: %d" % [
-		current_mesh_data.size(), total_vertices, total_triangles
-	]
+	for child in node.get_children():
+		var child_stats = _count_scene_mesh_stats(child)
+		result["meshes"] += child_stats["meshes"]
+		result["vertices"] += child_stats["vertices"]
+		result["triangles"] += child_stats["triangles"]
+
+	return result
 
 
 func _log(message: String) -> void:

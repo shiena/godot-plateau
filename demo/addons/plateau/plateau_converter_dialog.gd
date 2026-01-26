@@ -504,6 +504,19 @@ static func create_dialog() -> AcceptDialog:
 	export_desc.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	export_section.add_child(export_desc)
 
+	# Per-file export option (memory optimization)
+	var per_file_check = CheckBox.new()
+	per_file_check.name = "PerFileExportCheck"
+	per_file_check.text = "GMLファイル単位でエクスポート (メモリ節約)"
+	per_file_check.button_pressed = true
+	export_section.add_child(per_file_check)
+
+	var per_file_desc = Label.new()
+	per_file_desc.text = "大量のGMLファイルを処理する際のメモリ不足を防止します"
+	per_file_desc.autowrap_mode = TextServer.AUTOWRAP_WORD
+	per_file_desc.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+	export_section.add_child(per_file_desc)
+
 	# Format selection
 	var format_hbox = HBoxContainer.new()
 	var format_label = Label.new()
@@ -1016,6 +1029,8 @@ static func _on_export_confirmed(dialog: AcceptDialog) -> void:
 	var axis_dropdown: OptionButton = dialog.find_child("AxisDropdown", true, false)
 	var transform_dropdown: OptionButton = dialog.find_child("TransformDropdown", true, false)
 
+	var per_file_check: CheckBox = dialog.find_child("PerFileExportCheck", true, false)
+
 	var is_dataset = source_radio_dataset.button_pressed
 	var zone_id = zone_dropdown.get_selected_id()
 	var coordinate_system = axis_dropdown.get_selected_id()
@@ -1028,6 +1043,7 @@ static func _on_export_confirmed(dialog: AcceptDialog) -> void:
 	var texture_packing = texture_packing_check.button_pressed
 	var texture_resolution = texture_res_dropdown.get_selected_id()
 	var export_format = format_dropdown.get_selected_id()
+	var per_file_export = per_file_check.button_pressed if per_file_check else true
 
 	# Collect package filter flags and mesh codes
 	var package_flags: int = 0
@@ -1085,12 +1101,13 @@ static func _on_export_confirmed(dialog: AcceptDialog) -> void:
 	print("  Texture Packing: ", texture_packing)
 	print("  Output: ", output_path.text)
 	print("  Format: ", export_format)
+	print("  Per-file Export: ", per_file_export)
 
 	_do_export.call_deferred(
 		dialog, is_dataset, input_path.text, package_flags, selected_mesh_codes,
 		zone_id, coordinate_system, transform_type, granularity, lod_min, lod_max,
 		highest_lod_only, export_textures, texture_packing, texture_resolution,
-		export_format, output_path.text, progress_bar, progress_label
+		export_format, output_path.text, per_file_export, progress_bar, progress_label
 	)
 
 
@@ -1112,6 +1129,7 @@ static func _do_export(
 	texture_resolution: int,
 	export_format: int,
 	output_path: String,
+	per_file_export: bool,
 	progress_bar: ProgressBar,
 	progress_label: Label
 ) -> void:
@@ -1151,54 +1169,122 @@ static func _do_export(
 
 	progress_bar.value = 5
 
-	var all_mesh_data: Array = []
 	var total_files = gml_paths.size()
+	var total_meshes = 0
+	var export_count = 0
+	var success = true
 
-	for i in range(total_files):
-		var gml_path = gml_paths[i]
-		var file_name = gml_path.get_file()
-		progress_label.text = "Processing: %s (%d/%d)" % [file_name, i + 1, total_files]
+	# Per-file export mode: export each GML to a separate file
+	if per_file_export and total_files > 1:
+		var output_dir = output_path.get_base_dir()
+		var output_ext = output_path.get_extension()
 
-		var mesh_data = _extract_meshes_from_gml(
-			gml_path, zone_id, coordinate_system, transform_type, granularity,
-			lod_min, lod_max, highest_lod_only, export_textures, texture_packing,
-			texture_resolution
-		)
+		for i in range(total_files):
+			var gml_path = gml_paths[i]
+			var file_name = gml_path.get_file()
+			progress_label.text = "Processing: %s (%d/%d)" % [file_name, i + 1, total_files]
 
-		for md in mesh_data:
-			all_mesh_data.append(md)
+			var mesh_data = _extract_meshes_from_gml(
+				gml_path, zone_id, coordinate_system, transform_type, granularity,
+				lod_min, lod_max, highest_lod_only, export_textures, texture_packing,
+				texture_resolution
+			)
 
-		var progress = 5 + int(75.0 * (i + 1) / total_files)
-		progress_bar.value = progress
+			if mesh_data.is_empty():
+				var progress = 5 + int(90.0 * (i + 1) / total_files)
+				progress_bar.value = progress
+				continue
 
-	if all_mesh_data.is_empty():
-		push_warning("[PLATEAU Converter] No meshes extracted from GML files")
+			total_meshes += mesh_data.size()
 
+			# Create output path for this file
+			var file_output_name = file_name.get_basename() + "." + output_ext
+			var file_output_path = output_dir.path_join(file_output_name)
 
-	progress_bar.value = 85
-	progress_label.text = "Exporting to file..."
+			progress_label.text = "Exporting: %s (%d/%d)" % [file_name, i + 1, total_files]
 
-	var exporter = PLATEAUMeshExporter.new()
+			var exporter = PLATEAUMeshExporter.new()
 
-	# テクスチャディレクトリを設定（GMLファイルの親ディレクトリ）
-	if gml_paths.size() > 0:
-		var gml_dir = gml_paths[0].get_base_dir()
-		# PLATEAUデータは通常、udx/bldg/などの構造を持つため、上位ディレクトリを使用
-		var parent_dir = gml_dir.get_base_dir()
-		exporter.texture_directory = parent_dir
+			# Set texture directory
+			var gml_dir = gml_path.get_base_dir()
+			var parent_dir = gml_dir.get_base_dir()
+			exporter.texture_directory = parent_dir
 
-	var success = exporter.export_to_file(all_mesh_data, output_path, export_format)
+			var file_success = exporter.export_to_file(mesh_data, file_output_path, export_format)
 
-	progress_bar.value = 100
+			if file_success:
+				export_count += 1
+				print("[PLATEAU Converter] Exported: %s (%d meshes)" % [file_output_path, mesh_data.size()])
+			else:
+				push_error("[PLATEAU Converter] Failed to export: " + file_output_path)
+				success = false
 
-	var elapsed := (Time.get_ticks_msec() - start_time) / 1000.0
+			# Clear references to release memory
+			mesh_data.clear()
+			exporter = null
 
-	if success:
-		print("[PLATEAU Converter] Export completed in %.2f seconds" % elapsed)
-		print("[PLATEAU Converter] Total meshes: %d" % all_mesh_data.size())
-		print("[PLATEAU Converter] Output: %s" % output_path)
+			var progress = 5 + int(90.0 * (i + 1) / total_files)
+			progress_bar.value = progress
+
+		progress_bar.value = 100
+
+		var elapsed := (Time.get_ticks_msec() - start_time) / 1000.0
+
+		if export_count > 0:
+			print("[PLATEAU Converter] Export completed in %.2f seconds" % elapsed)
+			print("[PLATEAU Converter] Total files: %d, Total meshes: %d" % [export_count, total_meshes])
+			print("[PLATEAU Converter] Output directory: %s" % output_dir)
+		else:
+			push_error("[PLATEAU Converter] No files exported")
+			success = false
+
 	else:
-		push_error("[PLATEAU Converter] Export failed")
+		# Single file export mode (original behavior)
+		var all_mesh_data: Array = []
+
+		for i in range(total_files):
+			var gml_path = gml_paths[i]
+			var file_name = gml_path.get_file()
+			progress_label.text = "Processing: %s (%d/%d)" % [file_name, i + 1, total_files]
+
+			var mesh_data = _extract_meshes_from_gml(
+				gml_path, zone_id, coordinate_system, transform_type, granularity,
+				lod_min, lod_max, highest_lod_only, export_textures, texture_packing,
+				texture_resolution
+			)
+
+			for md in mesh_data:
+				all_mesh_data.append(md)
+
+			var progress = 5 + int(75.0 * (i + 1) / total_files)
+			progress_bar.value = progress
+
+		if all_mesh_data.is_empty():
+			push_warning("[PLATEAU Converter] No meshes extracted from GML files")
+
+		progress_bar.value = 85
+		progress_label.text = "Exporting to file..."
+
+		var exporter = PLATEAUMeshExporter.new()
+
+		# Set texture directory
+		if gml_paths.size() > 0:
+			var gml_dir = gml_paths[0].get_base_dir()
+			var parent_dir = gml_dir.get_base_dir()
+			exporter.texture_directory = parent_dir
+
+		success = exporter.export_to_file(all_mesh_data, output_path, export_format)
+
+		progress_bar.value = 100
+
+		var elapsed := (Time.get_ticks_msec() - start_time) / 1000.0
+
+		if success:
+			print("[PLATEAU Converter] Export completed in %.2f seconds" % elapsed)
+			print("[PLATEAU Converter] Total meshes: %d" % all_mesh_data.size())
+			print("[PLATEAU Converter] Output: %s" % output_path)
+		else:
+			push_error("[PLATEAU Converter] Export failed")
 
 	_export_finished(dialog, success, progress_label)
 
@@ -1566,7 +1652,8 @@ static func _do_import(
 			lod_node.owner = root
 
 			var mesh_array = lod_meshes[lod]
-			for mesh_data in mesh_array:
+			for j in range(mesh_array.size()):
+				var mesh_data = mesh_array[j]
 				var mesh = mesh_data.get_mesh()
 				if mesh == null:
 					continue
@@ -1585,11 +1672,17 @@ static func _do_import(
 
 				ResourceSaver.save(mesh, mesh_path)
 
-				# Create MeshInstance3D
+				# Get transform before clearing reference
+				var mesh_transform = mesh_data.get_transform()
+
+				# Clear reference to release memory
+				mesh_array[j] = null
+
+				# Create MeshInstance3D with loaded mesh (new reference)
 				var mi = MeshInstance3D.new()
 				mi.name = mesh_name.replace("/", "_")
 				mi.mesh = load(mesh_path)
-				mi.transform = mesh_data.get_transform()
+				mi.transform = mesh_transform
 
 				# Set LOD visibility ranges
 				if lod_auto_switch and lod_keys.size() > 1:
@@ -1605,6 +1698,14 @@ static func _do_import(
 
 				lod_node.add_child(mi)
 				mi.owner = root
+
+			# Clear array after processing each LOD
+			lod_meshes[lod].clear()
+
+		# Clear all references for this GML file to release memory
+		lod_meshes.clear()
+		extracted.clear()
+		city_model = null
 
 		var progress = 5 + int(85.0 * (i + 1) / total_files)
 		progress_bar.value = progress
