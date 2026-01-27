@@ -405,7 +405,13 @@ sources = Glob("src/*.cpp") + Glob("src/plateau/*.cpp")
 # Build suffix (remove .dev and .universal for compatibility)
 suffix = env['suffix'].replace(".dev", "").replace(".universal", "")
 
-lib_filename = "{}{}{}{}".format(env.subst('$SHLIBPREFIX'), LIB_NAME, suffix, env.subst('$SHLIBSUFFIX'))
+# Android needs explicit lib prefix (godot-cpp sets SHLIBPREFIX to empty string)
+if platform == "android":
+    lib_prefix = "lib"
+else:
+    lib_prefix = env.subst('$SHLIBPREFIX')
+
+lib_filename = "{}{}{}{}".format(lib_prefix, LIB_NAME, suffix, env.subst('$SHLIBSUFFIX'))
 
 # Determine output directory (include arch for mobile platforms)
 if platform in ("android", "ios"):
