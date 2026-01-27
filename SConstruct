@@ -23,6 +23,12 @@ macOS build requires:
   - Homebrew packages: brew install mesa-glu xz libdeflate
   - Example: scons platform=macos arch=arm64
   - Custom Homebrew prefix: scons platform=macos arch=arm64 homebrew_prefix=/usr/local
+
+Options:
+  - skip_libplateau_build=yes: Skip libplateau build (use pre-built library)
+  - skip_tests=yes: Skip building libplateau tests and examples (faster CI builds)
+  - use_clang=yes: Use Clang instead of GCC on Linux
+  - homebrew_prefix=/path: Custom Homebrew prefix on macOS
 """
 
 import os
@@ -202,12 +208,20 @@ def build_libplateau(target, source, env):
     arch = env.get("arch", "")
     build_type = env.get("LIBPLATEAU_BUILD_TYPE", "Release")
     build_dir = get_libplateau_build_dir(platform, arch)
+    skip_tests = env.get("skip_tests", False)
 
     cmake_args = [
         cmake_executable,
         "--build", str(build_dir),
         "--config", build_type,
     ]
+
+    # Skip tests/examples by building only the main library target
+    if skip_tests:
+        if platform in ("android", "ios"):
+            cmake_args.extend(["--target", "plateau"])
+        else:
+            cmake_args.extend(["--target", "plateau_combined"])
 
     print(f"Building libplateau: {' '.join(cmake_args)}")
     subprocess.check_call(cmake_args)
@@ -281,6 +295,7 @@ libplateau_build_type = get_cmake_build_type(target)
 env["LIBPLATEAU_BUILD_TYPE"] = libplateau_build_type
 env["use_clang"] = ARGUMENTS.get("use_clang", "no") == "yes"
 env["homebrew_prefix"] = ARGUMENTS.get("homebrew_prefix", DEFAULT_HOMEBREW_PREFIX)
+env["skip_tests"] = ARGUMENTS.get("skip_tests", "no") == "yes"
 
 libplateau_build_dir = get_libplateau_build_dir(platform, arch)
 libplateau_lib_path = get_libplateau_lib_path(platform, libplateau_build_dir, libplateau_build_type)
