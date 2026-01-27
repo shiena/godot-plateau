@@ -153,7 +153,7 @@ jobs:
         if: ${{ matrix.target.platform == 'windows' }}
         shell: pwsh
         run: |
-          Remove-Item bin/* -Include *.exp,*.lib,*.pdb -Force
+          Remove-Item bin -Recurse -Include *.exp,*.lib,*.pdb -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -183,6 +183,10 @@ jobs:
         run: |
           # Apply version update
           cp artifacts/version-update/plugin.cfg demo/addons/plateau/plugin.cfg
+
+          # Remove old library files to avoid stale files in archive
+          echo "Removing old library files..."
+          find demo/addons/plateau -type f \( -name "*.dll" -o -name "*.so" -o -name "*.dylib" -o -name "*.exp" -o -name "*.lib" \) -delete
 
           # Copy libraries to demo/addons/plateau/
           echo "Copying libraries..."
