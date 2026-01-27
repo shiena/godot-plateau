@@ -126,15 +126,14 @@ jobs:
           scons-cache: ${{ github.workspace }}/.scons-cache/
           cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.target-type }}
 
-      - name: Clean libplateau build directory
+      - name: Clean build directories
         shell: bash
         run: |
           # Remove entire libplateau build directory to force full rebuild
           # SCons cache may have cmake markers but not the actual built libraries
           rm -rf build/*/libplateau build/*/*/libplateau 2>/dev/null || true
-          # Also clean from scons cache
-          find .scons-cache -name "*libplateau*" -delete 2>/dev/null || true
-          find .scons-cache -name "*.cmake_configured*" -delete 2>/dev/null || true
+          # Clean stale library files from demo/addons (may be restored from cache)
+          find demo/addons/plateau -type f \( -name "*.dll" -o -name "*.so" -o -name "*.dylib" -o -name "*.exp" -o -name "*.lib" \) -delete 2>/dev/null || true
 
       - name: Build GDExtension
         shell: sh
