@@ -1,4 +1,5 @@
 #include "plateau_instanced_city_model.h"
+#include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 
 using namespace godot;
@@ -10,7 +11,11 @@ PLATEAUInstancedCityModel::PLATEAUInstancedCityModel()
       coordinate_system_(static_cast<int>(PLATEAUCoordinateSystem::EUN)),
       min_lod_(0),
       max_lod_(4),
-      mesh_granularity_(1) { // 1 = PRIMARY (per-building)
+      mesh_granularity_(1), // 1 = PRIMARY (per-building)
+      lod_auto_switch_enabled_(true),
+      lod2_distance_(DEFAULT_LOD2_DISTANCE),
+      lod1_distance_(DEFAULT_LOD1_DISTANCE),
+      lod_disable_in_editor_(true) {
 }
 
 PLATEAUInstancedCityModel::~PLATEAUInstancedCityModel() {
@@ -213,6 +218,169 @@ int PLATEAUInstancedCityModel::parse_lod_from_name(const String &name) {
     return -1;
 }
 
+// LOD Auto-Switch settings
+void PLATEAUInstancedCityModel::set_lod_auto_switch_enabled(bool enabled) {
+    lod_auto_switch_enabled_ = enabled;
+    apply_lod_settings();
+}
+
+bool PLATEAUInstancedCityModel::get_lod_auto_switch_enabled() const {
+    return lod_auto_switch_enabled_;
+}
+
+void PLATEAUInstancedCityModel::set_lod2_distance(float distance) {
+    lod2_distance_ = distance;
+    apply_lod_settings();
+}
+
+float PLATEAUInstancedCityModel::get_lod2_distance() const {
+    return lod2_distance_;
+}
+
+void PLATEAUInstancedCityModel::set_lod1_distance(float distance) {
+    lod1_distance_ = distance;
+    apply_lod_settings();
+}
+
+float PLATEAUInstancedCityModel::get_lod1_distance() const {
+    return lod1_distance_;
+}
+
+void PLATEAUInstancedCityModel::set_lod_disable_in_editor(bool disable) {
+    lod_disable_in_editor_ = disable;
+    apply_lod_settings();
+}
+
+bool PLATEAUInstancedCityModel::get_lod_disable_in_editor() const {
+    return lod_disable_in_editor_;
+}
+
+void PLATEAUInstancedCityModel::apply_lod_to_mesh(MeshInstance3D *mesh, int lod, int max_lod, int min_lod, bool use_lod) {
+    if (!mesh) {
+        return;
+    }
+
+    if (!use_lod) {
+        // Disable LOD: show all meshes
+        mesh->set_visibility_range_begin(0);
+        mesh->set_visibility_range_end(0);
+        return;
+    }
+
+    // Apply visibility ranges based on LOD level
+    if (lod == max_lod) {
+        // Highest LOD: visible from 0 to lod2_distance
+        mesh->set_visibility_range_begin(0);
+        mesh->set_visibility_range_end(lod2_distance_);
+    } else if (lod == min_lod) {
+        // Lowest LOD: visible from lod1_distance to infinity (0)
+        mesh->set_visibility_range_begin(lod1_distance_);
+        mesh->set_visibility_range_end(0);
+    } else {
+        // Middle LODs: visible from lod2_distance to lod1_distance
+        mesh->set_visibility_range_begin(lod2_distance_);
+        mesh->set_visibility_range_end(lod1_distance_);
+    }
+}
+
+void PLATEAUInstancedCityModel::apply_lod_settings() {
+    // Determine if LOD should be used
+    bool use_lod = lod_auto_switch_enabled_;
+    if (lod_disable_in_editor_ && Engine::get_singleton()->is_editor_hint()) {
+        use_lod = false;
+    }
+
+    // Iterate all GML transforms
+    TypedArray<Node3D> gml_transforms = get_gml_transforms();
+    for (int i = 0; i < gml_transforms.size(); i++) {
+        Node3D *gml_transform = Object::cast_to<Node3D>(gml_transforms[i].operator Object*());
+        if (!gml_transform) {
+            continue;
+        }
+
+        // Get available LODs for this GML
+        PackedInt32Array lods = get_lods(gml_transform);
+        if (lods.size() <= 1) {
+            // Single LOD or no LOD: disable visibility range
+            TypedArray<Node3D> lod_transforms = get_lod_transforms(gml_transform);
+            for (int j = 0; j < lod_transforms.size(); j++) {
+                Node3D *lod_node = Object::cast_to<Node3D>(lod_transforms[j].operator Object*());
+                if (!lod_node) {
+                    continue;
+                }
+                TypedArray<Node> children = lod_node->get_children();
+                for (int k = 0; k < children.size(); k++) {
+                    MeshInstance3D *mesh = Object::cast_to<MeshInstance3D>(children[k].operator Object*());
+                    if (mesh) {
+                        mesh->set_visibility_range_begin(0);
+                        mesh->set_visibility_range_end(0);
+                    }
+                }
+            }
+            continue;
+        }
+
+        // Multiple LODs: apply visibility ranges
+        int max_lod = lods[lods.size() - 1];
+        int min_lod = lods[0];
+
+        TypedArray<Node3D> lod_transforms = get_lod_transforms(gml_transform);
+        for (int j = 0; j < lod_transforms.size(); j++) {
+            Node3D *lod_node = Object::cast_to<Node3D>(lod_transforms[j].operator Object*());
+            if (!lod_node) {
+                continue;
+            }
+
+            int lod = parse_lod_from_name(lod_node->get_name());
+            if (lod < 0) {
+                continue;
+            }
+
+            TypedArray<Node> children = lod_node->get_children();
+            for (int k = 0; k < children.size(); k++) {
+                MeshInstance3D *mesh = Object::cast_to<MeshInstance3D>(children[k].operator Object*());
+                if (mesh) {
+                    apply_lod_to_mesh(mesh, lod, max_lod, min_lod, use_lod);
+                }
+            }
+        }
+    }
+}
+
+void PLATEAUInstancedCityModel::_ready() {
+    // Apply LOD settings when scene is loaded
+    // This ensures editor settings take effect immediately
+    apply_lod_settings();
+}
+
+void PLATEAUInstancedCityModel::reset_lod_settings() {
+    // Disable all visibility ranges
+    TypedArray<Node3D> gml_transforms = get_gml_transforms();
+    for (int i = 0; i < gml_transforms.size(); i++) {
+        Node3D *gml_transform = Object::cast_to<Node3D>(gml_transforms[i].operator Object*());
+        if (!gml_transform) {
+            continue;
+        }
+
+        TypedArray<Node3D> lod_transforms = get_lod_transforms(gml_transform);
+        for (int j = 0; j < lod_transforms.size(); j++) {
+            Node3D *lod_node = Object::cast_to<Node3D>(lod_transforms[j].operator Object*());
+            if (!lod_node) {
+                continue;
+            }
+
+            TypedArray<Node> children = lod_node->get_children();
+            for (int k = 0; k < children.size(); k++) {
+                MeshInstance3D *mesh = Object::cast_to<MeshInstance3D>(children[k].operator Object*());
+                if (mesh) {
+                    mesh->set_visibility_range_begin(0);
+                    mesh->set_visibility_range_end(0);
+                }
+            }
+        }
+    }
+}
+
 void PLATEAUInstancedCityModel::_bind_methods() {
     // GeoReference data
     ClassDB::bind_method(D_METHOD("set_zone_id", "zone_id"), &PLATEAUInstancedCityModel::set_zone_id);
@@ -264,4 +432,30 @@ void PLATEAUInstancedCityModel::_bind_methods() {
 
     // Static methods
     ClassDB::bind_static_method("PLATEAUInstancedCityModel", D_METHOD("parse_lod_from_name", "name"), &PLATEAUInstancedCityModel::parse_lod_from_name);
+
+    // LOD Auto-Switch settings
+    ADD_GROUP("LOD Auto-Switch", "lod_");
+
+    ClassDB::bind_method(D_METHOD("set_lod_auto_switch_enabled", "enabled"), &PLATEAUInstancedCityModel::set_lod_auto_switch_enabled);
+    ClassDB::bind_method(D_METHOD("get_lod_auto_switch_enabled"), &PLATEAUInstancedCityModel::get_lod_auto_switch_enabled);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lod_auto_switch_enabled"), "set_lod_auto_switch_enabled", "get_lod_auto_switch_enabled");
+
+    ClassDB::bind_method(D_METHOD("set_lod2_distance", "distance"), &PLATEAUInstancedCityModel::set_lod2_distance);
+    ClassDB::bind_method(D_METHOD("get_lod2_distance"), &PLATEAUInstancedCityModel::get_lod2_distance);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "lod2_distance", PROPERTY_HINT_RANGE, "10,2000,10,suffix:m"), "set_lod2_distance", "get_lod2_distance");
+
+    ClassDB::bind_method(D_METHOD("set_lod1_distance", "distance"), &PLATEAUInstancedCityModel::set_lod1_distance);
+    ClassDB::bind_method(D_METHOD("get_lod1_distance"), &PLATEAUInstancedCityModel::get_lod1_distance);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "lod1_distance", PROPERTY_HINT_RANGE, "50,5000,10,suffix:m"), "set_lod1_distance", "get_lod1_distance");
+
+    ClassDB::bind_method(D_METHOD("set_lod_disable_in_editor", "disable"), &PLATEAUInstancedCityModel::set_lod_disable_in_editor);
+    ClassDB::bind_method(D_METHOD("get_lod_disable_in_editor"), &PLATEAUInstancedCityModel::get_lod_disable_in_editor);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lod_disable_in_editor"), "set_lod_disable_in_editor", "get_lod_disable_in_editor");
+
+    ClassDB::bind_method(D_METHOD("apply_lod_settings"), &PLATEAUInstancedCityModel::apply_lod_settings);
+    ClassDB::bind_method(D_METHOD("reset_lod_settings"), &PLATEAUInstancedCityModel::reset_lod_settings);
+
+    // Constants
+    BIND_CONSTANT(DEFAULT_LOD2_DISTANCE);
+    BIND_CONSTANT(DEFAULT_LOD1_DISTANCE);
 }

@@ -1577,6 +1577,12 @@ static func _do_import(
 	root.name = scene_name
 	root.zone_id = zone_id
 
+	# Set LOD Auto-Switch settings
+	root.lod_auto_switch_enabled = lod_auto_switch
+	root.lod2_distance = lod2_distance
+	root.lod1_distance = lod1_distance
+	root.lod_disable_in_editor = true
+
 	# Track copied textures to avoid duplicates
 	var copied_textures: Dictionary = {}
 
@@ -1684,17 +1690,8 @@ static func _do_import(
 				mi.mesh = load(mesh_path)
 				mi.transform = mesh_transform
 
-				# Set LOD visibility ranges
-				if lod_auto_switch and lod_keys.size() > 1:
-					if lod == lod_max:  # Highest LOD (closest)
-						mi.visibility_range_begin = 0
-						mi.visibility_range_end = lod2_distance
-					elif lod == lod_min:  # Lowest LOD (farthest)
-						mi.visibility_range_begin = lod1_distance
-						mi.visibility_range_end = 0  # 0 = infinite
-					else:  # Middle LODs
-						mi.visibility_range_begin = lod2_distance
-						mi.visibility_range_end = lod1_distance
+				# Note: LOD visibility ranges are applied later via root.apply_lod_settings()
+				# This allows LOD settings to be changed in the Inspector after import
 
 				lod_node.add_child(mi)
 				mi.owner = root
@@ -1709,6 +1706,10 @@ static func _do_import(
 
 		var progress = 5 + int(85.0 * (i + 1) / total_files)
 		progress_bar.value = progress
+
+	# Apply LOD settings to all MeshInstance3D nodes
+	progress_label.text = "Applying LOD settings..."
+	root.apply_lod_settings()
 
 	# Save the scene
 	progress_label.text = "Saving scene..."

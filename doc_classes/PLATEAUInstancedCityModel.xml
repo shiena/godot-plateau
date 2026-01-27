@@ -78,6 +78,20 @@
 				Parses the LOD number from a node name (e.g., "LOD2" returns 2). Returns -1 if the name is not a valid LOD node name.
 			</description>
 		</method>
+		<method name="apply_lod_settings">
+			<return type="void" />
+			<description>
+				Applies the current LOD auto-switch settings to all MeshInstance3D children. This sets [code]visibility_range_begin[/code] and [code]visibility_range_end[/code] on each mesh based on its LOD level.
+				If [member lod_disable_in_editor] is [code]true[/code] and running in the editor, LOD switching is disabled (all LODs are visible).
+				This method is called automatically when LOD properties are changed or when the scene is loaded.
+			</description>
+		</method>
+		<method name="reset_lod_settings">
+			<return type="void" />
+			<description>
+				Resets LOD settings on all MeshInstance3D children by setting both [code]visibility_range_begin[/code] and [code]visibility_range_end[/code] to 0, making all meshes visible regardless of camera distance.
+			</description>
+		</method>
 	</methods>
 	<members>
 		<member name="zone_id" type="int" setter="set_zone_id" getter="get_zone_id" default="9">
@@ -104,5 +118,25 @@
 		<member name="mesh_granularity" type="int" setter="set_mesh_granularity" getter="get_mesh_granularity" default="1">
 			Mesh granularity: 0=Area (combined), 1=Primary (per-building), 2=Atomic (per-component).
 		</member>
+		<member name="lod_auto_switch_enabled" type="bool" setter="set_lod_auto_switch_enabled" getter="get_lod_auto_switch_enabled" default="true">
+			If [code]true[/code], enables automatic LOD switching based on camera distance. Meshes will show/hide based on [member lod2_distance] and [member lod1_distance] settings.
+		</member>
+		<member name="lod2_distance" type="float" setter="set_lod2_distance" getter="get_lod2_distance" default="200.0">
+			Distance in meters at which to switch from highest LOD to middle LOD. Default is [constant DEFAULT_LOD2_DISTANCE] (200m).
+		</member>
+		<member name="lod1_distance" type="float" setter="set_lod1_distance" getter="get_lod1_distance" default="500.0">
+			Distance in meters at which to switch from middle LOD to lowest LOD. Default is [constant DEFAULT_LOD1_DISTANCE] (500m).
+		</member>
+		<member name="lod_disable_in_editor" type="bool" setter="set_lod_disable_in_editor" getter="get_lod_disable_in_editor" default="true">
+			If [code]true[/code], disables LOD auto-switching when running in the editor. This allows all LOD levels to be visible for easier editing. Takes priority over [member lod_auto_switch_enabled] in the editor.
+		</member>
 	</members>
+	<constants>
+		<constant name="DEFAULT_LOD2_DISTANCE" value="200">
+			Default distance in meters for LOD2 switching (highest to middle LOD).
+		</constant>
+		<constant name="DEFAULT_LOD1_DISTANCE" value="500">
+			Default distance in meters for LOD1 switching (middle to lowest LOD).
+		</constant>
+	</constants>
 </class>

@@ -16,6 +16,10 @@ class PLATEAUInstancedCityModel : public Node3D {
     GDCLASS(PLATEAUInstancedCityModel, Node3D)
 
 public:
+    // Default LOD distance constants
+    static constexpr float DEFAULT_LOD2_DISTANCE = 200.0f;
+    static constexpr float DEFAULT_LOD1_DISTANCE = 500.0f;
+
     PLATEAUInstancedCityModel();
     ~PLATEAUInstancedCityModel();
 
@@ -69,10 +73,35 @@ public:
     // Parse LOD number from node name (e.g., "LOD2" -> 2)
     static int parse_lod_from_name(const String &name);
 
+    // LOD Auto-Switch settings
+    void set_lod_auto_switch_enabled(bool enabled);
+    bool get_lod_auto_switch_enabled() const;
+
+    void set_lod2_distance(float distance);
+    float get_lod2_distance() const;
+
+    void set_lod1_distance(float distance);
+    float get_lod1_distance() const;
+
+    void set_lod_disable_in_editor(bool disable);
+    bool get_lod_disable_in_editor() const;
+
+    // Apply LOD settings to all MeshInstance3D children
+    void apply_lod_settings();
+
+    // Reset LOD settings (disable visibility_range)
+    void reset_lod_settings();
+
+    // Godot lifecycle
+    void _ready();
+
 protected:
     static void _bind_methods();
 
 private:
+    // Helper to recursively apply LOD settings
+    void apply_lod_to_mesh(class MeshInstance3D *mesh, int lod, int max_lod, int min_lod, bool use_lod);
+
     // GeoReference data
     int zone_id_;
     Vector3 reference_point_;
@@ -86,6 +115,12 @@ private:
     int min_lod_;
     int max_lod_;
     int mesh_granularity_;
+
+    // LOD Auto-Switch settings
+    bool lod_auto_switch_enabled_;
+    float lod2_distance_;
+    float lod1_distance_;
+    bool lod_disable_in_editor_;
 
     // Cached GeoReference
     mutable Ref<PLATEAUGeoReference> geo_reference_cache_;
