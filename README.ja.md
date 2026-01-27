@@ -330,12 +330,21 @@ CityGMLファイルを `.tscn` シーンとしてGodotプロジェクトにイ�
 - Visual Studio 2022 (Windows) / Ninja + Xcode (macOS)
 - Git
 
+#### Linux 追加要件
+
+以下のパッケージをインストールしてください：
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install libgl1-mesa-dev libglu1-mesa-dev
+```
+
 #### macOS 追加要件
 
 以下のHomebrewパッケージをインストールしてください：
 
 ```bash
-brew install mesa-glu xz libdeflate
+brew install mesa-glu xz libdeflate ninja
 ```
 
 ### SConsでビルド（推奨）

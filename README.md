@@ -333,12 +333,21 @@ Usage:
 - Visual Studio 2022 (Windows) / Ninja + Xcode (macOS)
 - Git
 
+#### Linux Additional Requirements
+
+Install the following packages:
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install libgl1-mesa-dev libglu1-mesa-dev
+```
+
 #### macOS Additional Requirements
 
 Install the following Homebrew packages:
 
 ```bash
-brew install mesa-glu xz libdeflate
+brew install mesa-glu xz libdeflate ninja
 ```
 
 ### Build with SCons (Recommended)
