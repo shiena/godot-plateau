@@ -1,8 +1,16 @@
-# PLATEAU SDK for Godot
+<p align="center">
+  <img src="demo/addons/plateau/icon.png" alt="PLATEAU SDK for Godot logo" width="128" height="128">
+</p>
 
-A GDExtension for Godot Engine 4.x that enables loading 3D city models (CityGML) provided by Japan's Ministry of Land, Infrastructure, Transport and Tourism (MLIT).
+<h1 align="center">PLATEAU SDK for Godot</h1>
 
-[日本語版 README](./README.ja.md)
+<p align="center">
+  A GDExtension for Godot Engine 4.x that enables loading 3D city models (CityGML) provided by Japan's Ministry of Land, Infrastructure, Transport and Tourism (MLIT).
+</p>
+
+<p align="center">
+  <a href="./README.ja.md">日本語版 README</a>
+</p>
 
 ## Features
 
@@ -472,6 +480,13 @@ The following classes are **not available** on mobile platforms due to libpng de
 - `PLATEAUVectorTile` - Downloaded tile information
 
 Core functionality (CityGML loading, mesh extraction, coordinate conversion) works on all platforms.
+
+## Disclaimer
+
+This project is not affiliated with, endorsed by, or sponsored by the [Godot Foundation](https://godot.foundation/) or Japan's [Ministry of Land, Infrastructure, Transport and Tourism (MLIT)](https://www.mlit.go.jp/).
+
+- "Godot" and the Godot logo are registered trademarks of the Godot Foundation.
+- "PLATEAU" is a project by the Ministry of Land, Infrastructure, Transport and Tourism of Japan.
 
 ## License
 

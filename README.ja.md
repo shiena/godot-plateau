@@ -1,6 +1,13 @@
-# PLATEAU SDK for Godot
+<p align="center">
+  <img src="demo/addons/plateau/icon.png" alt="PLATEAU SDK for Godot ロゴ" width="128" height="128">
+</p>
 
-Godot Engine 4.x 向けの PLATEAU SDK GDExtension です。国土交通省が提供する3D都市モデル（CityGML）をGodotで利用できます。
+<h1 align="center">PLATEAU SDK for Godot</h1>
+
+<p align="center">
+  Godot Engine 4.x 向けの PLATEAU SDK GDExtension です。<br>
+  国土交通省が提供する3D都市モデル（CityGML）をGodotで利用できます。
+</p>
 
 ## 機能
 
@@ -470,6 +477,13 @@ OBJ形式でエクスポートする場合、libplateauはCityObject（建物）
 - `PLATEAUVectorTile` - ダウンロードしたタイル情報
 
 コア機能（CityGML読み込み、メッシュ抽出、座標変換）は全プラットフォームで動作します。
+
+## 免責事項
+
+このプロジェクトは [Godot Foundation](https://godot.foundation/) および [国土交通省](https://www.mlit.go.jp/) とは関係がなく、公式に承認またはスポンサーされているものではありません。
+
+- 「Godot」およびGodotロゴはGodot Foundationの登録商標です。
+- 「PLATEAU」は国土交通省のプロジェクトです。
 
 ## 使用方法
 
