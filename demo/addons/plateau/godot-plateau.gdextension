@@ -2,6 +2,7 @@
 
 entry_symbol = "godot_plateau_init"
 compatibility_minimum = "4.1"
+reloadable = false
 
 [libraries]
 ; Relative paths ensure that our GDExtension can be placed anywhere in the project directory.
