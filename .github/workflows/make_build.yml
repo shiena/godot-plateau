@@ -86,7 +86,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
 
       - name: Setup godot-cpp
         uses: ./godot-cpp/.github/actions/setup-godot-cpp
