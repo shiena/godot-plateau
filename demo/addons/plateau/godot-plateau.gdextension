@@ -6,9 +6,9 @@ compatibility_minimum = "4.1"
 [libraries]
 ; Relative paths ensure that our GDExtension can be placed anywhere in the project directory.
 
-; macOS (universal: arm64 + x86_64)
-macos.debug = "./macos/libgodot-plateau.macos.template_debug.universal.dylib"
-macos.release = "./macos/libgodot-plateau.macos.template_release.universal.dylib"
+; macOS (arm64)
+macos.arm64.debug = "./macos/libgodot-plateau.macos.template_debug.arm64.dylib"
+macos.arm64.release = "./macos/libgodot-plateau.macos.template_release.arm64.dylib"
 
 ; Windows (x86_64)
 windows.x86_64.debug = "./windows/godot-plateau.windows.template_debug.x86_64.dll"

@@ -76,7 +76,7 @@ jobs:
             { platform: linux, arch: x86_64, os: ubuntu-22.04 },
             { platform: linux, arch: arm64, os: ubuntu-22.04-arm },
             { platform: windows, arch: x86_64, os: windows-latest },
-            { platform: macos, arch: universal, os: macos-latest },
+            { platform: macos, arch: arm64, os: macos-latest },
             { platform: android, arch: arm64, os: ubuntu-22.04 },
             { platform: ios, arch: arm64, os: macos-latest },
           ]
@@ -87,6 +87,32 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Linux - Install dependencies
+        if: ${{ matrix.target.platform == 'linux' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev
+
+      - name: macOS - Install dependencies
+        if: ${{ matrix.target.platform == 'macos' || matrix.target.platform == 'ios' }}
+        run: |
+          brew install mesa-glu xz libdeflate ninja
+
+      - name: Install CMake 3.x
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.30.x'
+
+      - name: Verify CMake version
+        shell: bash
+        run: |
+          echo "CMake path: $(which cmake)"
+          cmake --version
+
+      - name: Windows - Setup MSVC
+        if: ${{ matrix.target.platform == 'windows' }}
+        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Setup godot-cpp
         uses: ./godot-cpp/.github/actions/setup-godot-cpp
@@ -99,6 +125,16 @@ jobs:
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
           cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.target-type }}
+
+      - name: Clean libplateau build directory
+        shell: bash
+        run: |
+          # Remove entire libplateau build directory to force full rebuild
+          # SCons cache may have cmake markers but not the actual built libraries
+          rm -rf build/*/libplateau build/*/*/libplateau 2>/dev/null || true
+          # Also clean from scons cache
+          find .scons-cache -name "*libplateau*" -delete 2>/dev/null || true
+          find .scons-cache -name "*.cmake_configured*" -delete 2>/dev/null || true
 
       - name: Build GDExtension
         shell: sh

@@ -87,6 +87,9 @@ def get_cmake_configure_args(platform, build_dir, build_type, env=None):
         "-DPLATEAU_USE_HTTP=OFF",  # Disable HTTP/OpenSSL - use Godot's HTTPRequest instead
         "-DBUILD_LIB_TYPE=static",
         f"-DCMAKE_BUILD_TYPE:STRING={build_type}",
+        # Disable documentation to avoid duplicate "doc" target conflicts
+        "-Dtiff-docs=OFF",           # libtiff docs
+        "-DRAPIDJSON_BUILD_DOC=OFF", # RapidJSON docs (via glTF-SDK)
     ]
 
     if platform == "windows":
@@ -98,7 +101,11 @@ def get_cmake_configure_args(platform, build_dir, build_type, env=None):
         # Get Homebrew prefix for liblzma and libdeflate
         homebrew_prefix = env.get("homebrew_prefix", DEFAULT_HOMEBREW_PREFIX) if env else DEFAULT_HOMEBREW_PREFIX
         arch = env.get("arch", "arm64") if env else "arm64"
-        macos_arch = "arm64" if arch in ("arm64", "universal") else arch
+        # For universal builds, need both arm64 and x86_64
+        if arch == "universal":
+            macos_arch = "arm64;x86_64"
+        else:
+            macos_arch = arch
         return common_args + [
             "-DRUNTIME_LIB_TYPE=MD",
             '-DCMAKE_CXX_FLAGS=-w',
@@ -147,14 +154,15 @@ def get_cmake_configure_args(platform, build_dir, build_type, env=None):
             return common_args + [
                 "-DCMAKE_C_COMPILER=clang",
                 "-DCMAKE_CXX_COMPILER=clang++",
-                "-DCMAKE_CXX_FLAGS=-w -Wno-c++11-narrowing -include cstdint -include climits -include algorithm",
+                "-DCMAKE_CXX_FLAGS=-w -Wno-c++11-narrowing -include cstdint -include climits -include cstddef -include algorithm",
                 "-DANDROID=ON",  # Skip test build (tests are excluded for Android/iOS)
             ]
         else:
             # Default: GCC 13 (Ubuntu 24.04 default) - matches libplateau CI environment
             # -include climits: Required for INT_MAX/INT_MIN in vector_tile_downloader.cpp
+            # -include cstddef: Required for size_t in height_map_with_alpha.h
             return common_args + [
-                "-DCMAKE_CXX_FLAGS=-w -include climits",
+                "-DCMAKE_CXX_FLAGS=-w -include climits -include cstddef",
             ]
 
 
@@ -285,20 +293,25 @@ libplateau_lib_file = File(str(libplateau_lib_path))
 
 if not skip_libplateau_build:
     # Configure step
+    # Use NoCache() to prevent SCons from caching the marker file
+    # This ensures CMake configure runs when cache is restored without actual libraries
     libplateau_configure = env.Command(
         str(libplateau_build_dir / ".cmake_configured"),
         [],
         configure_libplateau,
     )
     libplateau_configure_node = libplateau_configure[0]
+    env.NoCache(libplateau_configure_node)
 
     # Build step - target is the actual library file
+    # Also use NoCache() since CMake manages its own build artifacts
     libplateau_build = env.Command(
         libplateau_lib_file,
         [libplateau_configure_node],
         build_libplateau,
     )
     libplateau_build_node = libplateau_build[0]
+    env.NoCache(libplateau_build_node)
 
     # Declare 3rdparty libraries as side effects for Android/iOS
     # This tells SCons that CMake build also produces these files
