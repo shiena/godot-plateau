@@ -1,104 +1,215 @@
-# For syntax, see https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
-# This workflow is triggered manually on the "Actions" tab on GitHub, and can be used to create releases.
+# Release workflow for PLATEAU SDK for Godot
+# Triggered manually with version input, builds all platforms, and creates a GitHub release
 
-name: Make a GDExtension build for all supported platforms
+name: Release
+
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate and normalize version
+        id: version
+        run: |
+          INPUT_VERSION="${{ inputs.version }}"
+          # Strip leading 'v' for comparison
+          VERSION="${INPUT_VERSION#v}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+          # Get latest tag (sorted by version)
+          LATEST_TAG=$(git tag -l 'v*' | sort -V | tail -n1)
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No existing tags found. Proceeding with release."
+            exit 0
+          fi
+
+          LATEST_VERSION="${LATEST_TAG#v}"
+          echo "Input version: $VERSION"
+          echo "Latest version: $LATEST_VERSION"
+
+          # Compare versions using sort -V
+          HIGHER=$(printf '%s\n%s' "$LATEST_VERSION" "$VERSION" | sort -V | tail -n1)
+          if [ "$HIGHER" = "$LATEST_VERSION" ]; then
+            echo "::error::Input version ($VERSION) must be greater than latest version ($LATEST_VERSION)"
+            exit 1
+          fi
+
+          echo "Version check passed: $VERSION > $LATEST_VERSION"
+
+      - name: Update plugin.cfg version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          sed -i "s/^version=\".*\"/version=\"${VERSION}\"/" demo/addons/plateau/plugin.cfg
+          echo "Updated plugin.cfg:"
+          cat demo/addons/plateau/plugin.cfg
+
+      - name: Upload version update
+        uses: actions/upload-artifact@v4
+        with:
+          name: version-update
+          path: demo/addons/plateau/plugin.cfg
+
   build:
+    needs: [prepare]
+    runs-on: ${{ matrix.target.os }}
     strategy:
       fail-fast: false
       matrix:
-        # A build is made for every possible combination of parameters
-        # You can add or remove entries from the arrays of each parameter to customize which builds you want to run.
-        # See https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/running-variations-of-jobs-in-a-workflow
+        # Targets based on godot-plateau.gdextension
         target:
           [
             { platform: linux, arch: x86_64, os: ubuntu-22.04 },
-            { platform: linux, arch: x86_32, os: ubuntu-22.04 },
             { platform: linux, arch: arm64, os: ubuntu-22.04-arm },
-            { platform: linux, arch: arm32, os: ubuntu-22.04-arm },
             { platform: windows, arch: x86_64, os: windows-latest },
-            { platform: windows, arch: x86_32, os: windows-latest },
-            { platform: windows, arch: arm64, os: windows-latest },
             { platform: macos, arch: universal, os: macos-latest },
-            { platform: android, arch: x86_64, os: ubuntu-22.04 },
-            { platform: android, arch: x86_32, os: ubuntu-22.04 },
             { platform: android, arch: arm64, os: ubuntu-22.04 },
-            { platform: android, arch: arm32, os: ubuntu-22.04 },
             { platform: ios, arch: arm64, os: macos-latest },
-            { platform: web, arch: wasm32, os: ubuntu-22.04 },
           ]
         target-type: [template_debug, template_release]
-        float-precision: [single]
 
-    runs-on: ${{ matrix.target.os }}
     steps:
-      # Clone this repository
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: true
 
-      # Add linux x86_32 toolchain
-      - name: Install multilib support
-        if: ${{ matrix.target.platform == 'linux' && matrix.target.arch == 'x86_32' }}
-        run: |
-          sudo apt-get update && sudo apt-get install -y gcc-multilib g++-multilib
-
-      # Setup dependencies
       - name: Setup godot-cpp
         uses: ./godot-cpp/.github/actions/setup-godot-cpp
         with:
           platform: ${{ matrix.target.platform }}
           em-version: 3.1.62
 
-      # Build GDExtension (with caches)
-
       - name: Restore .scons_cache
         uses: ./godot-cpp/.github/actions/godot-cache-restore
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
-          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}
+          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.target-type }}
 
-      - name: Build GDExtension Debug Build
+      - name: Build GDExtension
         shell: sh
         env:
           SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
         run: |
-          scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }}
+          scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }}
 
       - name: Save .scons_cache
         uses: ./godot-cpp/.github/actions/godot-cache-save
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
-          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}
+          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.target-type }}
 
-      # Clean up compilation files
       - name: Windows - Delete compilation files
         if: ${{ matrix.target.platform == 'windows' }}
         shell: pwsh
         run: |
           Remove-Item bin/* -Include *.exp,*.lib,*.pdb -Force
 
-      # Upload the build
-      - name: Upload Artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: godot-cpp-template-${{ matrix.target.platform }}-${{ matrix.target.arch }}-${{ matrix.float-precision }}-${{ matrix.target-type }}
+          name: godot-plateau-${{ matrix.target.platform }}-${{ matrix.target.arch }}-${{ matrix.target-type }}
           path: |
             ${{ github.workspace }}/bin/**
 
-  # Merges all the build artifacts together into a single godot-cpp-template artifact.
-  # If you comment out this step, all the builds will be uploaded individually.
-  merge:
-    runs-on: ubuntu-22.04
-    needs: build
+  release:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
-      - name: Merge Artifacts
-        uses: actions/upload-artifact/merge@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          name: godot-cpp-template
-          pattern: godot-cpp-template-*
-          delete-merged: true
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Apply version update and copy libraries
+        run: |
+          # Apply version update
+          cp artifacts/version-update/plugin.cfg demo/addons/plateau/plugin.cfg
+
+          # Copy libraries to demo/addons/plateau/
+          echo "Copying libraries..."
+          for artifact_dir in artifacts/godot-plateau-*/; do
+            echo "Processing: $artifact_dir"
+            cp -rv "$artifact_dir"/* demo/addons/plateau/ 2>/dev/null || true
+          done
+
+          # Show final structure
+          echo "Final addons/plateau structure:"
+          find demo/addons/plateau -type f \( -name "*.dll" -o -name "*.so" -o -name "*.dylib" \)
+
+      - name: Commit and push
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Add all library files and plugin.cfg
+          git add demo/addons/plateau/
+
+          # Commit
+          git commit -m "chore: release v${VERSION}"
+
+          # Push to main
+          git push origin HEAD:main
+
+          # Create and push tag
+          git tag "v${VERSION}"
+          git push origin "v${VERSION}"
+
+      - name: Create release archive
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+
+          # Create zip with toplevel directory for Asset Library
+          mkdir godot-plateau
+          cp -r demo/addons godot-plateau/
+          zip -r "godot-plateau-v${VERSION}.zip" godot-plateau/
+
+      - name: Generate changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: .github/cliff.toml
+          args: --latest --strip header
+        env:
+          OUTPUT: CHANGELOG.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          gh release create "v${VERSION}" \
+            --title "Release v${VERSION}" \
+            --notes-file CHANGELOG.md \
+            "godot-plateau-v${VERSION}.zip"
+
+      - name: Delete intermediate artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            godot-plateau-*
+            version-update
