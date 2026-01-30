@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="project/addons/plateau/icon.png" alt="PLATEAU SDK for Godot ロゴ" width="128" height="128">
+  <img src="project/addons/plateau/icon.svg" alt="PLATEAU SDK for Godot ロゴ" width="128" height="128">
 </p>
 
 <h1 align="center">PLATEAU SDK for Godot</h1>
