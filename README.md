@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="demo/addons/plateau/icon.png" alt="PLATEAU SDK for Godot logo" width="128" height="128">
+  <img src="project/addons/plateau/icon.png" alt="PLATEAU SDK for Godot logo" width="128" height="128">
 </p>
 
 <h1 align="center">PLATEAU SDK for Godot</h1>
@@ -236,7 +236,7 @@ var mesh = model.generate_mesh()
 
 ## Samples
 
-The `demo/samples/` directory contains example scenes demonstrating SDK features.
+The `project/samples/` directory contains example scenes demonstrating SDK features.
 
 ### Attributes Display Sample (`attributes_display_sample.tscn`)
 Demonstrates how to display CityObject attributes when clicking on buildings.
@@ -280,7 +280,7 @@ Demonstrates map tile download features.
 
 ### Using the Samples
 
-1. Open the demo project in Godot
+1. Open the sample project in Godot
 2. Run one of the sample scenes
 3. Use "Import GML..." or "Load..." buttons to select your CityGML file
 4. Interact with the UI to test various features
@@ -383,7 +383,7 @@ scons platform=android arch=arm64 target=template_release
 scons platform=ios arch=arm64 target=template_release
 ```
 
-The built library will be copied to `bin/<platform>/` and `demo/addons/plateau/<platform>/`.
+The built library will be copied to `bin/<platform>/` and `project/addons/plateau/<platform>/`.
 
 #### Build Options
 
@@ -437,7 +437,7 @@ cmake -S . -B build -G "Visual Studio 17 2022"
 cmake --build build --config Release
 ```
 
-The built DLL will be copied to `bin/windows/` and `demo/bin/windows/`.
+The built DLL will be copied to `bin/windows/` and `project/bin/windows/`.
 
 ## Project Structure
 
@@ -457,7 +457,7 @@ godot-plateau/
 │       ├── plateau_dynamic_tile.cpp/h         # Dynamic tile loading
 │       └── plateau_road_network.cpp/h         # Road network data
 ├── doc_classes/        # API documentation XML files
-├── demo/
+├── project/
 │   ├── bin/
 │   │   └── godot-plateau.gdextension
 │   └── samples/

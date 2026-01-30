@@ -54,15 +54,15 @@ jobs:
       - name: Update plugin.cfg version
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          sed -i "s/^version=\".*\"/version=\"${VERSION}\"/" demo/addons/plateau/plugin.cfg
+          sed -i "s/^version=\".*\"/version=\"${VERSION}\"/" project/addons/plateau/plugin.cfg
           echo "Updated plugin.cfg:"
-          cat demo/addons/plateau/plugin.cfg
+          cat project/addons/plateau/plugin.cfg
 
       - name: Upload version update
         uses: actions/upload-artifact@v4
         with:
           name: version-update
-          path: demo/addons/plateau/plugin.cfg
+          path: project/addons/plateau/plugin.cfg
 
   build:
     needs: [prepare]
@@ -132,8 +132,8 @@ jobs:
           # Remove entire libplateau build directory to force full rebuild
           # SCons cache may have cmake markers but not the actual built libraries
           rm -rf build/*/libplateau build/*/*/libplateau 2>/dev/null || true
-          # Clean stale library files from demo/addons (may be restored from cache)
-          find demo/addons/plateau -type f \( -name "*.dll" -o -name "*.so" -o -name "*.dylib" -o -name "*.exp" -o -name "*.lib" \) -delete 2>/dev/null || true
+          # Clean stale library files from project/addons (may be restored from cache)
+          find project/addons/plateau -type f \( -name "*.dll" -o -name "*.so" -o -name "*.dylib" -o -name "*.exp" -o -name "*.lib" \) -delete 2>/dev/null || true
 
       - name: Build GDExtension
         shell: sh
@@ -181,22 +181,22 @@ jobs:
       - name: Apply version update and copy libraries
         run: |
           # Apply version update
-          cp artifacts/version-update/plugin.cfg demo/addons/plateau/plugin.cfg
+          cp artifacts/version-update/plugin.cfg project/addons/plateau/plugin.cfg
 
           # Remove old library files to avoid stale files in archive
           echo "Removing old library files..."
-          find demo/addons/plateau -type f \( -name "*.dll" -o -name "*.so" -o -name "*.dylib" -o -name "*.exp" -o -name "*.lib" \) -delete
+          find project/addons/plateau -type f \( -name "*.dll" -o -name "*.so" -o -name "*.dylib" -o -name "*.exp" -o -name "*.lib" \) -delete
 
-          # Copy libraries to demo/addons/plateau/
+          # Copy libraries to project/addons/plateau/
           echo "Copying libraries..."
           for artifact_dir in artifacts/godot-plateau-*/; do
             echo "Processing: $artifact_dir"
-            cp -rv "$artifact_dir"/* demo/addons/plateau/ 2>/dev/null || true
+            cp -rv "$artifact_dir"/* project/addons/plateau/ 2>/dev/null || true
           done
 
           # Show final structure
           echo "Final addons/plateau structure:"
-          find demo/addons/plateau -type f \( -name "*.dll" -o -name "*.so" -o -name "*.dylib" \)
+          find project/addons/plateau -type f \( -name "*.dll" -o -name "*.so" -o -name "*.dylib" \)
 
       - name: Commit and push
         run: |
@@ -206,7 +206,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Add all library files and plugin.cfg
-          git add demo/addons/plateau/
+          git add project/addons/plateau/
 
           # Commit
           git commit -m "chore: release v${VERSION}"
@@ -224,7 +224,7 @@ jobs:
 
           # Create zip with toplevel directory for Asset Library
           mkdir godot-plateau
-          cp -r demo/addons godot-plateau/
+          cp -r project/addons godot-plateau/
           zip -r "godot-plateau-v${VERSION}.zip" godot-plateau/
 
       - name: Generate changelog

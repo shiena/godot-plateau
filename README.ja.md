@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="demo/addons/plateau/icon.png" alt="PLATEAU SDK for Godot ロゴ" width="128" height="128">
+  <img src="project/addons/plateau/icon.png" alt="PLATEAU SDK for Godot ロゴ" width="128" height="128">
 </p>
 
 <h1 align="center">PLATEAU SDK for Godot</h1>
@@ -233,7 +233,7 @@ var mesh = model.generate_mesh()
 
 ## サンプル
 
-`demo/samples/` ディレクトリにSDKの機能を示すサンプルシーンがあります。
+`project/samples/` ディレクトリにSDKの機能を示すサンプルシーンがあります。
 
 ### 属性表示サンプル (`attributes_display_sample.tscn`)
 建物クリック時に属性情報を表示する方法を示します。
@@ -277,7 +277,7 @@ PLATEAU SDKの主要APIを示します（データセットフォルダ選択版
 
 ### サンプルの使い方
 
-1. Godotでdemoプロジェクトを開く
+1. Godotでサンプルプロジェクトを開く
 2. サンプルシーンを実行
 3. 「Import GML...」や「Load...」ボタンでCityGMLファイルを選択
 4. UIで各機能をテスト
@@ -380,7 +380,7 @@ scons platform=android arch=arm64 target=template_release
 scons platform=ios arch=arm64 target=template_release
 ```
 
-ビルドされたライブラリは `bin/<platform>/` と `demo/addons/plateau/<platform>/` にコピーされます。
+ビルドされたライブラリは `bin/<platform>/` と `project/addons/plateau/<platform>/` にコピーされます。
 
 #### ビルドオプション
 
@@ -434,7 +434,7 @@ cmake -S . -B build -G "Visual Studio 17 2022"
 cmake --build build --config Release
 ```
 
-ビルドされたDLLは `bin/windows/` と `demo/bin/windows/` にコピーされます。
+ビルドされたDLLは `bin/windows/` と `project/bin/windows/` にコピーされます。
 
 ## プロジェクト構造
 
@@ -454,7 +454,7 @@ godot-plateau/
 │       ├── plateau_dynamic_tile.cpp/h         # 動的タイル読み込み
 │       └── plateau_road_network.cpp/h         # 道路ネットワークデータ
 ├── doc_classes/        # APIドキュメントXMLファイル
-├── demo/
+├── project/
 │   ├── bin/
 │   │   └── godot-plateau.gdextension
 │   └── samples/
@@ -496,7 +496,7 @@ OBJ形式でエクスポートする場合、libplateauはCityObject（建物）
 
 ## 使用方法
 
-1. `demo/bin/` フォルダを Godot プロジェクトの `addons/` にコピー
+1. `project/bin/` フォルダを Godot プロジェクトの `addons/` にコピー
 2. プロジェクト設定でプラグインを有効化
 3. シーンに `PLATEAUImporter` ノードを追加
 4. Inspector で GML ファイルパスを設定
