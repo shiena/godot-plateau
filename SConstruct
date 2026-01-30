@@ -44,7 +44,7 @@ from methods import print_error, print_warning
 
 # Configuration
 LIB_NAME = "godot-plateau"
-GODOT_PROJECT_DIR = "demo"
+GODOT_PROJECT_DIR = "project"
 DEFAULT_HOMEBREW_PREFIX = "/opt/homebrew"
 
 REPO_ROOT = Path(Dir('#').abspath)
@@ -449,7 +449,7 @@ if libplateau_build_node:
     # (citygml_api.h is generated during cmake configure)
     env.Depends(sources, libplateau_configure_node)
 
-# Copy to demo project addons folder
+# Copy to project addons folder
 copy_addons = env.Install(addons_dir, library)
 
 default_args = [library] + copy_addons
