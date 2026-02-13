@@ -421,6 +421,9 @@ TypedArray<PLATEAUMeshData> PLATEAUCityModel::extract_meshes(const Ref<PLATEAUMe
         UtilityFunctions::printerr("Exception extracting meshes: ", String(e.what()));
     }
 
+    // Release texture cache after mesh conversion (textures are held by materials)
+    texture_cache_.clear();
+
     return result;
 }
 
@@ -1074,6 +1077,7 @@ void PLATEAUCityModel::_finalize_meshes_on_main_thread() {
     }
 
     // Cleanup
+    texture_cache_.clear();
     pending_model_.reset();
     pending_options_.unref();
     is_processing_.store(false);
