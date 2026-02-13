@@ -1,14 +1,6 @@
 #pragma once
 
-// Platform detection for mobile exclusions
-#if defined(__APPLE__)
-#include <TargetConditionals.h>
-#endif
-#if defined(__ANDROID__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
-#define PLATEAU_MOBILE_PLATFORM 1
-#endif
-
-#ifndef PLATEAU_MOBILE_PLATFORM
+#include "plateau_platform.h"
 
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/classes/array_mesh.hpp>
@@ -19,11 +11,13 @@
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/packed_byte_array.hpp>
 
+#ifndef PLATEAU_MOBILE_PLATFORM
 #include <plateau/height_map_generator/heightmap_generator.h>
 #include <plateau/height_map_generator/heightmap_mesh_generator.h>
 #include <plateau/height_map_generator/heightmap_types.h>
 #include <plateau/polygon_mesh/mesh.h>
 #include <plateau/geometry/geo_reference.h>
+#endif
 
 #include "plateau_city_model.h"
 
@@ -78,6 +72,10 @@ public:
     // Generate mesh from heightmap
     Ref<ArrayMesh> generate_mesh() const;
 
+    // Clear cached data to free memory
+    void clear_cache();
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     // Internal: Set data from generator
     void set_data(const plateau::heightMapGenerator::HeightMapT &heightmap,
                   int width, int height,
@@ -88,9 +86,7 @@ public:
     const plateau::heightMapGenerator::HeightMapT& get_heightmap_internal() const;
     TVec3d get_min_internal() const;
     TVec3d get_max_internal() const;
-
-    // Clear cached data to free memory
-    void clear_cache();
+#endif
 
 protected:
     static void _bind_methods();
@@ -100,6 +96,8 @@ private:
     String texture_path_;
     int width_;
     int height_;
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     TVec3d min_;
     TVec3d max_;
     TVec2f uv_min_;
@@ -114,6 +112,7 @@ private:
 
     // Internal: Invalidate cache when data changes
     void invalidate_cache();
+#endif
 };
 
 /**
@@ -167,9 +166,11 @@ public:
     // Check if async generation is in progress
     bool is_processing() const;
 
+#ifndef PLATEAU_MOBILE_PLATFORM
     // Generate heightmap from raw plateau::polygonMesh::Mesh
     // (Internal use, for direct mesh processing)
     Ref<PLATEAUHeightMapData> generate_from_plateau_mesh(const plateau::polygonMesh::Mesh &mesh, const String &name);
+#endif
 
 protected:
     static void _bind_methods();
@@ -190,5 +191,3 @@ private:
 };
 
 } // namespace godot
-
-#endif // !PLATEAU_MOBILE_PLATFORM

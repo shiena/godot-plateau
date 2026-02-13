@@ -1,21 +1,15 @@
 #pragma once
 
-// Platform detection for mobile exclusions
-#if defined(__APPLE__)
-#include <TargetConditionals.h>
-#endif
-#if defined(__ANDROID__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
-#define PLATEAU_MOBILE_PLATFORM 1
-#endif
-
-#ifndef PLATEAU_MOBILE_PLATFORM
+#include "plateau_platform.h"
 
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/typed_array.hpp>
 
+#ifndef PLATEAU_MOBILE_PLATFORM
 #include <plateau/height_map_alighner/height_map_aligner.h>
 #include <plateau/polygon_mesh/model.h>
+#endif
 
 #include "plateau_terrain.h"
 #include "plateau_city_model.h"
@@ -109,6 +103,7 @@ private:
 
     std::vector<Ref<PLATEAUHeightMapData>> heightmap_refs_;
 
+#ifndef PLATEAU_MOBILE_PLATFORM
     // Internal helper: Convert PLATEAUMeshData array to plateau::polygonMesh::Model
     std::shared_ptr<plateau::polygonMesh::Model> create_model_from_mesh_data(
         const TypedArray<PLATEAUMeshData> &mesh_data_array);
@@ -132,8 +127,7 @@ private:
     void update_node_recursive(
         Ref<PLATEAUMeshData> &mesh_data,
         const plateau::polygonMesh::Node &node);
+#endif
 };
 
 } // namespace godot
-
-#endif // !PLATEAU_MOBILE_PLATFORM

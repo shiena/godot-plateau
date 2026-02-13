@@ -5,14 +5,6 @@
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 
-// Platform detection for mobile exclusions
-#if defined(__APPLE__)
-#include <TargetConditionals.h>
-#endif
-#if defined(__ANDROID__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
-#define PLATEAU_MOBILE_PLATFORM 1
-#endif
-
 // PLATEAU classes
 #include "plateau/plateau_geo_reference.h"
 #include "plateau/plateau_mesh_extract_options.h"
@@ -30,12 +22,10 @@
 #include "plateau/plateau_dynamic_tile.h"
 #include "plateau/plateau_road_network.h"
 
-// Terrain/HeightMap classes not available on mobile (depend on libpng-based height_map_generator)
-#ifndef PLATEAU_MOBILE_PLATFORM
+// Terrain/HeightMap/Basemap classes (stub on mobile)
 #include "plateau/plateau_terrain.h"
 #include "plateau/plateau_height_map_aligner.h"
 #include "plateau/plateau_basemap.h"
-#endif
 
 using namespace godot;
 
@@ -62,15 +52,13 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(PLATEAUGranularityConverter);
 	GDREGISTER_CLASS(PLATEAUMeshExporter);
 
-	// Terrain/HeightMap/Basemap classes (not available on mobile platforms)
-#ifndef PLATEAU_MOBILE_PLATFORM
+	// Terrain/HeightMap/Basemap classes (stub on mobile platforms)
 	GDREGISTER_CLASS(PLATEAUHeightMapData);
 	GDREGISTER_CLASS(PLATEAUTerrain);
 	GDREGISTER_CLASS(PLATEAUHeightMapAligner);
 	GDREGISTER_CLASS(PLATEAUTileCoordinate);
 	GDREGISTER_CLASS(PLATEAUVectorTile);
 	GDREGISTER_CLASS(PLATEAUVectorTileDownloader);
-#endif
 
 	// New API: City Model Scene and Filter
 	GDREGISTER_CLASS(PLATEAUFilterCondition);

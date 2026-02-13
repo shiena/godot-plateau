@@ -1,26 +1,23 @@
-// Platform detection for mobile exclusions
-#if defined(__APPLE__)
-#include <TargetConditionals.h>
-#endif
-#if defined(__ANDROID__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
-#define PLATEAU_MOBILE_PLATFORM 1
-#endif
-
-#ifndef PLATEAU_MOBILE_PLATFORM
-
 #include "plateau_height_map_aligner.h"
 #include "plateau_platform.h"
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <cmath>
 
+#ifndef PLATEAU_MOBILE_PLATFORM
+#include <plateau/height_map_alighner/height_map_aligner.h>
+#include <plateau/polygon_mesh/model.h>
+#endif
+
 using namespace godot;
 
+#ifndef PLATEAU_MOBILE_PLATFORM
 // Type aliases
 using PlateauModel = plateau::polygonMesh::Model;
 using PlateauNode = plateau::polygonMesh::Node;
 using PlateauMesh = plateau::polygonMesh::Mesh;
 using HeightMapFrame = plateau::heightMapAligner::HeightMapFrame;
 using HeightMapAligner = plateau::heightMapAligner::HeightMapAligner;
+#endif
 
 PLATEAUHeightMapAligner::PLATEAUHeightMapAligner()
     : height_offset_(0.0),
@@ -113,6 +110,7 @@ TypedArray<PLATEAUMeshData> PLATEAUHeightMapAligner::align(const TypedArray<PLAT
     PLATEAU_MOBILE_UNSUPPORTED_V(result);
 #endif
 
+#ifndef PLATEAU_MOBILE_PLATFORM
     if (heightmap_refs_.empty()) {
         UtilityFunctions::printerr("PLATEAUHeightMapAligner: no heightmaps registered");
         return result;
@@ -170,6 +168,7 @@ TypedArray<PLATEAUMeshData> PLATEAUHeightMapAligner::align(const TypedArray<PLAT
     } catch (const std::exception &e) {
         UtilityFunctions::printerr("Exception during alignment: ", String(e.what()));
     }
+#endif
 
     return result;
 }
@@ -181,6 +180,7 @@ TypedArray<PLATEAUHeightMapData> PLATEAUHeightMapAligner::align_invert(const Typ
     PLATEAU_MOBILE_UNSUPPORTED_V(result);
 #endif
 
+#ifndef PLATEAU_MOBILE_PLATFORM
     if (heightmap_refs_.empty()) {
         UtilityFunctions::printerr("PLATEAUHeightMapAligner: no heightmaps registered");
         return result;
@@ -258,11 +258,17 @@ TypedArray<PLATEAUHeightMapData> PLATEAUHeightMapAligner::align_invert(const Typ
     } catch (const std::exception &e) {
         UtilityFunctions::printerr("Exception during inverse alignment: ", String(e.what()));
     }
+#endif
 
     return result;
 }
 
 double PLATEAUHeightMapAligner::get_height_at(const Vector2 &xz_position) const {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(std::nan(""));
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     if (heightmap_refs_.empty()) {
         return std::nan("");
     }
@@ -293,8 +299,10 @@ double PLATEAUHeightMapAligner::get_height_at(const Vector2 &xz_position) const 
     }
 
     return std::nan("");
+#endif
 }
 
+#ifndef PLATEAU_MOBILE_PLATFORM
 std::shared_ptr<PlateauModel> PLATEAUHeightMapAligner::create_model_from_mesh_data(
     const TypedArray<PLATEAUMeshData> &mesh_data_array) {
 
@@ -581,6 +589,7 @@ void PLATEAUHeightMapAligner::update_mesh_data_from_model(
         update_node_recursive(mesh_data, node);
     }
 }
+#endif
 
 void PLATEAUHeightMapAligner::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_height_offset", "offset"), &PLATEAUHeightMapAligner::set_height_offset);
@@ -615,5 +624,3 @@ void PLATEAUHeightMapAligner::_bind_methods() {
     ClassDB::bind_method(D_METHOD("align_invert", "mesh_data_array"), &PLATEAUHeightMapAligner::align_invert);
     ClassDB::bind_method(D_METHOD("get_height_at", "xz_position"), &PLATEAUHeightMapAligner::get_height_at);
 }
-
-#endif // !PLATEAU_MOBILE_PLATFORM

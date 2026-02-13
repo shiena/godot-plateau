@@ -1,14 +1,6 @@
 #pragma once
 
-// Platform detection for mobile exclusions
-#if defined(__APPLE__)
-#include <TargetConditionals.h>
-#endif
-#if defined(__ANDROID__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
-#define PLATEAU_MOBILE_PLATFORM 1
-#endif
-
-#ifndef PLATEAU_MOBILE_PLATFORM
+#include "plateau_platform.h"
 
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/classes/image.hpp>
@@ -16,8 +8,10 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/typed_array.hpp>
 
+#ifndef PLATEAU_MOBILE_PLATFORM
 #include <plateau/basemap/vector_tile_downloader.h>
 #include <plateau/basemap/tile_projection.h>
+#endif
 
 namespace godot {
 
@@ -221,16 +215,17 @@ private:
     int zoom_level_;
     int tile_source_;
     String url_template_;
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     plateau::geometry::Extent extent_;
     std::unique_ptr<VectorTileDownloader> downloader_;
 
     void ensure_downloader();
     void invalidate_downloader();
+#endif
     void update_url_from_source();
 };
 
 } // namespace godot
 
 VARIANT_ENUM_CAST(godot::PLATEAUTileSource);
-
-#endif // !PLATEAU_MOBILE_PLATFORM
