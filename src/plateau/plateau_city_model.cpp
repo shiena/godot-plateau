@@ -573,7 +573,7 @@ PackedVector3Array PLATEAUCityModel::compute_normals(const PackedVector3Array &v
 }
 
 // Load texture with caching
-Ref<ImageTexture> PLATEAUCityModel::load_texture_cached(const String &texture_path) {
+Ref<ImageTexture> PLATEAUCityModel::load_texture_cached(const String &texture_path) const {
     // Check cache first
     if (texture_cache_.has(texture_path)) {
         return texture_cache_[texture_path];
@@ -784,7 +784,7 @@ Ref<StandardMaterial3D> PLATEAUCityModel::create_material(const plateau::polygon
         texture_path = texture_path.simplify_path();
 
         // Try to load texture with caching
-        Ref<ImageTexture> texture = const_cast<PLATEAUCityModel*>(this)->load_texture_cached(texture_path);
+        Ref<ImageTexture> texture = load_texture_cached(texture_path);
         if (texture.is_valid()) {
             material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, texture);
             has_texture = true;
