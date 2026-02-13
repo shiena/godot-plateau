@@ -5,7 +5,7 @@
 	</brief_description>
 	<description>
 		PLATEAUHeightMapData stores generated heightmap data along with metadata such as bounds and UV coordinates. It can save heightmaps to files and generate meshes from the heightmap data.
-		[b]Note:[/b] This class is not available on mobile platforms (iOS/Android).
+		[b]Note:[/b] On mobile platforms (iOS/Android), this class is available but methods that depend on libplateau (e.g., [method save_png], [method save_raw], [method generate_mesh]) will return an error. Getter/setter properties work normally.
 	</description>
 	<tutorials>
 	</tutorials>
@@ -50,12 +50,14 @@
 			<return type="PackedByteArray" />
 			<description>
 				Returns the heightmap data as raw bytes (uint16 array).
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 		<method name="get_heightmap_normalized" qualifiers="const">
 			<return type="PackedFloat32Array" />
 			<description>
 				Returns the heightmap as normalized float array [0.0 - 1.0].
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 		<method name="save_png" qualifiers="const">

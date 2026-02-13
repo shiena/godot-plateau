@@ -5,7 +5,7 @@
 	</brief_description>
 	<description>
 		PLATEAUTerrain generates heightmaps from terrain mesh data (DEM/TINRelief) and can produce smoothed terrain meshes suitable for use in games.
-		[b]Note:[/b] This class is not available on mobile platforms (iOS/Android).
+		[b]Note:[/b] On mobile platforms (iOS/Android), this class is available but heightmap generation methods will return an error. Getter/setter properties work normally.
 		[codeblock]
 		var terrain = PLATEAUTerrain.new()
 		terrain.texture_width = 257

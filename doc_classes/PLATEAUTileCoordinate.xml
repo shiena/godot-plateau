@@ -5,7 +5,7 @@
 	</brief_description>
 	<description>
 		PLATEAUTileCoordinate represents a tile coordinate in the XYZ tile system used by GSI and other map tile servers.
-		[b]Note:[/b] This class is not available on mobile platforms (iOS/Android).
+		[b]Note:[/b] On mobile platforms (iOS/Android), this class is fully available. The [method get_extent] method requires libplateau and will return an empty Dictionary on mobile.
 	</description>
 	<tutorials>
 	</tutorials>
@@ -14,6 +14,7 @@
 			<return type="Dictionary" />
 			<description>
 				Returns the latitude/longitude extent for this tile as a Dictionary with min_lat, min_lon, max_lat, max_lon keys.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS) and will return an empty Dictionary.
 			</description>
 		</method>
 	</methods>
