@@ -2,6 +2,7 @@
 #include "plateau_platform.h"
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/image.hpp>
+#include <godot_cpp/core/math_defs.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <citygml/citygmllogger.h>
 #include <cmath>
@@ -562,7 +563,7 @@ PackedVector3Array PLATEAUCityModel::compute_normals(const PackedVector3Array &v
     // Normalize all normals
     for (int i = 0; i < normals.size(); i++) {
         Vector3 n = normals[i];
-        if (n.length_squared() > 0.0001f) {
+        if (n.length_squared() > CMP_EPSILON) {
             normals.set(i, n.normalized());
         } else {
             normals.set(i, Vector3(0, 1, 0)); // Default up normal
