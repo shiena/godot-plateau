@@ -213,6 +213,9 @@ private:
     // Texture cache to avoid reloading same textures
     mutable HashMap<String, Ref<ImageTexture>> texture_cache_;
 
+    // Material cache to share identical materials across submeshes (reduces RID count)
+    mutable HashMap<String, Ref<StandardMaterial3D>> material_cache_;
+
     // Helper methods for mesh conversion
     Ref<PLATEAUMeshData> convert_node(const plateau::polygonMesh::Node &node);
     Ref<ArrayMesh> convert_mesh(const plateau::polygonMesh::Mesh &mesh, plateau::polygonMesh::CityObjectList &out_city_object_list, PackedStringArray &out_texture_paths);

@@ -421,8 +421,9 @@ TypedArray<PLATEAUMeshData> PLATEAUCityModel::extract_meshes(const Ref<PLATEAUMe
         UtilityFunctions::printerr("Exception extracting meshes: ", String(e.what()));
     }
 
-    // Release texture cache after mesh conversion (textures are held by materials)
+    // Release caches after mesh conversion (resources are held by mesh surfaces)
     texture_cache_.clear();
+    material_cache_.clear();
 
     return result;
 }
@@ -768,44 +769,57 @@ Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &
 }
 
 Ref<StandardMaterial3D> PLATEAUCityModel::create_material(const plateau::polygonMesh::SubMesh &sub_mesh) {
+    // Build cache key from texture path + material properties
+    String cache_key;
+    std::string texture_path_str = sub_mesh.getTexturePath();
+    String normalized_texture_path;
+
+    if (!texture_path_str.empty()) {
+        normalized_texture_path = String::utf8(texture_path_str.c_str()).replace("\\", "/").simplify_path();
+        cache_key = normalized_texture_path;
+    }
+
+    auto mat = sub_mesh.getMaterial();
+    if (mat) {
+        auto d = mat->getDiffuse();
+        auto s = mat->getSpecular();
+        auto e = mat->getEmissive();
+        cache_key += "|d:" + String::num(d.x, 4) + "," + String::num(d.y, 4) + "," + String::num(d.z, 4)
+            + "|s:" + String::num(s.x, 4) + "," + String::num(s.y, 4) + "," + String::num(s.z, 4)
+            + "|e:" + String::num(e.x, 4) + "," + String::num(e.y, 4) + "," + String::num(e.z, 4)
+            + "|sh:" + String::num(mat->getShininess(), 4)
+            + "|tr:" + String::num(mat->getTransparency(), 4)
+            + "|am:" + String::num(mat->getAmbientIntensity(), 4);
+    } else {
+        cache_key += "|default";
+    }
+
+    // Return cached material if available
+    if (material_cache_.has(cache_key)) {
+        return material_cache_[cache_key];
+    }
+
     Ref<StandardMaterial3D> material;
     material.instantiate();
 
     // Set default material properties
     material->set_cull_mode(StandardMaterial3D::CULL_BACK);
 
-    // Get texture path (libplateau returns absolute path)
-    std::string texture_path_str = sub_mesh.getTexturePath();
     bool has_texture = false;
-
-    if (!texture_path_str.empty()) {
-        // libplateau already converts relative paths to absolute paths in mesh_factory.cpp
-        // Convert to Godot path format (use forward slashes, simplify path)
-        String texture_path = String::utf8(texture_path_str.c_str());
-        // Normalize path separators (Windows uses backslashes)
-        texture_path = texture_path.replace("\\", "/");
-        // Simplify path (resolve .. and .)
-        texture_path = texture_path.simplify_path();
-
-        // Try to load texture with caching
-        Ref<ImageTexture> texture = load_texture_cached(texture_path);
+    if (!normalized_texture_path.is_empty()) {
+        Ref<ImageTexture> texture = load_texture_cached(normalized_texture_path);
         if (texture.is_valid()) {
             material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, texture);
             has_texture = true;
         }
-        // Note: load_texture_cached already logs failures
     }
 
-    // Get material properties from libplateau if available
-    auto mat = sub_mesh.getMaterial();
     if (mat) {
-        // Get material properties
         auto diffuse = mat->getDiffuse();
         auto specular = mat->getSpecular();
         auto emissive = mat->getEmissive();
         float shininess = mat->getShininess();
         float transparency = mat->getTransparency();
-        float ambient = mat->getAmbientIntensity();
 
         // Set base color (diffuse)
         Color albedo_color(diffuse.x, diffuse.y, diffuse.z, 1.0f);
@@ -820,7 +834,6 @@ Ref<StandardMaterial3D> PLATEAUCityModel::create_material(const plateau::polygon
         if (!has_texture) {
             material->set_albedo(albedo_color);
         } else if (transparency > 0.0f) {
-            // If has texture but also transparency, set alpha
             material->set_albedo(Color(1.0f, 1.0f, 1.0f, albedo_color.a));
         }
 
@@ -832,26 +845,22 @@ Ref<StandardMaterial3D> PLATEAUCityModel::create_material(const plateau::polygon
         }
 
         // Calculate metallic from specular (Unreal SDK approach)
-        // If base color and specular RGB ratios are similar, derive metallic
         bool diffuse_is_gray = std::abs(diffuse.x - diffuse.y) < 0.01f && std::abs(diffuse.x - diffuse.z) < 0.01f;
         bool specular_is_gray = std::abs(specular.x - specular.y) < 0.01f && std::abs(specular.x - specular.z) < 0.01f;
 
         if (diffuse_is_gray && specular_is_gray && diffuse.x > 0.01f) {
-            // metallic = specular / diffuse
             float metallic = specular.x / diffuse.x;
             metallic = std::min(1.0f, std::max(0.0f, metallic));
             material->set_metallic(metallic);
             material->set_specular(0.5f);
         } else {
-            // Use average specular as specular value
             float spec_avg = (specular.x + specular.y + specular.z) / 3.0f;
             material->set_metallic(0.0f);
             material->set_specular(std::min(1.0f, spec_avg));
         }
 
         // Set roughness from shininess (inverse relationship)
-        // Higher shininess = lower roughness
-        float roughness = 1.0f - (shininess / 128.0f); // Assuming shininess 0-128 range
+        float roughness = 1.0f - (shininess / 128.0f);
         roughness = std::min(1.0f, std::max(0.0f, roughness));
         material->set_roughness(roughness);
 
@@ -865,6 +874,7 @@ Ref<StandardMaterial3D> PLATEAUCityModel::create_material(const plateau::polygon
         material->set_specular(0.5f);
     }
 
+    material_cache_[cache_key] = material;
     return material;
 }
 
@@ -1078,6 +1088,7 @@ void PLATEAUCityModel::_finalize_meshes_on_main_thread() {
 
     // Cleanup
     texture_cache_.clear();
+    material_cache_.clear();
     pending_model_.reset();
     pending_options_.unref();
     is_processing_.store(false);
