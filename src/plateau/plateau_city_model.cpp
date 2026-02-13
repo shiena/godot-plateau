@@ -663,7 +663,7 @@ Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &
         size_t start_index = sub_mesh.getStartIndex();
         size_t end_index = sub_mesh.getEndIndex();
 
-        if (end_index < start_index) {
+        if (end_index >= indices.size() || end_index < start_index) {
             continue;
         }
 
