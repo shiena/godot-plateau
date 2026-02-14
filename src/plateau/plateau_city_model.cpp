@@ -384,15 +384,8 @@ TypedArray<PLATEAUMeshData> PLATEAUCityModel::extract_meshes(const Ref<PLATEAUMe
     PLATEAU_MOBILE_UNSUPPORTED_V(result);
 #endif
 
-    if (!is_loaded_ || city_model_ == nullptr) {
-        UtilityFunctions::printerr("CityModel not loaded");
-        return result;
-    }
-
-    if (options.is_null()) {
-        UtilityFunctions::printerr("MeshExtractOptions is null");
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(!is_loaded_ || city_model_ == nullptr, result, "CityModel not loaded.");
+    ERR_FAIL_COND_V_MSG(options.is_null(), result, "MeshExtractOptions is null.");
 
     try {
         // Get native options
@@ -401,10 +394,7 @@ TypedArray<PLATEAUMeshData> PLATEAUCityModel::extract_meshes(const Ref<PLATEAUMe
         // Extract meshes
         auto model = plateau::polygonMesh::MeshExtractor::extract(*city_model_, native_options);
 
-        if (!model) {
-            UtilityFunctions::printerr("Failed to extract meshes");
-            return result;
-        }
+        ERR_FAIL_COND_V_MSG(!model, result, "Failed to extract meshes.");
 
         // Convert each root node
         for (size_t i = 0; i < model->getRootNodeCount(); i++) {
@@ -428,9 +418,7 @@ TypedArray<PLATEAUMeshData> PLATEAUCityModel::extract_meshes(const Ref<PLATEAUMe
 }
 
 Vector3 PLATEAUCityModel::get_center_point(int coordinate_zone_id) const {
-    if (!is_loaded_ || city_model_ == nullptr) {
-        return Vector3();
-    }
+    ERR_FAIL_COND_V_MSG(!is_loaded_ || city_model_ == nullptr, Vector3(), "CityModel not loaded.");
 
     // Get envelope from city model
     const auto &envelope = city_model_->getEnvelope();
@@ -924,9 +912,7 @@ Variant PLATEAUCityModel::convert_attribute_value(const citygml::AttributeValue 
 }
 
 Dictionary PLATEAUCityModel::get_city_object_attributes(const String &gml_id) const {
-    if (!is_loaded_ || city_model_ == nullptr) {
-        return Dictionary();
-    }
+    ERR_FAIL_COND_V_MSG(!is_loaded_ || city_model_ == nullptr, Dictionary(), "CityModel not loaded.");
 
     std::string id = gml_id.utf8().get_data();
     const citygml::CityObject* city_obj = city_model_->getCityObjectById(id);
@@ -939,9 +925,7 @@ Dictionary PLATEAUCityModel::get_city_object_attributes(const String &gml_id) co
 }
 
 int64_t PLATEAUCityModel::get_city_object_type(const String &gml_id) const {
-    if (!is_loaded_ || city_model_ == nullptr) {
-        return 0;
-    }
+    ERR_FAIL_COND_V_MSG(!is_loaded_ || city_model_ == nullptr, 0, "CityModel not loaded.");
 
     std::string id = gml_id.utf8().get_data();
     const citygml::CityObject* city_obj = city_model_->getCityObjectById(id);

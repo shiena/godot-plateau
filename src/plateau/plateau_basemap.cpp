@@ -353,10 +353,8 @@ Ref<PLATEAUVectorTile> PLATEAUVectorTileDownloader::download(int index) {
 #ifndef PLATEAU_MOBILE_PLATFORM
     ensure_downloader();
 
-    if (!downloader_ || index < 0 || index >= downloader_->getTileCount()) {
-        UtilityFunctions::printerr("PLATEAUVectorTileDownloader: Invalid index: ", index);
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(!downloader_ || index < 0 || index >= downloader_->getTileCount(), result,
+        "PLATEAUVectorTileDownloader: Invalid index: " + String::num_int64(index));
 
     try {
         VectorTile tile;
@@ -454,10 +452,7 @@ TypedArray<PLATEAUVectorTile> PLATEAUVectorTileDownloader::download_all() {
 
 #ifndef PLATEAU_MOBILE_PLATFORM
     ensure_downloader();
-    if (!downloader_) {
-        UtilityFunctions::printerr("PLATEAUVectorTileDownloader: Downloader not initialized");
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(!downloader_, result, "PLATEAUVectorTileDownloader: Downloader not initialized.");
 
     try {
         VectorTiles tiles = downloader_->downloadAll();
@@ -683,10 +678,7 @@ void PLATEAUVectorTileDownloader::ensure_downloader() {
         return;
     }
 
-    if (destination_.is_empty()) {
-        UtilityFunctions::printerr("PLATEAUVectorTileDownloader: destination is empty");
-        return;
-    }
+    ERR_FAIL_COND_MSG(destination_.is_empty(), "PLATEAUVectorTileDownloader: destination is empty.");
 
     try {
         // Convert Godot path to absolute filesystem path

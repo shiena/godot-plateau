@@ -78,15 +78,8 @@ float PLATEAUHeightMapAligner::get_skip_threshold_distance() const {
 }
 
 void PLATEAUHeightMapAligner::add_heightmap(const Ref<PLATEAUHeightMapData> &heightmap_data) {
-    if (heightmap_data.is_null()) {
-        UtilityFunctions::printerr("PLATEAUHeightMapAligner: heightmap_data is null");
-        return;
-    }
-
-    if (heightmap_data->get_width() <= 0 || heightmap_data->get_height() <= 0) {
-        UtilityFunctions::printerr("PLATEAUHeightMapAligner: heightmap_data has invalid dimensions");
-        return;
-    }
+    ERR_FAIL_COND_MSG(heightmap_data.is_null(), "PLATEAUHeightMapAligner: heightmap_data is null.");
+    ERR_FAIL_COND_MSG(heightmap_data->get_width() <= 0 || heightmap_data->get_height() <= 0, "PLATEAUHeightMapAligner: heightmap_data has invalid dimensions.");
 
     heightmap_refs_.push_back(heightmap_data);
     UtilityFunctions::print("Added heightmap: ", heightmap_data->get_name(),
@@ -109,15 +102,8 @@ TypedArray<PLATEAUMeshData> PLATEAUHeightMapAligner::align(const TypedArray<PLAT
 #endif
 
 #ifndef PLATEAU_MOBILE_PLATFORM
-    if (heightmap_refs_.empty()) {
-        UtilityFunctions::printerr("PLATEAUHeightMapAligner: no heightmaps registered");
-        return result;
-    }
-
-    if (mesh_data_array.is_empty()) {
-        UtilityFunctions::printerr("PLATEAUHeightMapAligner: mesh_data_array is empty");
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(heightmap_refs_.empty(), result, "PLATEAUHeightMapAligner: no heightmaps registered.");
+    ERR_FAIL_COND_V_MSG(mesh_data_array.is_empty(), result, "PLATEAUHeightMapAligner: mesh_data_array is empty.");
 
     try {
         // Create HeightMapAligner with ENU coordinate system (Godot's coordinate system)
@@ -179,15 +165,8 @@ TypedArray<PLATEAUHeightMapData> PLATEAUHeightMapAligner::align_invert(const Typ
 #endif
 
 #ifndef PLATEAU_MOBILE_PLATFORM
-    if (heightmap_refs_.empty()) {
-        UtilityFunctions::printerr("PLATEAUHeightMapAligner: no heightmaps registered");
-        return result;
-    }
-
-    if (mesh_data_array.is_empty()) {
-        UtilityFunctions::printerr("PLATEAUHeightMapAligner: mesh_data_array is empty");
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(heightmap_refs_.empty(), result, "PLATEAUHeightMapAligner: no heightmaps registered.");
+    ERR_FAIL_COND_V_MSG(mesh_data_array.is_empty(), result, "PLATEAUHeightMapAligner: mesh_data_array is empty.");
 
     try {
         // Create HeightMapAligner

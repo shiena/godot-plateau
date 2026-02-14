@@ -37,10 +37,7 @@ Ref<PLATEAUGeoReference> PLATEAUImporter::get_geo_reference() const {
 }
 
 bool PLATEAUImporter::import_gml() {
-    if (gml_path_.is_empty()) {
-        UtilityFunctions::printerr("PLATEAUImporter: GML path is empty");
-        return false;
-    }
+    ERR_FAIL_COND_V_MSG(gml_path_.is_empty(), false, "PLATEAUImporter: GML path is empty.");
 
     return import_from_path(gml_path_);
 }
@@ -52,9 +49,8 @@ bool PLATEAUImporter::import_from_path(const String &gml_path) {
     // Create city model and load GML
     city_model_.instantiate();
     if (!city_model_->load(gml_path)) {
-        UtilityFunctions::printerr("PLATEAUImporter: Failed to load GML file: ", gml_path);
         is_imported_ = false;
-        return false;
+        ERR_FAIL_V_MSG(false, "PLATEAUImporter: Failed to load GML file: " + gml_path);
     }
 
     // Ensure options are instantiated
@@ -126,10 +122,7 @@ PLATEAUInstancedCityModel *PLATEAUImporter::import_to_scene(
     const Ref<PLATEAUMeshExtractOptions> &options,
     const String &gml_path) {
 
-    if (mesh_data_array.is_empty()) {
-        UtilityFunctions::printerr("PLATEAUImporter: mesh_data_array is empty");
-        return nullptr;
-    }
+    ERR_FAIL_COND_V_MSG(mesh_data_array.is_empty(), nullptr, "PLATEAUImporter: mesh_data_array is empty.");
 
     // Create PLATEAUInstancedCityModel as root node
     PLATEAUInstancedCityModel *root = memnew(PLATEAUInstancedCityModel);

@@ -165,10 +165,7 @@ bool PLATEAUHeightMapData::save_png(const String &path) const {
 #endif
 
 #ifndef PLATEAU_MOBILE_PLATFORM
-    if (heightmap_data_.empty() || width_ <= 0 || height_ <= 0) {
-        UtilityFunctions::printerr("Cannot save PNG: no heightmap data");
-        return false;
-    }
+    ERR_FAIL_COND_V_MSG(heightmap_data_.empty() || width_ <= 0 || height_ <= 0, false, "Cannot save PNG: no heightmap data.");
 
     std::string path_str = path.utf8().get_data();
     try {
@@ -190,10 +187,7 @@ bool PLATEAUHeightMapData::save_raw(const String &path) const {
 #endif
 
 #ifndef PLATEAU_MOBILE_PLATFORM
-    if (heightmap_data_.empty() || width_ <= 0 || height_ <= 0) {
-        UtilityFunctions::printerr("Cannot save RAW: no heightmap data");
-        return false;
-    }
+    ERR_FAIL_COND_V_MSG(heightmap_data_.empty() || width_ <= 0 || height_ <= 0, false, "Cannot save RAW: no heightmap data.");
 
     std::string path_str = path.utf8().get_data();
     try {
@@ -218,10 +212,7 @@ Ref<ArrayMesh> PLATEAUHeightMapData::generate_mesh() const {
 #endif
 
 #ifndef PLATEAU_MOBILE_PLATFORM
-    if (heightmap_data_.empty() || width_ <= 0 || height_ <= 0) {
-        UtilityFunctions::printerr("Cannot generate mesh: no heightmap data");
-        return array_mesh;
-    }
+    ERR_FAIL_COND_V_MSG(heightmap_data_.empty() || width_ <= 0 || height_ <= 0, array_mesh, "Cannot generate mesh: no heightmap data.");
 
     try {
         // Calculate height scale
@@ -480,26 +471,17 @@ Ref<PLATEAUHeightMapData> PLATEAUTerrain::generate_from_mesh(const Ref<PLATEAUMe
 #endif
 
 #ifndef PLATEAU_MOBILE_PLATFORM
-    if (mesh_data.is_null()) {
-        UtilityFunctions::printerr("PLATEAUTerrain: mesh_data is null");
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(mesh_data.is_null(), result, "PLATEAUTerrain: mesh_data is null.");
 
     Ref<ArrayMesh> godot_mesh = mesh_data->get_mesh();
-    if (godot_mesh.is_null() || godot_mesh->get_surface_count() == 0) {
-        UtilityFunctions::printerr("PLATEAUTerrain: mesh_data has no mesh");
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(godot_mesh.is_null() || godot_mesh->get_surface_count() == 0, result, "PLATEAUTerrain: mesh_data has no mesh.");
 
     // Convert Godot ArrayMesh to plateau::polygonMesh::Mesh
     PlateauMesh native_mesh;
 
     // Get surface data
     Array arrays = godot_mesh->surface_get_arrays(0);
-    if (arrays.size() < Mesh::ARRAY_VERTEX + 1) {
-        UtilityFunctions::printerr("PLATEAUTerrain: invalid mesh arrays");
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(arrays.size() < Mesh::ARRAY_VERTEX + 1, result, "PLATEAUTerrain: invalid mesh arrays.");
 
     PackedVector3Array vertices = arrays[Mesh::ARRAY_VERTEX];
     PackedInt32Array indices = arrays[Mesh::ARRAY_INDEX];
@@ -508,10 +490,7 @@ Ref<PLATEAUHeightMapData> PLATEAUTerrain::generate_from_mesh(const Ref<PLATEAUMe
         uvs = arrays[Mesh::ARRAY_TEX_UV];
     }
 
-    if (vertices.is_empty() || indices.is_empty()) {
-        UtilityFunctions::printerr("PLATEAUTerrain: mesh has no vertices or indices");
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(vertices.is_empty() || indices.is_empty(), result, "PLATEAUTerrain: mesh has no vertices or indices.");
 
     // Convert to native mesh
     std::vector<TVec3d> native_vertices;

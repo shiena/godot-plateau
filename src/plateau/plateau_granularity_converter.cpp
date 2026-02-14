@@ -36,18 +36,12 @@ TypedArray<PLATEAUMeshData> PLATEAUGranularityConverter::convert(
     PLATEAU_MOBILE_UNSUPPORTED_V(result);
 #endif
 
-    if (mesh_data_array.is_empty()) {
-        UtilityFunctions::printerr("PLATEAUGranularityConverter: mesh_data_array is empty");
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(mesh_data_array.is_empty(), result, "PLATEAUGranularityConverter: mesh_data_array is empty.");
 
     try {
         // Convert to native model
         auto model = create_model_from_mesh_data(mesh_data_array);
-        if (!model) {
-            UtilityFunctions::printerr("PLATEAUGranularityConverter: Failed to create model");
-            return result;
-        }
+        ERR_FAIL_COND_V_MSG(!model, result, "PLATEAUGranularityConverter: Failed to create model.");
 
         // Create converter
         plateau::granularityConvert::GranularityConverter converter;
@@ -68,8 +62,7 @@ TypedArray<PLATEAUMeshData> PLATEAUGranularityConverter::convert(
                 granularity = ConvertGranularity::MaterialInPrimary;
                 break;
             default:
-                UtilityFunctions::printerr("PLATEAUGranularityConverter: Invalid granularity: ", target_granularity);
-                return result;
+                ERR_FAIL_V_MSG(result, "PLATEAUGranularityConverter: Invalid granularity: " + String::num_int64(target_granularity));
         }
 
         GranularityOption option(granularity, grid_count_);
