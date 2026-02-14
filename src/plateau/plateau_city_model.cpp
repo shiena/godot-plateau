@@ -545,6 +545,7 @@ PackedVector3Array PLATEAUCityModel::compute_normals(const PackedVector3Array &v
         int i2 = indices[face * 3 + 2];
 
         if (i0 >= vertices.size() || i1 >= vertices.size() || i2 >= vertices.size()) {
+            WARN_PRINT_ONCE("compute_normals: index out of bounds, skipping face.");
             continue;
         }
 
@@ -668,6 +669,7 @@ Ref<ArrayMesh> PLATEAUCityModel::convert_mesh(const plateau::polygonMesh::Mesh &
         size_t end_index = sub_mesh.getEndIndex();
 
         if (end_index >= indices.size() || end_index < start_index) {
+            WARN_PRINT_ONCE("convert_mesh: invalid submesh range, skipping submesh.");
             continue;
         }
 

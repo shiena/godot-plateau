@@ -24,6 +24,7 @@ PackedVector3Array compute_smooth_normals(
         int i2 = indices[face * 3 + 2];
 
         if (i0 >= vertices.size() || i1 >= vertices.size() || i2 >= vertices.size()) {
+            WARN_PRINT_ONCE("compute_smooth_normals: index out of bounds, skipping face.");
             continue;
         }
 
