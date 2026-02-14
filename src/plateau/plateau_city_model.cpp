@@ -45,10 +45,9 @@ private:
     bool silent_mode_;
 };
 
-// Type aliases to avoid name collision with godot::Node and godot::Mesh
-using PlateauNode = plateau::polygonMesh::Node;
-using PlateauMesh = plateau::polygonMesh::Mesh;
-using PlateauModel = plateau::polygonMesh::Model;
+#include "plateau_types.h"
+
+// Type aliases for file-local types
 using PlateauSubMesh = plateau::polygonMesh::SubMesh;
 using PlateauCityObjectList = plateau::polygonMesh::CityObjectList;
 using PlateauCityObjectIndex = plateau::polygonMesh::CityObjectIndex;

@@ -5,10 +5,9 @@
 
 using namespace godot;
 
-// Type aliases
-using PlateauModel = plateau::polygonMesh::Model;
-using PlateauNode = plateau::polygonMesh::Node;
-using PlateauMesh = plateau::polygonMesh::Mesh;
+#include "plateau_types.h"
+
+// Type aliases for file-local types
 using GltfWriter = plateau::meshWriter::GltfWriter;
 using GltfWriteOptions = plateau::meshWriter::GltfWriteOptions;
 using GltfFileFormat = plateau::meshWriter::GltfFileFormat;

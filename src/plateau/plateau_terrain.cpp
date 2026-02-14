@@ -8,15 +8,15 @@
 #include <plateau/height_map_generator/heightmap_generator.h>
 #include <plateau/height_map_generator/heightmap_mesh_generator.h>
 #include <plateau/height_map_generator/heightmap_types.h>
-#include <plateau/polygon_mesh/mesh.h>
 #include <plateau/geometry/geo_reference.h>
 #endif
+
+#include "plateau_types.h"
 
 using namespace godot;
 
 #ifndef PLATEAU_MOBILE_PLATFORM
-// Type aliases
-using PlateauMesh = plateau::polygonMesh::Mesh;
+// Type aliases for file-local types
 using HeightMapT = plateau::heightMapGenerator::HeightMapT;
 using HeightMapElemT = plateau::heightMapGenerator::HeightMapElemT;
 #endif

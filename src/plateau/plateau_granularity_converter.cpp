@@ -5,10 +5,9 @@
 
 using namespace godot;
 
-// Type aliases
-using PlateauModel = plateau::polygonMesh::Model;
-using PlateauNode = plateau::polygonMesh::Node;
-using PlateauMesh = plateau::polygonMesh::Mesh;
+#include "plateau_types.h"
+
+// Type aliases for file-local types
 using GranularityOption = plateau::granularityConvert::GranularityConvertOption;
 using ConvertGranularity = plateau::granularityConvert::ConvertGranularity;
 

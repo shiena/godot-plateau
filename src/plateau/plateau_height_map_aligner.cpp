@@ -5,16 +5,14 @@
 
 #ifndef PLATEAU_MOBILE_PLATFORM
 #include <plateau/height_map_alighner/height_map_aligner.h>
-#include <plateau/polygon_mesh/model.h>
 #endif
+
+#include "plateau_types.h"
 
 using namespace godot;
 
 #ifndef PLATEAU_MOBILE_PLATFORM
-// Type aliases
-using PlateauModel = plateau::polygonMesh::Model;
-using PlateauNode = plateau::polygonMesh::Node;
-using PlateauMesh = plateau::polygonMesh::Mesh;
+// Type aliases for file-local types
 using HeightMapFrame = plateau::heightMapAligner::HeightMapFrame;
 using HeightMapAligner = plateau::heightMapAligner::HeightMapAligner;
 #endif
