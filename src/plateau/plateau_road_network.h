@@ -589,6 +589,12 @@ public:
     // Deserialize from dictionary
     static Ref<PLATEAURnModel> deserialize(const Dictionary &data);
 
+    // Export as GeoJSON FeatureCollection dictionaries.
+    // Returns Dictionary with keys: "links", "lanes", "nodes", "tracks"
+    // Each value is a GeoJSON FeatureCollection (Dictionary).
+    // The geo_reference is used to convert local coordinates to lat/lon.
+    Dictionary export_geojson(const Ref<class PLATEAUGeoReference> &geo_reference) const;
+
 protected:
     static void _bind_methods();
 
