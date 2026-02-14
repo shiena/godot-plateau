@@ -237,7 +237,7 @@ max_columns = 4
 offset_left = 410.0
 offset_top = 10.0
 offset_right = 800.0
-offset_bottom = 210.0
+offset_bottom = 240.0
 
 [node name="Title" type="Label" parent="UI/TexturePanel"]
 offset_left = 10.0
@@ -308,26 +308,34 @@ offset_bottom = 120.0
 text = "Apply Texture"
 disabled = true
 
-[node name="TextureProgress" type="ProgressBar" parent="UI/TexturePanel"]
+[node name="CreateGroundButton" type="Button" parent="UI/TexturePanel"]
 offset_left = 10.0
-offset_top = 130.0
+offset_top = 125.0
 offset_right = 380.0
 offset_bottom = 150.0
+text = "Create Ground Mesh"
+disabled = true
+
+[node name="TextureProgress" type="ProgressBar" parent="UI/TexturePanel"]
+offset_left = 10.0
+offset_top = 160.0
+offset_right = 380.0
+offset_bottom = 180.0
 show_percentage = true
 
 [node name="TextureStatus" type="Label" parent="UI/TexturePanel"]
 offset_left = 10.0
-offset_top = 155.0
+offset_top = 185.0
 offset_right = 380.0
-offset_bottom = 175.0
+offset_bottom = 205.0
 text = ""
 theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
 
 [node name="NavigationPanel" type="Panel" parent="UI"]
 offset_left = 410.0
-offset_top = 220.0
+offset_top = 250.0
 offset_right = 800.0
-offset_bottom = 390.0
+offset_bottom = 420.0
 
 [node name="Title" type="Label" parent="UI/NavigationPanel"]
 offset_left = 10.0

@@ -57,6 +57,7 @@ var current_filter_mode: FilterMode = FilterMode.BY_MESH_CODE
 @onready var apply_texture_button: Button = $UI/TexturePanel/ApplyTextureButton
 @onready var texture_progress: ProgressBar = $UI/TexturePanel/TextureProgress
 @onready var texture_status: Label = $UI/TexturePanel/TextureStatus
+@onready var create_ground_button: Button = $UI/TexturePanel/CreateGroundButton
 
 # Navigation UI
 @onready var jump_center_button: Button = $UI/NavigationPanel/JumpCenterButton
@@ -95,6 +96,7 @@ var downloaded_tiles: Array = []  # Array of PLATEAUVectorTile
 var current_tile_index: int = 0
 var combined_texture: ImageTexture
 var geo_reference: PLATEAUGeoReference
+var ground_mesh: MeshInstance3D
 var mesh_bounds_min: Vector3
 var mesh_bounds_max: Vector3
 
@@ -148,6 +150,7 @@ func _ready() -> void:
 	# Connect texture download buttons
 	download_texture_button.pressed.connect(_on_download_texture_pressed)
 	apply_texture_button.pressed.connect(_on_apply_texture_pressed)
+	create_ground_button.pressed.connect(_on_create_ground_pressed)
 
 	# Initialize texture download state
 	texture_progress.value = 0
@@ -1116,6 +1119,7 @@ func _on_load_gml_pressed() -> void:
 
 	# Reset texture state
 	apply_texture_button.disabled = true
+	create_ground_button.disabled = true
 	combined_texture = null
 
 
@@ -1379,8 +1383,13 @@ func _clear_meshes() -> void:
 	downloaded_tiles.clear()
 	tile_queue.clear()
 
+	if ground_mesh != null:
+		ground_mesh.queue_free()
+		ground_mesh = null
+
 	download_texture_button.disabled = true
 	apply_texture_button.disabled = true
+	create_ground_button.disabled = true
 
 
 # --- Texture Download Functions ---
@@ -1447,6 +1456,7 @@ func _on_download_texture_pressed() -> void:
 	# Disable buttons during download
 	download_texture_button.disabled = true
 	apply_texture_button.disabled = true
+	create_ground_button.disabled = true
 
 	# Start downloading first tile
 	_download_next_tile()
@@ -1593,6 +1603,7 @@ func _on_all_tiles_downloaded() -> void:
 	if combined_texture != null:
 		_log("[color=green]Combined texture created: %dx%d[/color]" % [combined_texture.get_width(), combined_texture.get_height()])
 		apply_texture_button.disabled = false
+		create_ground_button.disabled = false
 		texture_status.text = "Texture ready. Click 'Apply to Terrain' to apply."
 	else:
 		_log("[color=red]ERROR: Failed to create combined texture[/color]")
@@ -1682,6 +1693,56 @@ func _on_apply_texture_pressed() -> void:
 	_log("[color=green]Texture applied to %d meshes (skipped %d with existing textures)[/color]" % [applied_count, skipped_count])
 	_log_rid_usage()
 	texture_status.text = ""
+
+
+func _on_create_ground_pressed() -> void:
+	if combined_texture == null:
+		_log("[color=yellow]Download texture first[/color]")
+		return
+	if geo_reference == null:
+		_log("[color=yellow]Load a GML file first to set coordinate zone[/color]")
+		return
+
+	_log("--- Creating Ground Mesh ---")
+
+	# Remove existing ground
+	if ground_mesh != null:
+		ground_mesh.queue_free()
+
+	# Convert tile extent corners to local coordinates
+	var sw_geo = Vector3(tile_extent_min_lat, tile_extent_min_lon, 0.0)
+	var ne_geo = Vector3(tile_extent_max_lat, tile_extent_max_lon, 0.0)
+	var sw_local = geo_reference.project(sw_geo)
+	var ne_local = geo_reference.project(ne_geo)
+
+	# Calculate size and center
+	var size_x = absf(ne_local.x - sw_local.x)
+	var size_z = absf(ne_local.z - sw_local.z)
+	var center = (sw_local + ne_local) / 2.0
+
+	_log("Ground size: %.1f x %.1f meters" % [size_x, size_z])
+	_log("Ground center: (%.1f, %.1f, %.1f)" % [center.x, center.y, center.z])
+
+	# Create ground plane
+	var plane_mesh = PlaneMesh.new()
+	plane_mesh.size = Vector2(size_x, size_z)
+	plane_mesh.subdivide_width = 1
+	plane_mesh.subdivide_depth = 1
+
+	# Create material with texture
+	var material = StandardMaterial3D.new()
+	material.albedo_texture = combined_texture
+	material.uv1_scale = Vector3(1, 1, 1)
+
+	ground_mesh = MeshInstance3D.new()
+	ground_mesh.mesh = plane_mesh
+	ground_mesh.material_override = material
+	ground_mesh.name = "GroundMesh"
+	# Position at center, at ground level (slightly below mesh bounds)
+	ground_mesh.position = Vector3(center.x, mesh_bounds_min.y - 1.0, center.z)
+	mesh_container.add_child(ground_mesh)
+
+	_log("[color=green]Ground mesh created[/color]")
 
 
 func _log_rid_usage() -> void:

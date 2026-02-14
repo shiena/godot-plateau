@@ -24,6 +24,7 @@ var dataset_source: PLATEAUDatasetSource
 var loaded_tiles: Dictionary = {}  # {mesh_code: Node3D}
 var current_mesh_code: String = ""
 var shared_reference_point: Vector3
+var geo_reference: PLATEAUGeoReference
 var is_loading: bool = false
 
 @onready var camera: Camera3D = $Camera3D
@@ -93,11 +94,11 @@ func _open_dataset(path: String) -> void:
 
 	if not latlon.is_empty():
 		# GeoReferenceで座標変換
-		var geo_ref = PLATEAUGeoReference.new()
-		geo_ref.zone_id = zone_id
-		geo_ref.reference_point = Vector3.ZERO
+		geo_reference = PLATEAUGeoReference.new()
+		geo_reference.zone_id = zone_id
+		geo_reference.reference_point = Vector3.ZERO
 
-		var pos = geo_ref.project(Vector3(latlon["lat"], latlon["lon"], 0))
+		var pos = geo_reference.project(Vector3(latlon["lat"], latlon["lon"], 0))
 		shared_reference_point = pos
 
 		# カメラを最初の位置に移動
@@ -115,15 +116,13 @@ func _open_dataset(path: String) -> void:
 
 func _get_mesh_code_at_camera() -> String:
 	# カメラ位置から最も近いメッシュコードを取得
-	if dataset_source == null:
+	if dataset_source == null or geo_reference == null:
 		return ""
 
 	var mesh_codes = dataset_source.get_mesh_codes()
 	if mesh_codes.is_empty():
 		return ""
 
-	# カメラのXZ位置からメッシュコードを推定
-	# (簡略化: 最も近いメッシュコードを選択)
 	var cam_pos = camera.global_position
 	var best_code = mesh_codes[0]
 	var best_dist = INF
@@ -133,8 +132,8 @@ func _get_mesh_code_at_camera() -> String:
 		if latlon.is_empty():
 			continue
 
-		# 距離を計算 (簡易的)
-		var dist = Vector2(cam_pos.x, cam_pos.z).distance_to(Vector2.ZERO)
+		var local_pos = geo_reference.project(Vector3(latlon["lat"], latlon["lon"], 0))
+		var dist = Vector2(cam_pos.x, cam_pos.z).distance_to(Vector2(local_pos.x, local_pos.z))
 		if dist < best_dist:
 			best_dist = dist
 			best_code = code
