@@ -129,7 +129,7 @@ void PLATEAUDatasetGroup::_bind_methods() {
 // ============================================================================
 
 PLATEAUGmlFileInfo::PLATEAUGmlFileInfo()
-    : max_lod_(0), package_type_(0) {
+    : max_lod_(0), epsg_(6697), package_type_(0) {
 }
 
 PLATEAUGmlFileInfo::~PLATEAUGmlFileInfo() {
@@ -159,6 +159,14 @@ int PLATEAUGmlFileInfo::get_max_lod() const {
     return max_lod_;
 }
 
+void PLATEAUGmlFileInfo::set_epsg(int epsg) {
+    epsg_ = epsg;
+}
+
+int PLATEAUGmlFileInfo::get_epsg() const {
+    return epsg_;
+}
+
 void PLATEAUGmlFileInfo::set_package_type(int64_t type) {
     package_type_ = type;
 }
@@ -179,6 +187,10 @@ void PLATEAUGmlFileInfo::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_max_lod", "lod"), &PLATEAUGmlFileInfo::set_max_lod);
     ClassDB::bind_method(D_METHOD("get_max_lod"), &PLATEAUGmlFileInfo::get_max_lod);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "max_lod"), "set_max_lod", "get_max_lod");
+
+    ClassDB::bind_method(D_METHOD("set_epsg", "epsg"), &PLATEAUGmlFileInfo::set_epsg);
+    ClassDB::bind_method(D_METHOD("get_epsg"), &PLATEAUGmlFileInfo::get_epsg);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "epsg"), "set_epsg", "get_epsg");
 
     ClassDB::bind_method(D_METHOD("set_package_type", "type"), &PLATEAUGmlFileInfo::set_package_type);
     ClassDB::bind_method(D_METHOD("get_package_type"), &PLATEAUGmlFileInfo::get_package_type);
@@ -283,6 +295,7 @@ TypedArray<PLATEAUGmlFileInfo> PLATEAUDatasetSource::get_gml_files(int64_t packa
                     info->set_mesh_code(String(grid_code->get().c_str()));
                 }
                 info->set_max_lod(gml_file.getMaxLod());
+                info->set_epsg(static_cast<int>(gml_file.getEpsg()));
                 info->set_package_type(static_cast<int64_t>(gml_file.getPackage()));
                 result.push_back(info);
             }

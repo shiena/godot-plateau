@@ -122,6 +122,9 @@ public:
     void set_max_lod(int lod);
     int get_max_lod() const;
 
+    void set_epsg(int epsg);
+    int get_epsg() const;
+
     void set_package_type(int64_t type);
     int64_t get_package_type() const;
 
@@ -132,6 +135,7 @@ private:
     String path_;
     String mesh_code_;
     int max_lod_;
+    int epsg_;
     int64_t package_type_;
 };
 
