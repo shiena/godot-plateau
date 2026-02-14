@@ -206,7 +206,7 @@ func _setup_package_options() -> void:
 	package_option.add_item("Vegetation (veg)", PLATEAUDatasetSource.PACKAGE_VEGETATION)
 	package_option.add_item("City Furniture (frn)", PLATEAUDatasetSource.PACKAGE_CITY_FURNITURE)
 	package_option.add_item("Bridge (brid)", PLATEAUDatasetSource.PACKAGE_BRIDGE)
-	package_option.add_item("Flood (fld)", PLATEAUDatasetSource.PACKAGE_FLOOD)
+	package_option.add_item("Disaster Risk (fld)", PLATEAUDatasetSource.PACKAGE_DISASTER_RISK)
 	package_option.add_item("All Packages", PLATEAUDatasetSource.PACKAGE_ALL)
 
 
@@ -1252,10 +1252,8 @@ func _packages_to_string(flags: int) -> String:
 		names.append("Furniture")
 	if flags & PLATEAUDatasetSource.PACKAGE_BRIDGE:
 		names.append("Bridge")
-	if flags & PLATEAUDatasetSource.PACKAGE_FLOOD:
-		names.append("Flood")
-	if flags & PLATEAUDatasetSource.PACKAGE_TSUNAMI:
-		names.append("Tsunami")
+	if flags & PLATEAUDatasetSource.PACKAGE_DISASTER_RISK:
+		names.append("DisasterRisk")
 	return ", ".join(names) if not names.is_empty() else "None"
 
 
@@ -1276,10 +1274,8 @@ func _package_flag_to_name(flag: int) -> String:
 			return "frn"
 		PLATEAUDatasetSource.PACKAGE_BRIDGE:
 			return "brid"
-		PLATEAUDatasetSource.PACKAGE_FLOOD:
+		PLATEAUDatasetSource.PACKAGE_DISASTER_RISK:
 			return "fld"
-		PLATEAUDatasetSource.PACKAGE_TSUNAMI:
-			return "tnm"
 		_:
 			return ""
 

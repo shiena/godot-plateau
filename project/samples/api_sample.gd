@@ -111,7 +111,7 @@ func _update_package_checkboxes(packages: int) -> void:
 		{"flag": PLATEAUDatasetSource.PACKAGE_WATER_BODY, "name": "WaterBody (wtr)", "display": "水部"},
 		{"flag": PLATEAUDatasetSource.PACKAGE_BRIDGE, "name": "Bridge (brid)", "display": "橋梁"},
 		{"flag": PLATEAUDatasetSource.PACKAGE_TUNNEL, "name": "Tunnel (tun)", "display": "トンネル"},
-		{"flag": PLATEAUDatasetSource.PACKAGE_FLOOD, "name": "Flood (fld)", "display": "浸水想定区域"},
+		{"flag": PLATEAUDatasetSource.PACKAGE_DISASTER_RISK, "name": "DisasterRisk (fld)", "display": "災害リスク"},
 		{"flag": PLATEAUDatasetSource.PACKAGE_URBAN_PLANNING, "name": "UrbanPlanning (urf)", "display": "都市計画"},
 	]
 
@@ -429,7 +429,7 @@ func _format_packages(packages: int) -> String:
 	if packages & PLATEAUDatasetSource.PACKAGE_WATER_BODY: names.append("WaterBody")
 	if packages & PLATEAUDatasetSource.PACKAGE_BRIDGE: names.append("Bridge")
 	if packages & PLATEAUDatasetSource.PACKAGE_TUNNEL: names.append("Tunnel")
-	if packages & PLATEAUDatasetSource.PACKAGE_FLOOD: names.append("Flood")
+	if packages & PLATEAUDatasetSource.PACKAGE_DISASTER_RISK: names.append("DisasterRisk")
 	if packages & PLATEAUDatasetSource.PACKAGE_URBAN_PLANNING: names.append("UrbanPlanning")
 	return ", ".join(names) if not names.is_empty() else "(none)"
 

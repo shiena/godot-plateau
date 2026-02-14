@@ -355,7 +355,7 @@ void PLATEAUDatasetSource::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_mesh_codes"), &PLATEAUDatasetSource::get_mesh_codes);
     ClassDB::bind_method(D_METHOD("filter_by_mesh_codes", "codes"), &PLATEAUDatasetSource::filter_by_mesh_codes);
 
-    // Package type enum
+    // Package type enum (bit positions match libplateau's PredefinedCityModelPackage)
     BIND_ENUM_CONSTANT(PACKAGE_NONE);
     BIND_ENUM_CONSTANT(PACKAGE_BUILDING);
     BIND_ENUM_CONSTANT(PACKAGE_ROAD);
@@ -364,11 +364,7 @@ void PLATEAUDatasetSource::_bind_methods() {
     BIND_ENUM_CONSTANT(PACKAGE_CITY_FURNITURE);
     BIND_ENUM_CONSTANT(PACKAGE_VEGETATION);
     BIND_ENUM_CONSTANT(PACKAGE_RELIEF);
-    BIND_ENUM_CONSTANT(PACKAGE_FLOOD);
-    BIND_ENUM_CONSTANT(PACKAGE_TSUNAMI);
-    BIND_ENUM_CONSTANT(PACKAGE_LANDSLIDE);
-    BIND_ENUM_CONSTANT(PACKAGE_STORM_SURGE);
-    BIND_ENUM_CONSTANT(PACKAGE_INLAND_FLOOD);
+    BIND_ENUM_CONSTANT(PACKAGE_DISASTER_RISK);
     BIND_ENUM_CONSTANT(PACKAGE_RAILWAY);
     BIND_ENUM_CONSTANT(PACKAGE_WATERWAY);
     BIND_ENUM_CONSTANT(PACKAGE_WATER_BODY);

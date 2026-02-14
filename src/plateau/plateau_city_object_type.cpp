@@ -356,11 +356,7 @@ String PLATEAUCityObjectTypeHierarchy::get_package_name(int64_t package) {
         case PACKAGE_CITY_FURNITURE: return "frn";
         case PACKAGE_VEGETATION: return "veg";
         case PACKAGE_RELIEF: return "dem";
-        case PACKAGE_FLOOD: return "fld";
-        case PACKAGE_TSUNAMI: return "tnm";
-        case PACKAGE_LANDSLIDE: return "lsld";
-        case PACKAGE_STORM_SURGE: return "htd";
-        case PACKAGE_INLAND_FLOOD: return "ifld";
+        case PACKAGE_DISASTER_RISK: return "fld";
         case PACKAGE_RAILWAY: return "rwy";
         case PACKAGE_WATERWAY: return "wwy";
         case PACKAGE_WATER_BODY: return "wtr";
@@ -386,11 +382,7 @@ String PLATEAUCityObjectTypeHierarchy::get_package_display_name(int64_t package)
         case PACKAGE_CITY_FURNITURE: return String::utf8("都市設備");
         case PACKAGE_VEGETATION: return String::utf8("植生");
         case PACKAGE_RELIEF: return String::utf8("起伏");
-        case PACKAGE_FLOOD: return String::utf8("洪水浸水想定区域");
-        case PACKAGE_TSUNAMI: return String::utf8("津波浸水想定");
-        case PACKAGE_LANDSLIDE: return String::utf8("土砂災害警戒区域");
-        case PACKAGE_STORM_SURGE: return String::utf8("高潮浸水想定区域");
-        case PACKAGE_INLAND_FLOOD: return String::utf8("内水浸水想定区域");
+        case PACKAGE_DISASTER_RISK: return String::utf8("災害リスク");
         case PACKAGE_RAILWAY: return String::utf8("鉄道");
         case PACKAGE_WATERWAY: return String::utf8("航路");
         case PACKAGE_WATER_BODY: return String::utf8("水部");

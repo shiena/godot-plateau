@@ -11,34 +11,31 @@
 namespace godot {
 
 // Predefined city model package types (bitmask)
+// Bit positions match libplateau's PredefinedCityModelPackage exactly.
 enum PLATEAUCityModelPackage : int64_t {
     PACKAGE_NONE = 0,
-    PACKAGE_BUILDING = 1 << 0,           // bldg - Buildings
-    PACKAGE_ROAD = 1 << 1,               // tran - Roads
-    PACKAGE_URBAN_PLANNING = 1 << 2,     // urf - Urban planning
-    PACKAGE_LAND_USE = 1 << 3,           // luse - Land use
-    PACKAGE_CITY_FURNITURE = 1 << 4,     // frn - City furniture
-    PACKAGE_VEGETATION = 1 << 5,         // veg - Vegetation
-    PACKAGE_RELIEF = 1 << 6,             // dem - Relief/DEM
-    PACKAGE_FLOOD = 1 << 7,              // fld - Flood
-    PACKAGE_TSUNAMI = 1 << 8,            // tnm - Tsunami
-    PACKAGE_LANDSLIDE = 1 << 9,          // lsld - Landslide
-    PACKAGE_STORM_SURGE = 1 << 10,       // htd - Storm surge
-    PACKAGE_INLAND_FLOOD = 1 << 11,      // ifld - Inland flood
-    PACKAGE_RAILWAY = 1 << 12,           // rwy - Railway
-    PACKAGE_WATERWAY = 1 << 13,          // wwy - Waterway
-    PACKAGE_WATER_BODY = 1 << 14,        // wtr - Water body
-    PACKAGE_BRIDGE = 1 << 15,            // brid - Bridge
-    PACKAGE_TRACK = 1 << 16,             // trk - Track
-    PACKAGE_SQUARE = 1 << 17,            // squr - Square
-    PACKAGE_TUNNEL = 1 << 18,            // tun - Tunnel
-    PACKAGE_UNDERGROUND_FACILITY = 1 << 19, // unf - Underground facility
-    PACKAGE_UNDERGROUND_BUILDING = 1 << 20, // ubld - Underground building
-    PACKAGE_AREA = 1 << 21,              // area - Area
-    PACKAGE_OTHER_CONSTRUCTION = 1 << 22, // cons - Other construction
-    PACKAGE_GENERIC = 1 << 23,           // gen - Generic
-    PACKAGE_UNKNOWN = 1 << 24,
-    PACKAGE_ALL = 0x1FFFFFF,
+    PACKAGE_BUILDING = 1 << 0,              // bldg - Buildings
+    PACKAGE_ROAD = 1 << 1,                  // tran - Roads
+    PACKAGE_URBAN_PLANNING = 1 << 2,        // urf - Urban planning
+    PACKAGE_LAND_USE = 1 << 3,              // luse - Land use
+    PACKAGE_CITY_FURNITURE = 1 << 4,        // frn - City furniture
+    PACKAGE_VEGETATION = 1 << 5,            // veg - Vegetation
+    PACKAGE_RELIEF = 1 << 6,                // dem - Relief/DEM
+    PACKAGE_DISASTER_RISK = 1 << 7,         // fld/tnm/lsld/htd/ifld - Disaster risk
+    PACKAGE_RAILWAY = 1 << 8,               // rwy - Railway
+    PACKAGE_WATERWAY = 1 << 9,              // wwy - Waterway
+    PACKAGE_WATER_BODY = 1 << 10,           // wtr - Water body
+    PACKAGE_BRIDGE = 1 << 11,               // brid - Bridge
+    PACKAGE_TRACK = 1 << 12,                // trk - Track
+    PACKAGE_SQUARE = 1 << 13,               // squr - Square
+    PACKAGE_TUNNEL = 1 << 14,               // tun - Tunnel
+    PACKAGE_UNDERGROUND_FACILITY = 1 << 15, // unf - Underground facility
+    PACKAGE_UNDERGROUND_BUILDING = 1 << 16, // ubld - Underground building
+    PACKAGE_AREA = 1 << 17,                 // area - Area
+    PACKAGE_OTHER_CONSTRUCTION = 1 << 18,   // cons - Other construction
+    PACKAGE_GENERIC = 1 << 19,              // gen - Generic
+    PACKAGE_UNKNOWN = 1 << 31,
+    PACKAGE_ALL = 0x000FFFFF | (1 << 31),
 };
 
 /**
