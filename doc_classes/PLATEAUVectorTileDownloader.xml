@@ -5,7 +5,7 @@
 	</brief_description>
 	<description>
 		PLATEAUVectorTileDownloader downloads map tiles (aerial photos, standard maps, etc.) for a given geographic extent. Tiles are saved as image files to the specified destination directory.
-		[b]Note:[/b] This class is not available on mobile platforms (iOS/Android).
+		[b]Note:[/b] On mobile platforms (iOS/Android), this class is available but methods that depend on libplateau (e.g., [method download], [method download_all], [method set_extent]) will return an error. Getter/setter properties, [method get_tile_url], and [method get_tile_file_path] work normally.
 		[codeblock]
 		var downloader = PLATEAUVectorTileDownloader.new()
 		downloader.destination = "user://map_tiles"
@@ -27,6 +27,7 @@
 			<param index="3" name="max_lon" type="float" />
 			<description>
 				Set the download extent using latitude/longitude bounds.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 		<method name="set_extent_from_center">
@@ -36,18 +37,21 @@
 			<param index="2" name="radius_deg" type="float" />
 			<description>
 				Set the download extent from a center point and radius (in degrees).
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 		<method name="get_extent" qualifiers="const">
 			<return type="Dictionary" />
 			<description>
 				Returns the current extent as a Dictionary with min_lat, min_lon, max_lat, max_lon keys.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 		<method name="get_tile_count" qualifiers="const">
 			<return type="int" />
 			<description>
 				Returns the number of tiles to download for the current extent.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 		<method name="get_tile_coordinate" qualifiers="const">
@@ -55,6 +59,7 @@
 			<param index="0" name="index" type="int" />
 			<description>
 				Returns the tile coordinate at the specified index.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 		<method name="download">
@@ -91,6 +96,7 @@
 			<param index="0" name="index" type="int" />
 			<description>
 				Returns the expected file path for a tile at the specified index.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 		<method name="get_default_url" qualifiers="static">
@@ -106,6 +112,7 @@
 			<param index="2" name="zoom_level" type="int" />
 			<description>
 				Convert latitude/longitude to tile coordinate.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 		<method name="unproject" qualifiers="static">
@@ -113,6 +120,7 @@
 			<param index="0" name="coord" type="PLATEAUTileCoordinate" />
 			<description>
 				Convert tile coordinate to extent (lat/lon bounds).
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 	</methods>

@@ -1,32 +1,36 @@
-// Platform detection for mobile exclusions
-#if defined(__APPLE__)
-#include <TargetConditionals.h>
-#endif
-#if defined(__ANDROID__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
-#define PLATEAU_MOBILE_PLATFORM 1
-#endif
-
-#ifndef PLATEAU_MOBILE_PLATFORM
-
 #include "plateau_terrain.h"
 #include "plateau_platform.h"
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <cmath>
 
+#ifndef PLATEAU_MOBILE_PLATFORM
+#include <plateau/height_map_generator/heightmap_generator.h>
+#include <plateau/height_map_generator/heightmap_mesh_generator.h>
+#include <plateau/height_map_generator/heightmap_types.h>
+#include <plateau/geometry/geo_reference.h>
+#endif
+
+#include "plateau_types.h"
+
 using namespace godot;
 
-// Type aliases
-using PlateauMesh = plateau::polygonMesh::Mesh;
+#ifndef PLATEAU_MOBILE_PLATFORM
+// Type aliases for file-local types
 using HeightMapT = plateau::heightMapGenerator::HeightMapT;
 using HeightMapElemT = plateau::heightMapGenerator::HeightMapElemT;
+#endif
 
 // ============================================================================
 // PLATEAUHeightMapData implementation
 // ============================================================================
 
 PLATEAUHeightMapData::PLATEAUHeightMapData()
-    : width_(0), height_(0), min_(0, 0, 0), max_(0, 0, 0), uv_min_(0, 0), uv_max_(1, 1) {
+    : width_(0), height_(0)
+#ifndef PLATEAU_MOBILE_PLATFORM
+    , min_(0, 0, 0), max_(0, 0, 0), uv_min_(0, 0), uv_max_(1, 1)
+#endif
+{
 }
 
 PLATEAUHeightMapData::~PLATEAUHeightMapData() {
@@ -49,19 +53,35 @@ int PLATEAUHeightMapData::get_height() const {
 }
 
 Vector3 PLATEAUHeightMapData::get_min_bounds() const {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    return Vector3();
+#else
     return Vector3(min_.x, min_.y, min_.z);
+#endif
 }
 
 Vector3 PLATEAUHeightMapData::get_max_bounds() const {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    return Vector3();
+#else
     return Vector3(max_.x, max_.y, max_.z);
+#endif
 }
 
 Vector2 PLATEAUHeightMapData::get_min_uv() const {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    return Vector2();
+#else
     return Vector2(uv_min_.x, uv_min_.y);
+#endif
 }
 
 Vector2 PLATEAUHeightMapData::get_max_uv() const {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    return Vector2();
+#else
     return Vector2(uv_max_.x, uv_max_.y);
+#endif
 }
 
 void PLATEAUHeightMapData::set_texture_path(const String &path) {
@@ -73,6 +93,11 @@ String PLATEAUHeightMapData::get_texture_path() const {
 }
 
 PackedByteArray PLATEAUHeightMapData::get_heightmap_raw() const {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(PackedByteArray());
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     if (heightmap_data_.empty()) {
         return PackedByteArray();
     }
@@ -91,9 +116,15 @@ PackedByteArray PLATEAUHeightMapData::get_heightmap_raw() const {
     }
     cached_raw_valid_ = true;
     return cached_raw_;
+#endif
 }
 
 PackedFloat32Array PLATEAUHeightMapData::get_heightmap_normalized() const {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(PackedFloat32Array());
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     if (heightmap_data_.empty()) {
         return PackedFloat32Array();
     }
@@ -110,27 +141,31 @@ PackedFloat32Array PLATEAUHeightMapData::get_heightmap_normalized() const {
     }
     cached_normalized_valid_ = true;
     return cached_normalized_;
+#endif
 }
 
+#ifndef PLATEAU_MOBILE_PLATFORM
 void PLATEAUHeightMapData::invalidate_cache() {
     cached_raw_valid_ = false;
     cached_normalized_valid_ = false;
     cached_raw_.resize(0);
     cached_normalized_.resize(0);
 }
+#endif
 
 void PLATEAUHeightMapData::clear_cache() {
+#ifndef PLATEAU_MOBILE_PLATFORM
     invalidate_cache();
+#endif
 }
 
 bool PLATEAUHeightMapData::save_png(const String &path) const {
 #ifdef PLATEAU_MOBILE_PLATFORM
     PLATEAU_MOBILE_UNSUPPORTED_V(false);
 #endif
-    if (heightmap_data_.empty() || width_ <= 0 || height_ <= 0) {
-        UtilityFunctions::printerr("Cannot save PNG: no heightmap data");
-        return false;
-    }
+
+#ifndef PLATEAU_MOBILE_PLATFORM
+    ERR_FAIL_COND_V_MSG(heightmap_data_.empty() || width_ <= 0 || height_ <= 0, false, "Cannot save PNG: no heightmap data.");
 
     std::string path_str = path.utf8().get_data();
     try {
@@ -143,16 +178,16 @@ bool PLATEAUHeightMapData::save_png(const String &path) const {
         UtilityFunctions::printerr("Failed to save PNG: ", String(e.what()));
         return false;
     }
+#endif
 }
 
 bool PLATEAUHeightMapData::save_raw(const String &path) const {
 #ifdef PLATEAU_MOBILE_PLATFORM
     PLATEAU_MOBILE_UNSUPPORTED_V(false);
 #endif
-    if (heightmap_data_.empty() || width_ <= 0 || height_ <= 0) {
-        UtilityFunctions::printerr("Cannot save RAW: no heightmap data");
-        return false;
-    }
+
+#ifndef PLATEAU_MOBILE_PLATFORM
+    ERR_FAIL_COND_V_MSG(heightmap_data_.empty() || width_ <= 0 || height_ <= 0, false, "Cannot save RAW: no heightmap data.");
 
     std::string path_str = path.utf8().get_data();
     try {
@@ -165,6 +200,7 @@ bool PLATEAUHeightMapData::save_raw(const String &path) const {
         UtilityFunctions::printerr("Failed to save RAW: ", String(e.what()));
         return false;
     }
+#endif
 }
 
 Ref<ArrayMesh> PLATEAUHeightMapData::generate_mesh() const {
@@ -175,10 +211,8 @@ Ref<ArrayMesh> PLATEAUHeightMapData::generate_mesh() const {
     PLATEAU_MOBILE_UNSUPPORTED_V(array_mesh);
 #endif
 
-    if (heightmap_data_.empty() || width_ <= 0 || height_ <= 0) {
-        UtilityFunctions::printerr("Cannot generate mesh: no heightmap data");
-        return array_mesh;
-    }
+#ifndef PLATEAU_MOBILE_PLATFORM
+    ERR_FAIL_COND_V_MSG(heightmap_data_.empty() || width_ <= 0 || height_ <= 0, array_mesh, "Cannot generate mesh: no heightmap data.");
 
     try {
         // Calculate height scale
@@ -310,10 +344,12 @@ Ref<ArrayMesh> PLATEAUHeightMapData::generate_mesh() const {
     } catch (const std::exception &e) {
         UtilityFunctions::printerr("Exception generating mesh: ", String(e.what()));
     }
+#endif
 
     return array_mesh;
 }
 
+#ifndef PLATEAU_MOBILE_PLATFORM
 void PLATEAUHeightMapData::set_data(const HeightMapT &heightmap,
                                      int width, int height,
                                      const TVec3d &min, const TVec3d &max,
@@ -340,6 +376,7 @@ TVec3d PLATEAUHeightMapData::get_min_internal() const {
 TVec3d PLATEAUHeightMapData::get_max_internal() const {
     return max_;
 }
+#endif
 
 void PLATEAUHeightMapData::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_name", "name"), &PLATEAUHeightMapData::set_name);
@@ -429,26 +466,22 @@ bool PLATEAUTerrain::get_apply_blur_filter() const {
 Ref<PLATEAUHeightMapData> PLATEAUTerrain::generate_from_mesh(const Ref<PLATEAUMeshData> &mesh_data) {
     Ref<PLATEAUHeightMapData> result;
 
-    if (mesh_data.is_null()) {
-        UtilityFunctions::printerr("PLATEAUTerrain: mesh_data is null");
-        return result;
-    }
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(result);
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
+    ERR_FAIL_COND_V_MSG(mesh_data.is_null(), result, "PLATEAUTerrain: mesh_data is null.");
 
     Ref<ArrayMesh> godot_mesh = mesh_data->get_mesh();
-    if (godot_mesh.is_null() || godot_mesh->get_surface_count() == 0) {
-        UtilityFunctions::printerr("PLATEAUTerrain: mesh_data has no mesh");
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(godot_mesh.is_null() || godot_mesh->get_surface_count() == 0, result, "PLATEAUTerrain: mesh_data has no mesh.");
 
     // Convert Godot ArrayMesh to plateau::polygonMesh::Mesh
     PlateauMesh native_mesh;
 
     // Get surface data
     Array arrays = godot_mesh->surface_get_arrays(0);
-    if (arrays.size() < Mesh::ARRAY_VERTEX + 1) {
-        UtilityFunctions::printerr("PLATEAUTerrain: invalid mesh arrays");
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(arrays.size() < Mesh::ARRAY_VERTEX + 1, result, "PLATEAUTerrain: invalid mesh arrays.");
 
     PackedVector3Array vertices = arrays[Mesh::ARRAY_VERTEX];
     PackedInt32Array indices = arrays[Mesh::ARRAY_INDEX];
@@ -457,10 +490,7 @@ Ref<PLATEAUHeightMapData> PLATEAUTerrain::generate_from_mesh(const Ref<PLATEAUMe
         uvs = arrays[Mesh::ARRAY_TEX_UV];
     }
 
-    if (vertices.is_empty() || indices.is_empty()) {
-        UtilityFunctions::printerr("PLATEAUTerrain: mesh has no vertices or indices");
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(vertices.is_empty() || indices.is_empty(), result, "PLATEAUTerrain: mesh has no vertices or indices.");
 
     // Convert to native mesh
     std::vector<TVec3d> native_vertices;
@@ -493,11 +523,17 @@ Ref<PLATEAUHeightMapData> PLATEAUTerrain::generate_from_mesh(const Ref<PLATEAUMe
     }
 
     return generate_from_plateau_mesh(native_mesh, mesh_data->get_name());
+#endif
 }
 
 Ref<PLATEAUHeightMapData> PLATEAUTerrain::generate_from_meshes(const TypedArray<PLATEAUMeshData> &mesh_data_array) {
     Ref<PLATEAUHeightMapData> result;
 
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(result);
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     if (mesh_data_array.is_empty()) {
         UtilityFunctions::printerr("PLATEAUTerrain: mesh_data_array is empty");
         return result;
@@ -588,14 +624,12 @@ Ref<PLATEAUHeightMapData> PLATEAUTerrain::generate_from_meshes(const TypedArray<
                            static_cast<int64_t>(merged_mesh.getVertices().size()), " vertices");
 
     return generate_from_plateau_mesh(merged_mesh, combined_name);
+#endif
 }
 
+#ifndef PLATEAU_MOBILE_PLATFORM
 Ref<PLATEAUHeightMapData> PLATEAUTerrain::generate_from_plateau_mesh(const plateau::polygonMesh::Mesh &mesh, const String &name) {
     Ref<PLATEAUHeightMapData> result;
-
-#ifdef PLATEAU_MOBILE_PLATFORM
-    PLATEAU_MOBILE_UNSUPPORTED_V(result);
-#endif
 
     result.instantiate();
     result->set_name(name);
@@ -640,11 +674,14 @@ Ref<PLATEAUHeightMapData> PLATEAUTerrain::generate_from_plateau_mesh(const plate
 
     return result;
 }
+#endif
 
 void PLATEAUTerrain::generate_from_meshes_async(const TypedArray<PLATEAUMeshData> &mesh_data_array) {
 #ifdef PLATEAU_MOBILE_PLATFORM
     PLATEAU_MOBILE_UNSUPPORTED();
 #endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     if (is_processing_.load()) {
         UtilityFunctions::printerr("PLATEAUTerrain: Already processing");
         return;
@@ -662,15 +699,18 @@ void PLATEAUTerrain::generate_from_meshes_async(const TypedArray<PLATEAUMeshData
     WorkerThreadPool::get_singleton()->add_task(
         callable_mp(this, &PLATEAUTerrain::_generate_thread_func)
     );
+#endif
 }
 
 void PLATEAUTerrain::_generate_thread_func() {
+#ifndef PLATEAU_MOBILE_PLATFORM
     Ref<PLATEAUHeightMapData> result = generate_from_meshes(pending_mesh_data_);
 
     is_processing_.store(false);
     pending_mesh_data_.clear();
 
     call_deferred("emit_signal", "generate_completed", result);
+#endif
 }
 
 bool PLATEAUTerrain::is_processing() const {
@@ -706,5 +746,3 @@ void PLATEAUTerrain::_bind_methods() {
     // Signal for async completion
     ADD_SIGNAL(MethodInfo("generate_completed", PropertyInfo(Variant::OBJECT, "heightmap_data", PROPERTY_HINT_RESOURCE_TYPE, "PLATEAUHeightMapData")));
 }
-
-#endif // !PLATEAU_MOBILE_PLATFORM

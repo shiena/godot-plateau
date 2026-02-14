@@ -6,9 +6,7 @@
 #include <godot_cpp/variant/packed_int32_array.hpp>
 #include <godot_cpp/variant/typed_array.hpp>
 
-#include <plateau/polygon_mesh/model.h>
-#include <plateau/polygon_mesh/mesh.h>
-
+#include "plateau_types.h"
 #include "plateau_city_model.h"
 
 #include <vector>
@@ -16,11 +14,6 @@
 
 namespace godot {
 namespace plateau_utils {
-
-// Type aliases
-using PlateauModel = plateau::polygonMesh::Model;
-using PlateauNode = plateau::polygonMesh::Node;
-using PlateauMesh = plateau::polygonMesh::Mesh;
 
 /**
  * Compute smooth normals for a mesh using area-weighted face normals.

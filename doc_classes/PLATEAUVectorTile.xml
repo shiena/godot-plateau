@@ -5,7 +5,7 @@
 	</brief_description>
 	<description>
 		PLATEAUVectorTile contains information about a downloaded map tile including its coordinate, local image path, and download status.
-		[b]Note:[/b] This class is not available on mobile platforms (iOS/Android).
+		This class is fully available on all platforms including mobile (iOS/Android).
 	</description>
 	<tutorials>
 	</tutorials>

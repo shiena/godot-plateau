@@ -41,7 +41,8 @@ String PLATEAUGmlFile::get_grid_code() const {
         if (grid_code && grid_code->isValid()) {
             return String::utf8(grid_code->get().c_str());
         }
-    } catch (...) {
+    } catch (const std::exception &e) {
+        UtilityFunctions::printerr("PLATEAUGmlFile: Failed to get grid code: ", e.what());
     }
 
     return String();
@@ -210,7 +211,8 @@ Dictionary PLATEAUGmlFile::get_grid_extent() const {
             result["min_lon"] = extent.min.longitude;
             result["max_lon"] = extent.max.longitude;
         }
-    } catch (...) {
+    } catch (const std::exception &e) {
+        UtilityFunctions::printerr("PLATEAUGmlFile: Failed to get grid extent: ", e.what());
     }
 
     return result;

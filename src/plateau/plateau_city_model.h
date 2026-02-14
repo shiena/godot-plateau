@@ -211,7 +211,10 @@ private:
     void _finalize_meshes_on_main_thread();  // Stage 2: Create Godot resources (main thread)
 
     // Texture cache to avoid reloading same textures
-    HashMap<String, Ref<ImageTexture>> texture_cache_;
+    mutable HashMap<String, Ref<ImageTexture>> texture_cache_;
+
+    // Material cache to share identical materials across submeshes (reduces RID count)
+    mutable HashMap<String, Ref<StandardMaterial3D>> material_cache_;
 
     // Helper methods for mesh conversion
     Ref<PLATEAUMeshData> convert_node(const plateau::polygonMesh::Node &node);
@@ -222,7 +225,7 @@ private:
     static PackedVector3Array compute_normals(const PackedVector3Array &vertices, const PackedInt32Array &indices);
 
     // Load texture with caching
-    Ref<ImageTexture> load_texture_cached(const String &texture_path);
+    Ref<ImageTexture> load_texture_cached(const String &texture_path) const;
 
     // Phase 1: Helper to convert citygml attributes to Godot Dictionary
     static Dictionary convert_attributes(const citygml::AttributesMap &attrs);

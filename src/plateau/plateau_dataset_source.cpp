@@ -267,10 +267,7 @@ int64_t PLATEAUDatasetSource::get_available_packages() const {
 TypedArray<PLATEAUGmlFileInfo> PLATEAUDatasetSource::get_gml_files(int64_t package_flags) {
     TypedArray<PLATEAUGmlFileInfo> result;
 
-    if (!is_valid()) {
-        UtilityFunctions::printerr("PLATEAUDatasetSource: Source is not valid");
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(!is_valid(), result, "PLATEAUDatasetSource: Source is not valid.");
 
     try {
         auto package = static_cast<plateau::dataset::PredefinedCityModelPackage>(package_flags);
@@ -325,10 +322,7 @@ Ref<PLATEAUDatasetSource> PLATEAUDatasetSource::filter_by_mesh_codes(const Packe
     Ref<PLATEAUDatasetSource> filtered;
     filtered.instantiate();
 
-    if (!is_valid()) {
-        UtilityFunctions::printerr("PLATEAUDatasetSource: Source is not valid");
-        return filtered;
-    }
+    ERR_FAIL_COND_V_MSG(!is_valid(), filtered, "PLATEAUDatasetSource: Source is not valid.");
 
     try {
         std::vector<std::shared_ptr<plateau::dataset::GridCode>> grid_codes;

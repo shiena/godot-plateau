@@ -5,10 +5,9 @@
 
 using namespace godot;
 
-// Type aliases
-using PlateauModel = plateau::polygonMesh::Model;
-using PlateauNode = plateau::polygonMesh::Node;
-using PlateauMesh = plateau::polygonMesh::Mesh;
+#include "plateau_types.h"
+
+// Type aliases for file-local types
 using GltfWriter = plateau::meshWriter::GltfWriter;
 using GltfWriteOptions = plateau::meshWriter::GltfWriteOptions;
 using GltfFileFormat = plateau::meshWriter::GltfFileFormat;
@@ -38,23 +37,13 @@ bool PLATEAUMeshExporter::export_to_file(
     PLATEAU_MOBILE_UNSUPPORTED_V(false);
 #endif
 
-    if (mesh_data_array.is_empty()) {
-        UtilityFunctions::printerr("PLATEAUMeshExporter: mesh_data_array is empty");
-        return false;
-    }
-
-    if (file_path.is_empty()) {
-        UtilityFunctions::printerr("PLATEAUMeshExporter: file_path is empty");
-        return false;
-    }
+    ERR_FAIL_COND_V_MSG(mesh_data_array.is_empty(), false, "PLATEAUMeshExporter: mesh_data_array is empty.");
+    ERR_FAIL_COND_V_MSG(file_path.is_empty(), false, "PLATEAUMeshExporter: file_path is empty.");
 
     try {
         // Convert to native model
         auto model = create_model_from_mesh_data(mesh_data_array);
-        if (!model) {
-            UtilityFunctions::printerr("PLATEAUMeshExporter: Failed to create model");
-            return false;
-        }
+        ERR_FAIL_COND_V_MSG(!model, false, "PLATEAUMeshExporter: Failed to create model.");
 
         bool success = false;
         switch (format) {
@@ -68,8 +57,7 @@ bool PLATEAUMeshExporter::export_to_file(
                 success = export_obj(*model, file_path);
                 break;
             default:
-                UtilityFunctions::printerr("PLATEAUMeshExporter: Invalid format: ", format);
-                return false;
+                ERR_FAIL_V_MSG(false, "PLATEAUMeshExporter: Invalid format: " + String::num_int64(format));
         }
 
         if (success) {

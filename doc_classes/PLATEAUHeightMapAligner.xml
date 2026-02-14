@@ -5,7 +5,7 @@
 	</brief_description>
 	<description>
 		PLATEAUHeightMapAligner adjusts building and model heights to match terrain, or adjusts terrain to match roads and other features.
-		[b]Note:[/b] This class is not available on mobile platforms (iOS/Android).
+		[b]Note:[/b] On mobile platforms (iOS/Android), this class is available but alignment methods ([method align], [method align_invert], [method get_height_at]) will return an error. Getter/setter properties and [method add_heightmap]/[method clear_heightmaps] work normally.
 		[codeblock]
 		var aligner = PLATEAUHeightMapAligner.new()
 		aligner.height_offset = -0.15  # Sink buildings slightly
@@ -57,6 +57,7 @@
 			<param index="0" name="xz_position" type="Vector2" />
 			<description>
 				Get height at a specific XZ position from the heightmaps. Returns NaN if position is outside all heightmaps.
+				[b]Note:[/b] This method is not supported on mobile platforms (Android/iOS).
 			</description>
 		</method>
 	</methods>

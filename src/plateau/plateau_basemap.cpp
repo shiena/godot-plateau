@@ -1,13 +1,3 @@
-// Platform detection for mobile exclusions
-#if defined(__APPLE__)
-#include <TargetConditionals.h>
-#endif
-#if defined(__ANDROID__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
-#define PLATEAU_MOBILE_PLATFORM 1
-#endif
-
-#ifndef PLATEAU_MOBILE_PLATFORM
-
 #include "plateau_basemap.h"
 #include "plateau_platform.h"
 #include "plateau_parallel.h"
@@ -62,6 +52,11 @@ Dictionary PLATEAUTileCoordinate::get_extent() const {
         return result;
     }
 
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(result);
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     TileCoordinate coord(column_, row_, zoom_level_);
     auto extent = TileProjection::unproject(coord);
 
@@ -69,6 +64,7 @@ Dictionary PLATEAUTileCoordinate::get_extent() const {
     result["min_lon"] = extent.min.longitude;
     result["max_lat"] = extent.max.latitude;
     result["max_lon"] = extent.max.longitude;
+#endif
 
     return result;
 }
@@ -184,10 +180,17 @@ void PLATEAUVectorTile::_bind_methods() {
 
 PLATEAUVectorTileDownloader::PLATEAUVectorTileDownloader()
     : zoom_level_(15),
-      tile_source_(TILE_SOURCE_GSI_PHOTO),
-      extent_(plateau::geometry::GeoCoordinate(0, 0, 0),
-              plateau::geometry::GeoCoordinate(0, 0, 0)) {
+      tile_source_(TILE_SOURCE_GSI_PHOTO)
+#ifndef PLATEAU_MOBILE_PLATFORM
+    , extent_(plateau::geometry::GeoCoordinate(0, 0, 0),
+              plateau::geometry::GeoCoordinate(0, 0, 0))
+#endif
+{
+#ifndef PLATEAU_MOBILE_PLATFORM
     url_template_ = String(VectorTileDownloader::getDefaultUrl().c_str());
+#else
+    url_template_ = "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg";
+#endif
 }
 
 PLATEAUVectorTileDownloader::~PLATEAUVectorTileDownloader() {
@@ -195,7 +198,9 @@ PLATEAUVectorTileDownloader::~PLATEAUVectorTileDownloader() {
 
 void PLATEAUVectorTileDownloader::set_destination(const String &path) {
     destination_ = path;
+#ifndef PLATEAU_MOBILE_PLATFORM
     invalidate_downloader();
+#endif
 }
 
 String PLATEAUVectorTileDownloader::get_destination() const {
@@ -204,7 +209,9 @@ String PLATEAUVectorTileDownloader::get_destination() const {
 
 void PLATEAUVectorTileDownloader::set_zoom_level(int level) {
     zoom_level_ = Math::clamp(level, 1, 18);
+#ifndef PLATEAU_MOBILE_PLATFORM
     invalidate_downloader();
+#endif
 }
 
 int PLATEAUVectorTileDownloader::get_zoom_level() const {
@@ -214,7 +221,9 @@ int PLATEAUVectorTileDownloader::get_zoom_level() const {
 void PLATEAUVectorTileDownloader::set_tile_source(int source) {
     tile_source_ = source;
     update_url_from_source();
+#ifndef PLATEAU_MOBILE_PLATFORM
     invalidate_downloader();
+#endif
 }
 
 int PLATEAUVectorTileDownloader::get_tile_source() const {
@@ -245,9 +254,11 @@ void PLATEAUVectorTileDownloader::update_url_from_source() {
 
 void PLATEAUVectorTileDownloader::set_url_template(const String &url) {
     url_template_ = url;
+#ifndef PLATEAU_MOBILE_PLATFORM
     if (downloader_) {
         downloader_->setUrl(url.utf8().get_data());
     }
+#endif
 }
 
 String PLATEAUVectorTileDownloader::get_url_template() const {
@@ -255,11 +266,17 @@ String PLATEAUVectorTileDownloader::get_url_template() const {
 }
 
 void PLATEAUVectorTileDownloader::set_extent(double min_lat, double min_lon, double max_lat, double max_lon) {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED();
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     extent_ = plateau::geometry::Extent(
         plateau::geometry::GeoCoordinate(min_lat, min_lon, -10000),
         plateau::geometry::GeoCoordinate(max_lat, max_lon, 10000)
     );
     invalidate_downloader();
+#endif
 }
 
 void PLATEAUVectorTileDownloader::set_extent_from_center(double center_lat, double center_lon, double radius_deg) {
@@ -273,22 +290,41 @@ void PLATEAUVectorTileDownloader::set_extent_from_center(double center_lat, doub
 
 Dictionary PLATEAUVectorTileDownloader::get_extent() const {
     Dictionary result;
+
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(result);
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     result["min_lat"] = extent_.min.latitude;
     result["min_lon"] = extent_.min.longitude;
     result["max_lat"] = extent_.max.latitude;
     result["max_lon"] = extent_.max.longitude;
+#endif
+
     return result;
 }
 
 int PLATEAUVectorTileDownloader::get_tile_count() const {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(0);
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     const_cast<PLATEAUVectorTileDownloader*>(this)->ensure_downloader();
     if (!downloader_) {
         return 0;
     }
     return downloader_->getTileCount();
+#endif
 }
 
 Ref<PLATEAUTileCoordinate> PLATEAUVectorTileDownloader::get_tile_coordinate(int index) const {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(Ref<PLATEAUTileCoordinate>());
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     const_cast<PLATEAUVectorTileDownloader*>(this)->ensure_downloader();
     if (!downloader_ || index < 0 || index >= downloader_->getTileCount()) {
         return Ref<PLATEAUTileCoordinate>();
@@ -303,6 +339,7 @@ Ref<PLATEAUTileCoordinate> PLATEAUVectorTileDownloader::get_tile_coordinate(int 
     result->set_zoom_level(coord.zoom_level);
 
     return result;
+#endif
 }
 
 Ref<PLATEAUVectorTile> PLATEAUVectorTileDownloader::download(int index) {
@@ -313,12 +350,11 @@ Ref<PLATEAUVectorTile> PLATEAUVectorTileDownloader::download(int index) {
     PLATEAU_MOBILE_UNSUPPORTED_V(result);
 #endif
 
+#ifndef PLATEAU_MOBILE_PLATFORM
     ensure_downloader();
 
-    if (!downloader_ || index < 0 || index >= downloader_->getTileCount()) {
-        UtilityFunctions::printerr("PLATEAUVectorTileDownloader: Invalid index: ", index);
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(!downloader_ || index < 0 || index >= downloader_->getTileCount(), result,
+        "PLATEAUVectorTileDownloader: Invalid index: " + String::num_int64(index));
 
     try {
         VectorTile tile;
@@ -342,6 +378,7 @@ Ref<PLATEAUVectorTile> PLATEAUVectorTileDownloader::download(int index) {
     } catch (const std::exception &e) {
         UtilityFunctions::printerr("PLATEAUVectorTileDownloader exception: ", String(e.what()));
     }
+#endif
 
     return result;
 }
@@ -413,11 +450,9 @@ TypedArray<PLATEAUVectorTile> PLATEAUVectorTileDownloader::download_all() {
     PLATEAU_MOBILE_UNSUPPORTED_V(result);
 #endif
 
+#ifndef PLATEAU_MOBILE_PLATFORM
     ensure_downloader();
-    if (!downloader_) {
-        UtilityFunctions::printerr("PLATEAUVectorTileDownloader: Downloader not initialized");
-        return result;
-    }
+    ERR_FAIL_COND_V_MSG(!downloader_, result, "PLATEAUVectorTileDownloader: Downloader not initialized.");
 
     try {
         VectorTiles tiles = downloader_->downloadAll();
@@ -450,6 +485,7 @@ TypedArray<PLATEAUVectorTile> PLATEAUVectorTileDownloader::download_all() {
     } catch (const std::exception &e) {
         UtilityFunctions::printerr("PLATEAUVectorTileDownloader exception: ", String(e.what()));
     }
+#endif
 
     return result;
 }
@@ -570,6 +606,11 @@ Ref<ImageTexture> PLATEAUVectorTileDownloader::create_combined_texture(const Typ
 }
 
 String PLATEAUVectorTileDownloader::get_tile_path(int index) const {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(String());
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     const_cast<PLATEAUVectorTileDownloader*>(this)->ensure_downloader();
     if (!downloader_ || index < 0 || index >= downloader_->getTileCount()) {
         return String();
@@ -577,13 +618,23 @@ String PLATEAUVectorTileDownloader::get_tile_path(int index) const {
 
     auto path = downloader_->calcDestinationPath(index);
     return String(path.u8string().c_str());
+#endif
 }
 
 String PLATEAUVectorTileDownloader::get_default_url() {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    return "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg";
+#else
     return String(VectorTileDownloader::getDefaultUrl().c_str());
+#endif
 }
 
 Ref<PLATEAUTileCoordinate> PLATEAUVectorTileDownloader::project(double latitude, double longitude, int zoom_level) {
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(Ref<PLATEAUTileCoordinate>());
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     plateau::geometry::GeoCoordinate geo(latitude, longitude, 0);
     TileCoordinate coord = TileProjection::project(geo, zoom_level);
 
@@ -594,6 +645,7 @@ Ref<PLATEAUTileCoordinate> PLATEAUVectorTileDownloader::project(double latitude,
     result->set_zoom_level(coord.zoom_level);
 
     return result;
+#endif
 }
 
 Dictionary PLATEAUVectorTileDownloader::unproject(const Ref<PLATEAUTileCoordinate> &coord) {
@@ -603,6 +655,11 @@ Dictionary PLATEAUVectorTileDownloader::unproject(const Ref<PLATEAUTileCoordinat
         return result;
     }
 
+#ifdef PLATEAU_MOBILE_PLATFORM
+    PLATEAU_MOBILE_UNSUPPORTED_V(result);
+#endif
+
+#ifndef PLATEAU_MOBILE_PLATFORM
     TileCoordinate native_coord(coord->get_column(), coord->get_row(), coord->get_zoom_level());
     auto extent = TileProjection::unproject(native_coord);
 
@@ -610,19 +667,18 @@ Dictionary PLATEAUVectorTileDownloader::unproject(const Ref<PLATEAUTileCoordinat
     result["min_lon"] = extent.min.longitude;
     result["max_lat"] = extent.max.latitude;
     result["max_lon"] = extent.max.longitude;
+#endif
 
     return result;
 }
 
+#ifndef PLATEAU_MOBILE_PLATFORM
 void PLATEAUVectorTileDownloader::ensure_downloader() {
     if (downloader_) {
         return;
     }
 
-    if (destination_.is_empty()) {
-        UtilityFunctions::printerr("PLATEAUVectorTileDownloader: destination is empty");
-        return;
-    }
+    ERR_FAIL_COND_MSG(destination_.is_empty(), "PLATEAUVectorTileDownloader: destination is empty.");
 
     try {
         // Convert Godot path to absolute filesystem path
@@ -657,6 +713,7 @@ void PLATEAUVectorTileDownloader::ensure_downloader() {
 void PLATEAUVectorTileDownloader::invalidate_downloader() {
     downloader_.reset();
 }
+#endif
 
 void PLATEAUVectorTileDownloader::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_destination", "path"), &PLATEAUVectorTileDownloader::set_destination);
@@ -707,5 +764,3 @@ void PLATEAUVectorTileDownloader::_bind_methods() {
     BIND_ENUM_CONSTANT(TILE_SOURCE_OSM);
     BIND_ENUM_CONSTANT(TILE_SOURCE_CUSTOM);
 }
-
-#endif // !PLATEAU_MOBILE_PLATFORM
