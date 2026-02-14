@@ -12,6 +12,7 @@
 #include "plateau/plateau_importer.h"
 #include "plateau/plateau_instanced_city_model.h"
 #include "plateau/plateau_dataset_source.h"
+#include "plateau/plateau_grid_code.h"
 #include "plateau/plateau_gml_file.h"
 #include "plateau/plateau_granularity_converter.h"
 #include "plateau/plateau_mesh_exporter.h"
@@ -48,6 +49,7 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(PLATEAUDatasetGroup);
 	GDREGISTER_CLASS(PLATEAUGmlFileInfo);
 	GDREGISTER_CLASS(PLATEAUDatasetSource);
+	GDREGISTER_CLASS(PLATEAUGridCode);
 	GDREGISTER_CLASS(PLATEAUGmlFile);
 	GDREGISTER_CLASS(PLATEAUGranularityConverter);
 	GDREGISTER_CLASS(PLATEAUMeshExporter);

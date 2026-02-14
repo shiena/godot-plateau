@@ -129,7 +129,7 @@ void PLATEAUDatasetGroup::_bind_methods() {
 // ============================================================================
 
 PLATEAUGmlFileInfo::PLATEAUGmlFileInfo()
-    : max_lod_(0), package_type_(0) {
+    : max_lod_(0), epsg_(6697), package_type_(0) {
 }
 
 PLATEAUGmlFileInfo::~PLATEAUGmlFileInfo() {
@@ -159,6 +159,14 @@ int PLATEAUGmlFileInfo::get_max_lod() const {
     return max_lod_;
 }
 
+void PLATEAUGmlFileInfo::set_epsg(int epsg) {
+    epsg_ = epsg;
+}
+
+int PLATEAUGmlFileInfo::get_epsg() const {
+    return epsg_;
+}
+
 void PLATEAUGmlFileInfo::set_package_type(int64_t type) {
     package_type_ = type;
 }
@@ -179,6 +187,10 @@ void PLATEAUGmlFileInfo::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_max_lod", "lod"), &PLATEAUGmlFileInfo::set_max_lod);
     ClassDB::bind_method(D_METHOD("get_max_lod"), &PLATEAUGmlFileInfo::get_max_lod);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "max_lod"), "set_max_lod", "get_max_lod");
+
+    ClassDB::bind_method(D_METHOD("set_epsg", "epsg"), &PLATEAUGmlFileInfo::set_epsg);
+    ClassDB::bind_method(D_METHOD("get_epsg"), &PLATEAUGmlFileInfo::get_epsg);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "epsg"), "set_epsg", "get_epsg");
 
     ClassDB::bind_method(D_METHOD("set_package_type", "type"), &PLATEAUGmlFileInfo::set_package_type);
     ClassDB::bind_method(D_METHOD("get_package_type"), &PLATEAUGmlFileInfo::get_package_type);
@@ -283,6 +295,7 @@ TypedArray<PLATEAUGmlFileInfo> PLATEAUDatasetSource::get_gml_files(int64_t packa
                     info->set_mesh_code(String(grid_code->get().c_str()));
                 }
                 info->set_max_lod(gml_file.getMaxLod());
+                info->set_epsg(static_cast<int>(gml_file.getEpsg()));
                 info->set_package_type(static_cast<int64_t>(gml_file.getPackage()));
                 result.push_back(info);
             }
@@ -309,6 +322,30 @@ PackedStringArray PLATEAUDatasetSource::get_mesh_codes() {
         for (const auto &code : grid_codes) {
             if (code) {
                 result.push_back(String(code->get().c_str()));
+            }
+        }
+    } catch (const std::exception &e) {
+        UtilityFunctions::printerr("PLATEAUDatasetSource exception: ", String(e.what()));
+    }
+
+    return result;
+}
+
+TypedArray<PLATEAUGridCode> PLATEAUDatasetSource::get_grid_codes() {
+    TypedArray<PLATEAUGridCode> result;
+
+    if (!is_valid()) {
+        return result;
+    }
+
+    try {
+        const auto &grid_codes = accessor_->getGridCodes();
+        for (const auto &code : grid_codes) {
+            if (code && code->isValid()) {
+                Ref<PLATEAUGridCode> gc;
+                gc.instantiate();
+                gc->set_native(code);
+                result.push_back(gc);
             }
         }
     } catch (const std::exception &e) {
@@ -353,9 +390,10 @@ void PLATEAUDatasetSource::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_available_packages"), &PLATEAUDatasetSource::get_available_packages);
     ClassDB::bind_method(D_METHOD("get_gml_files", "package_flags"), &PLATEAUDatasetSource::get_gml_files);
     ClassDB::bind_method(D_METHOD("get_mesh_codes"), &PLATEAUDatasetSource::get_mesh_codes);
+    ClassDB::bind_method(D_METHOD("get_grid_codes"), &PLATEAUDatasetSource::get_grid_codes);
     ClassDB::bind_method(D_METHOD("filter_by_mesh_codes", "codes"), &PLATEAUDatasetSource::filter_by_mesh_codes);
 
-    // Package type enum
+    // Package type enum (bit positions match libplateau's PredefinedCityModelPackage)
     BIND_ENUM_CONSTANT(PACKAGE_NONE);
     BIND_ENUM_CONSTANT(PACKAGE_BUILDING);
     BIND_ENUM_CONSTANT(PACKAGE_ROAD);
@@ -364,11 +402,7 @@ void PLATEAUDatasetSource::_bind_methods() {
     BIND_ENUM_CONSTANT(PACKAGE_CITY_FURNITURE);
     BIND_ENUM_CONSTANT(PACKAGE_VEGETATION);
     BIND_ENUM_CONSTANT(PACKAGE_RELIEF);
-    BIND_ENUM_CONSTANT(PACKAGE_FLOOD);
-    BIND_ENUM_CONSTANT(PACKAGE_TSUNAMI);
-    BIND_ENUM_CONSTANT(PACKAGE_LANDSLIDE);
-    BIND_ENUM_CONSTANT(PACKAGE_STORM_SURGE);
-    BIND_ENUM_CONSTANT(PACKAGE_INLAND_FLOOD);
+    BIND_ENUM_CONSTANT(PACKAGE_DISASTER_RISK);
     BIND_ENUM_CONSTANT(PACKAGE_RAILWAY);
     BIND_ENUM_CONSTANT(PACKAGE_WATERWAY);
     BIND_ENUM_CONSTANT(PACKAGE_WATER_BODY);

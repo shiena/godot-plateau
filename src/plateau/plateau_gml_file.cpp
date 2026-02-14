@@ -69,53 +69,9 @@ int64_t PLATEAUGmlFile::get_package_type() const {
         return PLATEAUCityModelPackage::PACKAGE_UNKNOWN;
     }
 
-    auto package = gml_file_->getPackage();
-
-    // Convert libplateau package to Godot enum
-    switch (package) {
-        case plateau::dataset::PredefinedCityModelPackage::Building:
-            return PLATEAUCityModelPackage::PACKAGE_BUILDING;
-        case plateau::dataset::PredefinedCityModelPackage::Road:
-            return PLATEAUCityModelPackage::PACKAGE_ROAD;
-        case plateau::dataset::PredefinedCityModelPackage::UrbanPlanningDecision:
-            return PLATEAUCityModelPackage::PACKAGE_URBAN_PLANNING;
-        case plateau::dataset::PredefinedCityModelPackage::LandUse:
-            return PLATEAUCityModelPackage::PACKAGE_LAND_USE;
-        case plateau::dataset::PredefinedCityModelPackage::CityFurniture:
-            return PLATEAUCityModelPackage::PACKAGE_CITY_FURNITURE;
-        case plateau::dataset::PredefinedCityModelPackage::Vegetation:
-            return PLATEAUCityModelPackage::PACKAGE_VEGETATION;
-        case plateau::dataset::PredefinedCityModelPackage::Relief:
-            return PLATEAUCityModelPackage::PACKAGE_RELIEF;
-        case plateau::dataset::PredefinedCityModelPackage::DisasterRisk:
-            return PLATEAUCityModelPackage::PACKAGE_FLOOD;
-        case plateau::dataset::PredefinedCityModelPackage::Railway:
-            return PLATEAUCityModelPackage::PACKAGE_RAILWAY;
-        case plateau::dataset::PredefinedCityModelPackage::Waterway:
-            return PLATEAUCityModelPackage::PACKAGE_WATERWAY;
-        case plateau::dataset::PredefinedCityModelPackage::WaterBody:
-            return PLATEAUCityModelPackage::PACKAGE_WATER_BODY;
-        case plateau::dataset::PredefinedCityModelPackage::Bridge:
-            return PLATEAUCityModelPackage::PACKAGE_BRIDGE;
-        case plateau::dataset::PredefinedCityModelPackage::Track:
-            return PLATEAUCityModelPackage::PACKAGE_TRACK;
-        case plateau::dataset::PredefinedCityModelPackage::Square:
-            return PLATEAUCityModelPackage::PACKAGE_SQUARE;
-        case plateau::dataset::PredefinedCityModelPackage::Tunnel:
-            return PLATEAUCityModelPackage::PACKAGE_TUNNEL;
-        case plateau::dataset::PredefinedCityModelPackage::UndergroundFacility:
-            return PLATEAUCityModelPackage::PACKAGE_UNDERGROUND_FACILITY;
-        case plateau::dataset::PredefinedCityModelPackage::UndergroundBuilding:
-            return PLATEAUCityModelPackage::PACKAGE_UNDERGROUND_BUILDING;
-        case plateau::dataset::PredefinedCityModelPackage::Area:
-            return PLATEAUCityModelPackage::PACKAGE_AREA;
-        case plateau::dataset::PredefinedCityModelPackage::OtherConstruction:
-            return PLATEAUCityModelPackage::PACKAGE_OTHER_CONSTRUCTION;
-        case plateau::dataset::PredefinedCityModelPackage::Generic:
-            return PLATEAUCityModelPackage::PACKAGE_GENERIC;
-        default:
-            return PLATEAUCityModelPackage::PACKAGE_UNKNOWN;
-    }
+    // PLATEAUCityModelPackage bit positions match libplateau's PredefinedCityModelPackage,
+    // so a direct cast is safe.
+    return static_cast<int64_t>(gml_file_->getPackage());
 }
 
 String PLATEAUGmlFile::get_appearance_directory_path() const {

@@ -1,5 +1,6 @@
 #include "plateau_road_network.h"
 #include "plateau_city_model.h"
+#include "plateau_geo_reference.h"
 
 #include <godot_cpp/classes/surface_tool.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -1436,6 +1437,141 @@ int64_t PLATEAURnModel::allocate_id() {
     return next_id_++;
 }
 
+// Helper: convert way points to GeoJSON coordinate array [[lon, lat, alt], ...]
+static Array way_to_geojson_coords(const Ref<PLATEAURnWay> &way, const Ref<PLATEAUGeoReference> &geo_ref) {
+    Array coords;
+    if (way.is_null() || geo_ref.is_null()) return coords;
+
+    int count = way->get_point_count();
+    for (int i = 0; i < count; i++) {
+        Vector3 pos = way->get_point(i);
+        Vector3 latlon = geo_ref->unproject(pos);
+        Array coord;
+        coord.push_back(latlon.y); // lon
+        coord.push_back(latlon.x); // lat
+        coord.push_back(latlon.z); // alt
+        coords.push_back(coord);
+    }
+    return coords;
+}
+
+static Dictionary make_feature(const String &geometry_type, const Array &coordinates, const Dictionary &properties) {
+    Dictionary geometry;
+    geometry["type"] = geometry_type;
+    geometry["coordinates"] = coordinates;
+
+    Dictionary feature;
+    feature["type"] = "Feature";
+    feature["geometry"] = geometry;
+    feature["properties"] = properties;
+    return feature;
+}
+
+static Dictionary make_feature_collection(const Array &features) {
+    Dictionary fc;
+    fc["type"] = "FeatureCollection";
+    fc["features"] = features;
+    return fc;
+}
+
+Dictionary PLATEAURnModel::export_geojson(const Ref<PLATEAUGeoReference> &geo_reference) const {
+    ERR_FAIL_COND_V_MSG(geo_reference.is_null(), Dictionary(), "geo_reference is null");
+
+    Array link_features;
+    Array lane_features;
+    Array node_features;
+    Array track_features;
+
+    // Export roads as links and lanes
+    for (int ri = 0; ri < roads_.size(); ri++) {
+        Ref<PLATEAURnRoad> road = roads_[ri];
+        if (road.is_null()) continue;
+
+        // Road link (center line from merged sides)
+        Ref<PLATEAURnWay> left_merged = road->get_merged_side_way(true);
+        if (left_merged.is_valid() && left_merged->get_point_count() >= 2) {
+            Array coords = way_to_geojson_coords(left_merged, geo_reference);
+            Dictionary props;
+            props["id"] = road->get_id();
+            props["type"] = "road";
+            props["lane_count"] = road->get_main_lane_count();
+            link_features.push_back(make_feature("LineString", coords, props));
+        }
+
+        // Individual lanes
+        TypedArray<PLATEAURnLane> lanes = road->get_main_lanes();
+        for (int li = 0; li < lanes.size(); li++) {
+            Ref<PLATEAURnLane> lane = lanes[li];
+            if (lane.is_null()) continue;
+
+            Ref<PLATEAURnWay> center = lane->create_center_way();
+            if (center.is_valid() && center->get_point_count() >= 2) {
+                Array coords = way_to_geojson_coords(center, geo_reference);
+                Dictionary props;
+                props["id"] = String::num_int64(road->get_id()) + "_lane_" + String::num_int64(li);
+                props["road_id"] = road->get_id();
+                props["width"] = lane->calc_width();
+                props["attributes"] = lane->get_attributes();
+                lane_features.push_back(make_feature("LineString", coords, props));
+            }
+        }
+    }
+
+    // Export intersections as nodes and tracks
+    for (int ii = 0; ii < intersections_.size(); ii++) {
+        Ref<PLATEAURnIntersection> intersection = intersections_[ii];
+        if (intersection.is_null()) continue;
+
+        // Intersection node (center point)
+        Vector3 center = intersection->get_center();
+        Vector3 latlon = geo_reference->unproject(center);
+        Array point_coord;
+        point_coord.push_back(latlon.y); // lon
+        point_coord.push_back(latlon.x); // lat
+        point_coord.push_back(latlon.z); // alt
+
+        Dictionary node_props;
+        node_props["id"] = intersection->get_id();
+        node_props["edge_count"] = intersection->get_edges().size();
+        node_props["track_count"] = intersection->get_tracks().size();
+        node_features.push_back(make_feature("Point", point_coord, node_props));
+
+        // Tracks through intersection
+        TypedArray<PLATEAURnTrack> tracks = intersection->get_tracks();
+        for (int ti = 0; ti < tracks.size(); ti++) {
+            Ref<PLATEAURnTrack> track = tracks[ti];
+            if (track.is_null()) continue;
+
+            // Sample track spline as polyline
+            Array coords;
+            const int samples = 10;
+            for (int s = 0; s <= samples; s++) {
+                float t = static_cast<float>(s) / static_cast<float>(samples);
+                Vector3 pos = track->get_point(t);
+                Vector3 ll = geo_reference->unproject(pos);
+                Array coord;
+                coord.push_back(ll.y);
+                coord.push_back(ll.x);
+                coord.push_back(ll.z);
+                coords.push_back(coord);
+            }
+
+            Dictionary track_props;
+            track_props["id"] = String::num_int64(intersection->get_id()) + "_track_" + String::num_int64(ti);
+            track_props["intersection_id"] = intersection->get_id();
+            track_props["turn_type"] = static_cast<int>(track->get_turn_type());
+            track_features.push_back(make_feature("LineString", coords, track_props));
+        }
+    }
+
+    Dictionary result;
+    result["links"] = make_feature_collection(link_features);
+    result["lanes"] = make_feature_collection(lane_features);
+    result["nodes"] = make_feature_collection(node_features);
+    result["tracks"] = make_feature_collection(track_features);
+    return result;
+}
+
 void PLATEAURnModel::_bind_methods() {
     ClassDB::bind_method(D_METHOD("add_road", "road"), &PLATEAURnModel::add_road);
     ClassDB::bind_method(D_METHOD("remove_road", "road"), &PLATEAURnModel::remove_road);
@@ -1461,6 +1597,7 @@ void PLATEAURnModel::_bind_methods() {
     ClassDB::bind_method(D_METHOD("generate_mesh"), &PLATEAURnModel::generate_mesh);
     ClassDB::bind_method(D_METHOD("serialize"), &PLATEAURnModel::serialize);
     ClassDB::bind_static_method("PLATEAURnModel", D_METHOD("deserialize", "data"), &PLATEAURnModel::deserialize);
+    ClassDB::bind_method(D_METHOD("export_geojson", "geo_reference"), &PLATEAURnModel::export_geojson);
 
     ADD_PROPERTY(PropertyInfo(Variant::STRING, "factory_version"), "set_factory_version", "get_factory_version");
 }
