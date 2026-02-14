@@ -8,6 +8,8 @@
 #include <plateau/dataset/dataset_source.h>
 #include <plateau/dataset/i_dataset_accessor.h>
 
+#include "plateau_grid_code.h"
+
 namespace godot {
 
 // Predefined city model package types (bitmask)
@@ -177,10 +179,13 @@ public:
     // Get GML files for specified package type(s)
     TypedArray<PLATEAUGmlFileInfo> get_gml_files(int64_t package_flags);
 
-    // Get mesh codes (region IDs) in this dataset
+    // Get mesh codes (region IDs) in this dataset as strings
     PackedStringArray get_mesh_codes();
 
-    // Filter by mesh codes
+    // Get grid codes as PLATEAUGridCode objects (richer API than get_mesh_codes)
+    TypedArray<PLATEAUGridCode> get_grid_codes();
+
+    // Filter by grid code strings
     Ref<PLATEAUDatasetSource> filter_by_mesh_codes(const PackedStringArray &codes);
 
 protected:
