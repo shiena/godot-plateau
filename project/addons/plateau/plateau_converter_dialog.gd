@@ -83,7 +83,7 @@ const FORMAT_OPTIONS := {
 # Texture packing resolution options
 const TEXTURE_RESOLUTION_OPTIONS := [512, 1024, 2048, 4096, 8192]
 
-# Package flags
+# Package flags (bit positions match libplateau's PredefinedCityModelPackage)
 const PACKAGE_BUILDING := 1 << 0
 const PACKAGE_ROAD := 1 << 1
 const PACKAGE_URBAN_PLANNING := 1 << 2
@@ -91,16 +91,21 @@ const PACKAGE_LAND_USE := 1 << 3
 const PACKAGE_CITY_FURNITURE := 1 << 4
 const PACKAGE_VEGETATION := 1 << 5
 const PACKAGE_RELIEF := 1 << 6
-const PACKAGE_FLOOD := 1 << 7
-const PACKAGE_TSUNAMI := 1 << 8
-const PACKAGE_RAILWAY := 1 << 12
-const PACKAGE_WATERWAY := 1 << 13
-const PACKAGE_WATER_BODY := 1 << 14
-const PACKAGE_BRIDGE := 1 << 15
-const PACKAGE_TUNNEL := 1 << 18
-const PACKAGE_GENERIC := 1 << 23
-const PACKAGE_UNKNOWN := 1 << 24
-const PACKAGE_ALL := 0x1FFFFFF
+const PACKAGE_DISASTER_RISK := 1 << 7
+const PACKAGE_RAILWAY := 1 << 8
+const PACKAGE_WATERWAY := 1 << 9
+const PACKAGE_WATER_BODY := 1 << 10
+const PACKAGE_BRIDGE := 1 << 11
+const PACKAGE_TRACK := 1 << 12
+const PACKAGE_SQUARE := 1 << 13
+const PACKAGE_TUNNEL := 1 << 14
+const PACKAGE_UNDERGROUND_FACILITY := 1 << 15
+const PACKAGE_UNDERGROUND_BUILDING := 1 << 16
+const PACKAGE_AREA := 1 << 17
+const PACKAGE_OTHER_CONSTRUCTION := 1 << 18
+const PACKAGE_GENERIC := 1 << 19
+const PACKAGE_UNKNOWN := 1 << 31
+const PACKAGE_ALL := 0x000FFFFF | (1 << 31)
 
 const PACKAGE_OPTIONS := [
 	["Building (建物)", PACKAGE_BUILDING],
@@ -111,7 +116,7 @@ const PACKAGE_OPTIONS := [
 	["City Furniture (都市設備)", PACKAGE_CITY_FURNITURE],
 	["Bridge (橋)", PACKAGE_BRIDGE],
 	["Water Body (水域)", PACKAGE_WATER_BODY],
-	["Other (その他)", PACKAGE_URBAN_PLANNING | PACKAGE_FLOOD | PACKAGE_TSUNAMI | PACKAGE_RAILWAY | PACKAGE_WATERWAY | PACKAGE_TUNNEL | PACKAGE_GENERIC | PACKAGE_UNKNOWN],
+	["Other (その他)", PACKAGE_URBAN_PLANNING | PACKAGE_DISASTER_RISK | PACKAGE_RAILWAY | PACKAGE_WATERWAY | PACKAGE_TUNNEL | PACKAGE_GENERIC | PACKAGE_UNKNOWN],
 ]
 
 # Prefecture code to Zone ID mapping
