@@ -53,6 +53,23 @@
 				[/codeblock]
 			</description>
 		</method>
+		<method name="import_to_portable_scene">
+			<return type="Node3D" />
+			<param index="0" name="mesh_data_array" type="PLATEAUMeshData[]" />
+			<param index="1" name="root_name" type="String" />
+			<param index="2" name="geo_reference" type="PLATEAUGeoReference" default="null" />
+			<param index="3" name="options" type="PLATEAUMeshExtractOptions" default="null" />
+			<param index="4" name="gml_path" type="String" default="&quot;&quot;" />
+			<description>
+				Same as [method import_to_scene] but builds a hierarchy made only of built-in classes ([Node3D]/[MeshInstance3D]) with all PLATEAU information baked as node metadata. A scene saved from this root loads on platforms where the GDExtension is not available, such as a mobile runtime that only loads pre-baked [code].scn[/code] files.
+				GeoReference and import settings are stored on the root as [code]plateau_zone_id[/code], [code]plateau_reference_point[/code], [code]plateau_unit_scale[/code], [code]plateau_coordinate_system[/code], [code]plateau_min_lod[/code], [code]plateau_max_lod[/code], [code]plateau_mesh_granularity[/code] and [code]plateau_gml_path[/code] metadata. Each mesh node carries [code]gml_id[/code], [code]city_object_type[/code], [code]attributes[/code] and [code]city_objects[/code] metadata (see [member bake_metadata]).
+				Use the [code]PLATEAUPortable[/code] GDScript helper (addon) to save the scene and to access the baked metadata without the extension.
+				[codeblock]
+				var root = importer.import_to_portable_scene(meshes, "MyCity", geo_ref, options, gml_path)
+				PLATEAUPortable.save_scene(root, "res://city.scn")
+				[/codeblock]
+			</description>
+		</method>
 		<method name="clear_meshes">
 			<return type="void" />
 			<description>
@@ -84,6 +101,10 @@
 		</member>
 		<member name="generate_collision" type="bool" setter="set_generate_collision" getter="get_generate_collision" default="false">
 			If [code]true[/code], collision shapes will be generated for imported meshes.
+		</member>
+		<member name="bake_metadata" type="bool" setter="set_bake_metadata" getter="get_bake_metadata" default="true">
+			If [code]true[/code] (default), PLATEAU information is stored on each created node as serializable metadata: [code]gml_id[/code] (String), [code]city_object_type[/code] (int), [code]attributes[/code] (Dictionary) and [code]city_objects[/code] (Dictionary mapping [Vector2i] CityObjectIndex to gml_id).
+			Unlike [PLATEAUMeshData] (a RefCounted that is lost on scene serialization), these plain Variants survive saving to [code].scn[/code]/[code].tscn[/code], so attribute access, type filtering and raycast-to-feature lookup keep working after the scene is reloaded — even on platforms without the GDExtension.
 		</member>
 		<member name="show_only_max_lod" type="bool" setter="set_show_only_max_lod" getter="get_show_only_max_lod" default="true">
 			If [code]true[/code], only the highest LOD nodes are visible after import. Other LOD nodes are hidden but remain in the scene tree.

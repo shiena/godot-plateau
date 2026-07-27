@@ -66,6 +66,13 @@
 				Get the GML ID from UV4 coordinates (used for raycast hit lookup).
 			</description>
 		</method>
+		<method name="get_city_object_index_map" qualifiers="const">
+			<return type="Dictionary" />
+			<description>
+				Returns the CityObjectIndex-to-GML-ID mapping as a serializable [Dictionary] with [Vector2i] keys ([code]Vector2i(primary_index, atomic_index)[/code]) and [String] values (gml_id). Primary entries use [code]atomic_index = -1[/code].
+				This is the same table used internally by [method get_gml_id_from_uv], exported in a form that can be stored as node metadata and saved into a scene file. Baked automatically by [PLATEAUImporter] when [code]bake_metadata[/code] is enabled.
+			</description>
+		</method>
 		<method name="get_texture_paths" qualifiers="const">
 			<return type="PackedStringArray" />
 			<description>

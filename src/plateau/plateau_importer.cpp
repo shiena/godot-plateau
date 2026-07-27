@@ -4,7 +4,7 @@
 using namespace godot;
 
 PLATEAUImporter::PLATEAUImporter()
-    : is_imported_(false), generate_collision_(false), show_only_max_lod_(true) {
+    : is_imported_(false), generate_collision_(false), show_only_max_lod_(true), bake_metadata_(true) {
     // Note: extract_options_ and geo_reference_ are created lazily
     // to avoid "Instantiated ... used as default value" warning
 }
@@ -177,6 +177,85 @@ bool PLATEAUImporter::get_show_only_max_lod() const {
     return show_only_max_lod_;
 }
 
+void PLATEAUImporter::set_bake_metadata(bool enable) {
+    bake_metadata_ = enable;
+}
+
+bool PLATEAUImporter::get_bake_metadata() const {
+    return bake_metadata_;
+}
+
+void PLATEAUImporter::bake_metadata_to_node(Node *node, const Ref<PLATEAUMeshData> &mesh_data) {
+    if (!node || mesh_data.is_null()) {
+        return;
+    }
+
+    String gml_id = mesh_data->get_gml_id();
+    if (!gml_id.is_empty()) {
+        node->set_meta("gml_id", gml_id);
+    }
+
+    int64_t type = mesh_data->get_city_object_type();
+    if (type != 0) {
+        node->set_meta("city_object_type", type);
+    }
+
+    Dictionary attributes = mesh_data->get_attributes();
+    if (!attributes.is_empty()) {
+        node->set_meta("attributes", attributes);
+    }
+
+    Dictionary city_objects = mesh_data->get_city_object_index_map();
+    if (!city_objects.is_empty()) {
+        node->set_meta("city_objects", city_objects);
+    }
+}
+
+Node3D *PLATEAUImporter::import_to_portable_scene(
+    const TypedArray<PLATEAUMeshData> &mesh_data_array,
+    const String &root_name,
+    const Ref<PLATEAUGeoReference> &geo_reference,
+    const Ref<PLATEAUMeshExtractOptions> &options,
+    const String &gml_path) {
+
+    ERR_FAIL_COND_V_MSG(mesh_data_array.is_empty(), nullptr, "PLATEAUImporter: mesh_data_array is empty.");
+
+    // Plain Node3D root: loads without the GDExtension (no placeholder on mobile)
+    Node3D *root = memnew(Node3D);
+    root->set_name(root_name.is_empty() ? "PLATEAU_Import" : root_name);
+    root->set_meta("plateau_portable", true);
+
+    if (geo_reference.is_valid()) {
+        root->set_meta("plateau_zone_id", geo_reference->get_zone_id());
+        root->set_meta("plateau_reference_point", geo_reference->get_reference_point());
+        root->set_meta("plateau_unit_scale", geo_reference->get_unit_scale());
+        root->set_meta("plateau_coordinate_system", geo_reference->get_coordinate_system());
+    }
+
+    if (options.is_valid()) {
+        root->set_meta("plateau_min_lod", options->get_min_lod());
+        root->set_meta("plateau_max_lod", options->get_max_lod());
+        root->set_meta("plateau_mesh_granularity", options->get_mesh_granularity());
+    }
+
+    if (!gml_path.is_empty()) {
+        root->set_meta("plateau_gml_path", gml_path);
+    }
+
+    // Portable scenes always carry metadata regardless of the bake_metadata flag
+    const bool prev_bake = bake_metadata_;
+    bake_metadata_ = true;
+    build_scene_hierarchy(mesh_data_array, root, nullptr);
+    bake_metadata_ = prev_bake;
+
+    if (show_only_max_lod_) {
+        apply_lod_visibility(root);
+    }
+
+    UtilityFunctions::print("PLATEAUImporter: Created portable scene with ", mesh_data_array.size(), " root meshes");
+    return root;
+}
+
 int PLATEAUImporter::parse_lod_from_name(const String &name) {
     // Parse LOD number from node name (e.g., "LOD0", "LOD1", "LOD2")
     // Returns -1 if not an LOD node
@@ -270,6 +349,11 @@ Node3D *PLATEAUImporter::create_node_from_mesh_data(const Ref<PLATEAUMeshData> &
         mesh_instance->set_mesh(mesh);
         mesh_instance->set_transform(mesh_data->get_transform());
 
+        // Bake PLATEAU info as serializable metadata (survives .scn save/load)
+        if (bake_metadata_) {
+            bake_metadata_to_node(mesh_instance, mesh_data);
+        }
+
         // Generate collision if enabled
         if (generate_collision_) {
             create_collision_for_mesh(mesh_instance);
@@ -281,6 +365,9 @@ Node3D *PLATEAUImporter::create_node_from_mesh_data(const Ref<PLATEAUMeshData> &
         Node3D *node = memnew(Node3D);
         node->set_name(mesh_data->get_name());
         node->set_transform(mesh_data->get_transform());
+        if (bake_metadata_) {
+            bake_metadata_to_node(node, mesh_data);
+        }
         return node;
     }
 }
@@ -374,10 +461,16 @@ void PLATEAUImporter::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_show_only_max_lod"), &PLATEAUImporter::get_show_only_max_lod);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "show_only_max_lod"), "set_show_only_max_lod", "get_show_only_max_lod");
 
+    // Metadata baking
+    ClassDB::bind_method(D_METHOD("set_bake_metadata", "enable"), &PLATEAUImporter::set_bake_metadata);
+    ClassDB::bind_method(D_METHOD("get_bake_metadata"), &PLATEAUImporter::get_bake_metadata);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "bake_metadata"), "set_bake_metadata", "get_bake_metadata");
+
     // Methods
     ClassDB::bind_method(D_METHOD("import_gml"), &PLATEAUImporter::import_gml);
     ClassDB::bind_method(D_METHOD("import_from_path", "gml_path"), &PLATEAUImporter::import_from_path);
     ClassDB::bind_method(D_METHOD("import_to_scene", "mesh_data_array", "root_name", "geo_reference", "options", "gml_path"), &PLATEAUImporter::import_to_scene, DEFVAL(Ref<PLATEAUGeoReference>()), DEFVAL(Ref<PLATEAUMeshExtractOptions>()), DEFVAL(String()));
+    ClassDB::bind_method(D_METHOD("import_to_portable_scene", "mesh_data_array", "root_name", "geo_reference", "options", "gml_path"), &PLATEAUImporter::import_to_portable_scene, DEFVAL(Ref<PLATEAUGeoReference>()), DEFVAL(Ref<PLATEAUMeshExtractOptions>()), DEFVAL(String()));
     ClassDB::bind_method(D_METHOD("clear_meshes"), &PLATEAUImporter::clear_meshes);
     ClassDB::bind_method(D_METHOD("get_city_model"), &PLATEAUImporter::get_city_model);
     ClassDB::bind_method(D_METHOD("is_imported"), &PLATEAUImporter::is_imported);

@@ -58,10 +58,28 @@ public:
     void set_show_only_max_lod(bool enable);
     bool get_show_only_max_lod() const;
 
+    // Metadata baking
+    // When true (default), gml_id / city_object_type / attributes / city object
+    // index map are stored as node metadata (plain Variants) so they survive
+    // scene serialization (.scn/.tscn) and remain usable without the extension
+    void set_bake_metadata(bool enable);
+    bool get_bake_metadata() const;
+
     // Import mesh data array to scene and return root node
     // This creates a PLATEAUInstancedCityModel hierarchy from pre-extracted mesh data
     // The returned node contains metadata about the import (GeoReference, LOD range, etc.)
     PLATEAUInstancedCityModel *import_to_scene(
+        const TypedArray<PLATEAUMeshData> &mesh_data_array,
+        const String &root_name,
+        const Ref<PLATEAUGeoReference> &geo_reference = Ref<PLATEAUGeoReference>(),
+        const Ref<PLATEAUMeshExtractOptions> &options = Ref<PLATEAUMeshExtractOptions>(),
+        const String &gml_path = String());
+
+    // Same as import_to_scene but builds a portable hierarchy made only of
+    // built-in classes (Node3D/MeshInstance3D) with all PLATEAU info baked as
+    // node metadata. A scene saved from this root loads on platforms where the
+    // GDExtension is not available (e.g. mobile runtime that only loads .scn)
+    Node3D *import_to_portable_scene(
         const TypedArray<PLATEAUMeshData> &mesh_data_array,
         const String &root_name,
         const Ref<PLATEAUGeoReference> &geo_reference = Ref<PLATEAUGeoReference>(),
@@ -79,6 +97,10 @@ private:
     bool is_imported_;
     bool generate_collision_;
     bool show_only_max_lod_;
+    bool bake_metadata_;
+
+    // Bake PLATEAU info from mesh_data into serializable node metadata
+    static void bake_metadata_to_node(Node *node, const Ref<PLATEAUMeshData> &mesh_data);
 
     // Helper methods
     void build_scene_hierarchy(const TypedArray<PLATEAUMeshData> &mesh_data_array, Node3D *parent, Node *owner = nullptr);

@@ -126,6 +126,10 @@ public:
     // Get GML ID from UV4 coordinates (for raycast hit lookup)
     String get_gml_id_from_uv(const Vector2 &uv) const;
 
+    // Export CityObjectList as a serializable Dictionary {Vector2i(primary, atomic): gml_id}
+    // Used to bake the index->gml_id mapping into node metadata so it survives .scn save/load
+    Dictionary get_city_object_index_map() const;
+
     // Texture paths for each surface (for export)
     void set_texture_paths(const PackedStringArray &paths);
     PackedStringArray get_texture_paths() const;

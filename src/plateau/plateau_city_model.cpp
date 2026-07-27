@@ -209,6 +209,20 @@ String PLATEAUMeshData::get_gml_id_from_uv(const Vector2 &uv) const {
     return String();
 }
 
+Dictionary PLATEAUMeshData::get_city_object_index_map() const {
+    Dictionary map;
+    const auto keys = city_object_list_.getAllKeys();
+    if (keys) {
+        for (const auto &key : *keys) {
+            std::string gml_id;
+            if (city_object_list_.tryGetAtomicGmlID(key, gml_id)) {
+                map[Vector2i(key.primary_index, key.atomic_index)] = String::utf8(gml_id.c_str());
+            }
+        }
+    }
+    return map;
+}
+
 // Texture path methods for export
 void PLATEAUMeshData::set_texture_paths(const PackedStringArray &paths) {
     texture_paths_ = paths;
@@ -268,6 +282,7 @@ void PLATEAUMeshData::_bind_methods() {
     ClassDB::bind_method(D_METHOD("has_city_object_info"), &PLATEAUMeshData::has_city_object_info);
     ClassDB::bind_method(D_METHOD("get_city_object_type_name"), &PLATEAUMeshData::get_city_object_type_name);
     ClassDB::bind_method(D_METHOD("get_gml_id_from_uv", "uv"), &PLATEAUMeshData::get_gml_id_from_uv);
+    ClassDB::bind_method(D_METHOD("get_city_object_index_map"), &PLATEAUMeshData::get_city_object_index_map);
 
     // Texture path methods for export
     ClassDB::bind_method(D_METHOD("set_texture_paths", "paths"), &PLATEAUMeshData::set_texture_paths);

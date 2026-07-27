@@ -218,9 +218,13 @@ Node3D *PLATEAUCityModelScene::import_gml(const String &gml_path, const Ref<PLAT
             mesh_instance->set_transform(mesh_data->get_transform());
 
             // Store mesh data as metadata for later retrieval
+            // Note: "plateau_mesh_data" (RefCounted) is runtime-only and does not
+            // survive scene serialization; the plain-Variant metas below do.
             mesh_instance->set_meta("plateau_mesh_data", mesh_data);
             mesh_instance->set_meta("gml_id", mesh_data->get_gml_id());
             mesh_instance->set_meta("city_object_type", mesh_data->get_city_object_type());
+            mesh_instance->set_meta("attributes", mesh_data->get_attributes());
+            mesh_instance->set_meta("city_objects", mesh_data->get_city_object_index_map());
 
             gml_root->add_child(mesh_instance);
             mesh_instance->set_owner(get_owner() ? get_owner() : this);
@@ -237,6 +241,8 @@ Node3D *PLATEAUCityModelScene::import_gml(const String &gml_path, const Ref<PLAT
                 child_instance->set_meta("plateau_mesh_data", child_data);
                 child_instance->set_meta("gml_id", child_data->get_gml_id());
                 child_instance->set_meta("city_object_type", child_data->get_city_object_type());
+                child_instance->set_meta("attributes", child_data->get_attributes());
+                child_instance->set_meta("city_objects", child_data->get_city_object_index_map());
 
                 gml_root->add_child(child_instance);
                 child_instance->set_owner(get_owner() ? get_owner() : this);
